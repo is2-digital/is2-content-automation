@@ -2,7 +2,7 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 8
+**Tasks Completed:** 9
 **Current Task:** None
 
 ---
@@ -203,6 +203,29 @@ After completing each task, add an entry below in this format:
 - Separate postgres credentials (ica_stage / n8n_custom_data_stage) with offset port 5433
 - Resource limits on all services: app (1 CPU/512M), postgres (1 CPU/512M), redis (0.5 CPU/256M)
 - No source volume mounts (production-like behavior)
+- Validated with `docker compose config`
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
+
+### 2026-02-22 (session 9)
+**Completed:**
+- ica-1h1.14: Create docker-compose.prod.yml override
+
+**Changes Made:**
+- Created `docker-compose.prod.yml` with production-specific overrides
+
+**Status:**
+- Production override uses `prod` build target, `ENVIRONMENT=production`, `.env.prod` env file
+- `restart: always` on all services for automatic recovery
+- json-file logging with rotation: app/postgres (10m/5 files), redis (10m/3 files)
+- Resource limits: app (2 CPU/1G), postgres (2 CPU/1G), redis (0.5 CPU/256M)
+- No exposed ports on postgres or redis — internal docker network only
 - Validated with `docker compose config`
 
 **Next:**
