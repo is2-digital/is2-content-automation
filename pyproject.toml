@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "is2news"
+name = "ica"
 version = "0.1.0"
 description = "AI newsletter generation pipeline for IS2-News"
 requires-python = ">=3.11"

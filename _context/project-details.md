@@ -1,6 +1,6 @@
 # IS2-News: Complete Project Analysis
 
-This document contains the full technical analysis of the IS2-News n8n workflow system, including every node, connection, code block, prompt, database query, and integration detail extracted from the source workflow JSON files.
+This document contains the full technical analysis of the to be rebuilt IS2-News n8n workflow system, including every node, connection, code block, prompt, database query, and integration detail extracted from the source workflow JSON files.
 
 ---
 

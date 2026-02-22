@@ -13,8 +13,8 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Protocol
 
-from is2news.services.search_api import SearchApiClient, SearchResult
-from is2news.utils.date_parser import parse_relative_date
+from ica.services.search_api import SearchApiClient, SearchResult
+from ica.utils.date_parser import parse_relative_date
 
 # Default keyword sets per PRD Section 1.3
 DAILY_KEYWORDS: list[str] = [

@@ -2,7 +2,7 @@
 
 import pytest
 
-from is2news.pipeline.alternates_html import (
+from ica.pipeline.alternates_html import (
     FilterResult,
     extract_urls_from_theme,
     filter_unused_articles,

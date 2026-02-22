@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a green-field Python rewrite of an n8n-based AI newsletter generation system (IS2-News). The original n8n system lives in `_n8n-project/` as reference; the goal is to rebuild it as a standalone Python application. **No Python source code exists yet** — the repo is currently in the design/bootstrapping phase with ~350 pre-loaded implementation tasks.
+This is a green-field Python rewrite of an n8n-based AI newsletter generation system previously called IS2-News. The original n8n system lives in `_n8n-project/` as reference; the goal is to rebuild it as a standalone Python application with a new name (is2-content-automation, or ica for short). **No Python source code exists yet** — the repo is currently in the design/bootstrapping phase with ~350 pre-loaded implementation tasks.
 
 The target newsletter is published at is2digital.com/newsletters for solopreneurs and SMB professionals interested in AI.
 

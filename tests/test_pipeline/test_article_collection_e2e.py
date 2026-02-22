@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 
-from is2news.pipeline.article_collection import (
+from ica.pipeline.article_collection import (
     DAILY_KEYWORDS,
     EVERY_2_DAYS_KEYWORDS,
     ArticleRecord,
@@ -21,8 +21,8 @@ from is2news.pipeline.article_collection import (
     deduplicate_results,
     parse_articles,
 )
-from is2news.services.search_api import SearchApiClient, SearchResult
-from is2news.utils.date_parser import format_date_mmddyyyy, parse_relative_date
+from ica.services.search_api import SearchApiClient, SearchResult
+from ica.utils.date_parser import format_date_mmddyyyy, parse_relative_date
 
 # ---------------------------------------------------------------------------
 # Reference date for deterministic tests
