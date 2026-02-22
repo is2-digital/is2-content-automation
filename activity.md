@@ -2,7 +2,7 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 6
+**Tasks Completed:** 7
 **Current Task:** None
 
 ---
@@ -162,6 +162,26 @@ After completing each task, add an entry below in this format:
 
 **Status:**
 - Base docker-compose.yml ready for environment-specific overrides (dev, stage, prod)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
+
+### 2026-02-22 (session 7)
+**Completed:**
+- ica-1h1.12: Create docker-compose.dev.yml override
+
+**Changes Made:**
+- Created `docker-compose.dev.yml` with dev-specific overrides
+
+**Status:**
+- Dev override sets build target to `dev`, mounts source for hot reload, exposes debug ports (8000, 5678), postgres (5432), redis (6379)
+- Uses `.env.dev` for environment variables, sets ENVIRONMENT=development
+- Validated merged config with `docker compose config`
 
 **Next:**
 - Next available task from `bd ready`
