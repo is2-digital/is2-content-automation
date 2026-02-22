@@ -2,7 +2,7 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 2
+**Tasks Completed:** 3
 **Current Task:** None
 
 ---
@@ -70,6 +70,30 @@ After completing each task, add an entry below in this format:
 - Full article collection pipeline implemented: SearchApi query → date parsing → deduplication → DB upsert
 - All 80 tests pass (24 existing + 56 new)
 - pytest now works in .venv
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
+
+### 2026-02-22 (session 3)
+**Completed:**
+- ica-0jh.1: Create summarization prompt template
+
+**Changes Made:**
+- Created `ica/prompts/__init__.py` (prompts package)
+- Created `ica/prompts/summarization.py` (SUMMARIZATION_SYSTEM_PROMPT, SUMMARIZATION_USER_PROMPT, _FEEDBACK_SECTION_TEMPLATE, build_summarization_prompt)
+- Created `tests/test_prompts/__init__.py`, `tests/test_prompts/test_summarization.py` (39 tests)
+
+**Status:**
+- Summarization prompt ported from n8n `SUB/summarization_subworkflow.json` "Generate Data using LLM" node
+- System prompt: accuracy control protocol, article summary standards, business relevance specs, data integrity standards
+- User prompt: conditional feedback injection, output format, article content interpolation
+- `build_summarization_prompt()` returns (system, user) tuple ready for LLM call
+- All 119 tests pass (80 existing + 39 new)
 
 **Next:**
 - Next available task from `bd ready`
