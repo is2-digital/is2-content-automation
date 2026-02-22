@@ -2,7 +2,7 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 3
+**Tasks Completed:** 4
 **Current Task:** None
 
 ---
@@ -94,6 +94,28 @@ After completing each task, add an entry below in this format:
 - User prompt: conditional feedback injection, output format, article content interpolation
 - `build_summarization_prompt()` returns (system, user) tuple ready for LLM call
 - All 119 tests pass (80 existing + 39 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
+
+### 2026-02-22 (session 4)
+**Completed:**
+- ica-0jh.2: Create summarization regeneration prompt
+
+**Changes Made:**
+- Updated `ica/prompts/summarization.py` — added `REGENERATION_SYSTEM_PROMPT`, `REGENERATION_USER_PROMPT`, and `build_summarization_regeneration_prompt()` function
+- Created `tests/test_prompts/test_summarization_regeneration.py` (34 tests)
+
+**Status:**
+- Regeneration prompt ported from n8n "Re-Generate Data using LLM" node in summarization subworkflow
+- System prompt: professional editor role, accuracy control protocol (with 4th rule: "incorporate ONLY requested feedback"), article summary standards, data integrity standards
+- User prompt: injects original content and user feedback text
+- All 153 tests pass (119 existing + 34 new)
 
 **Next:**
 - Next available task from `bd ready`
