@@ -2,7 +2,7 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 5
+**Tasks Completed:** 6
 **Current Task:** None
 
 ---
@@ -139,6 +139,29 @@ After completing each task, add an entry below in this format:
 - Builder stage: isolated venv for clean dependency copy
 - Prod stage: slim runtime (libpq5 only, no gcc), non-root user, gunicorn + uvicorn workers, health check
 - `.dockerignore` excludes .git, .venv, _n8n-project, _context, .beads, .env files, etc.
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
+
+### 2026-02-22 (session 6)
+**Completed:**
+- ica-1h1.11: Create base docker-compose.yml with name: ica
+
+**Changes Made:**
+- Created `docker-compose.yml` with project name `ica`
+- Defined 3 services: app (FastAPI, builds from Dockerfile), postgres (PostgreSQL 16-alpine), redis (Redis 7-alpine for scheduler job store)
+- App service uses env_file directive, depends_on with health checks for postgres and redis
+- Postgres uses `POSTGRES_PASSWORD` as required var (fails if missing), defaults DB to `n8n_custom_data` and user to `ica`
+- Redis and Postgres both have health checks and named volumes
+- Base compose has no target/port overrides — environment-specific files will extend it
+
+**Status:**
+- Base docker-compose.yml ready for environment-specific overrides (dev, stage, prod)
 
 **Next:**
 - Next available task from `bd ready`
