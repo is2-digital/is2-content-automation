@@ -55,6 +55,18 @@ This project uses **bd** (beads) for task tracking. Do NOT use markdown TODO lis
 * **Configuration:** Use Pydantic Settings for all configuration. Never hardcode credentials or API keys.
 * **Error Handling:** Implement proper error handling with descriptive messages. Follow patterns defined in `prd.md` Section 7.
 
+# Context Management
+
+**Be judicious with context.** Do NOT read large files upfront — only read what the current task requires.
+
+* **`prd.md`** (~46KB): Do NOT read the whole file. Read only the specific section relevant to your task (e.g., Section 3.1 for Article Curation,
++Section 4.1 for summarization prompts, Section 2.2 for DB schemas).
+* **`_context/project-details.md`** (~50KB): Only read if your task specifically needs project-level context. Most tasks don't.
+* **`_n8n-project/`**: Only read the specific n8n workflow JSON that corresponds to your task. Do not read all workflow files.
+* **Existing code**: Read only the files you need to modify or that your task depends on.
+* **Prefer MCP over file reads**: Use `mcp__n8n-mcp__get_node` to look up specific n8n node details instead of reading raw workflow JSON when
++possible.
+
 # Wrap-Up & Commit
 
 1. Append a short dated entry to `activity.md` noting what was done and any blockers.
