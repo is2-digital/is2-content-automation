@@ -1,0 +1,47 @@
+# Staging overrides — use with:
+#   docker compose -f docker-compose.yml -f docker-compose.stage.yml up -d
+
+services:
+  app:
+    build:
+      target: prod
+    env_file:
+      - .env.stage
+    environment:
+      ENVIRONMENT: staging
+    ports:
+      - "8000:8000"   # FastAPI
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+  postgres:
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-n8n_custom_data_stage}
+      POSTGRES_USER: ${POSTGRES_USER:-ica_stage}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    ports:
+      - "5433:5432"   # offset port to avoid conflict with dev/prod
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+  redis:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
