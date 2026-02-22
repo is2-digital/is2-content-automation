@@ -2,9 +2,8 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 10
+**Tasks Completed:** 11
 **Current Task:** None
-**Tasks Completed:** 10
 
 ---
 
@@ -248,6 +247,29 @@ After completing each task, add an entry below in this format:
 **Status:**
 - `.env.dev`, `.env.stage`, `.env.prod` are properly gitignored
 - `.env.example` is tracked and documents all required variables with placeholder values
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
+
+### 2026-02-22 (session 11)
+**Completed:**
+- ica-1h1.16: Create Makefile with docker compose shortcuts
+
+**Changes Made:**
+- Created `Makefile` with targets: dev, stage, prod, build, down, logs, db-shell, ps, restart, clean, help
+- Default target is `help` which displays all available targets with descriptions
+
+**Status:**
+- All targets use `$(COMPOSE)` variable for DRY compose invocations
+- `dev` runs in foreground with `--build`; `stage` and `prod` run detached (`-d`)
+- `db-shell` uses env var defaults matching docker-compose.yml (ica / n8n_custom_data)
+- `clean` adds `-v` flag to also remove volumes
+- `make help` verified working
 
 **Next:**
 - Next available task from `bd ready`
