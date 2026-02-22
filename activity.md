@@ -4,7 +4,7 @@
 **Last Updated:** 2026-02-22
 **Tasks Completed:** 13
 **Current Task:** None
-**Tasks Completed This Session:** 1
+**Tasks Completed This Session:** 1 (session 15)
 
 ---
 
@@ -341,6 +341,31 @@ After completing each task, add an entry below in this format:
 - User prompt: conditional feedback injection, full %XX_ marker output format (FA, M1, M2, Q1-Q3, I1-I2), 2-2-2 distribution, source mix, requirements verification, theme separator, recommendation section
 - `build_theme_generation_prompt()` returns (system, user) tuple ready for LLM call
 - All 299 tests pass (215 existing + 84 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
+
+### 2026-02-22 (session 15)
+**Completed:**
+- ica-0jh.4: Create markdown generation prompt template
+
+**Changes Made:**
+- Created `ica/prompts/markdown_generation.py` (MARKDOWN_GENERATION_SYSTEM_PROMPT, MARKDOWN_GENERATION_USER_PROMPT, REGENERATION_SYSTEM_PROMPT, _FEEDBACK_SECTION_TEMPLATE, _VALIDATOR_ERRORS_SECTION_TEMPLATE, build_markdown_generation_prompt, build_markdown_regeneration_prompt)
+- Created `tests/test_prompts/test_markdown_generation.py` (98 tests)
+
+**Status:**
+- Markdown generation prompt ported from n8n "Generate Markdown using LLM" node in `SUB/markdown_generator_subworkflow.json`
+- System prompt: ~4000-word prompt with B2B editorial AI role, Kevin's 9 voice calibration patterns (precision, direct authority, conversational, intellectual honesty, practical grounding, dry humor, strategic synthesis, bold formatting, directive language), hard URL constraints, validator error delta handling with mandatory fix order, output rules
+- User prompt: conditional feedback injection, conditional validator errors injection, 8 required section headings (INTRODUCTION through FOOTER), character limits per section, featured article strict structure rules, CTA rules, link rules, formatted_theme data injection
+- Regeneration prompt: user-feedback-driven revision with preserve-original rules
+- `build_markdown_generation_prompt()` handles first generation, feedback, and validator-error regeneration
+- `build_markdown_regeneration_prompt()` handles user-feedback regeneration
+- All 397 tests pass (299 existing + 98 new)
 
 **Next:**
 - Next available task from `bd ready`
