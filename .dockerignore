@@ -1,0 +1,42 @@
+# Version control
+.git/
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+
+# Environment files (secrets)
+.env
+.env.*
+!.env.example
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Project metadata
+_n8n-project/
+_context/
+.beads/
+.claude/
+*.md
+activity.md
+prompt.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker (avoid recursive copy)
+Dockerfile
+docker-compose*.yml
+
+# Testing artifacts
+htmlcov/
+.coverage

@@ -2,7 +2,7 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 4
+**Tasks Completed:** 5
 **Current Task:** None
 
 ---
@@ -116,6 +116,29 @@ After completing each task, add an entry below in this format:
 - System prompt: professional editor role, accuracy control protocol (with 4th rule: "incorporate ONLY requested feedback"), article summary standards, data integrity standards
 - User prompt: injects original content and user feedback text
 - All 153 tests pass (119 existing + 34 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
+
+### 2026-02-22 (session 5)
+**Completed:**
+- ica-1h1.10: Create multi-stage Dockerfile with dev and prod targets
+
+**Changes Made:**
+- Created `Dockerfile` with 4 stages: base, dev, builder, prod
+- Created `.dockerignore` to keep build context clean
+
+**Status:**
+- Base stage: python:3.12-slim, installs libpq-dev + gcc for native extensions
+- Dev stage: editable install with dev deps, uvicorn --reload for hot-reloading
+- Builder stage: isolated venv for clean dependency copy
+- Prod stage: slim runtime (libpq5 only, no gcc), non-root user, gunicorn + uvicorn workers, health check
+- `.dockerignore` excludes .git, .venv, _n8n-project, _context, .beads, .env files, etc.
 
 **Next:**
 - Next available task from `bd ready`
