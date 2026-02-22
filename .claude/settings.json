@@ -1,0 +1,102 @@
+{
+  "env": {
+    "COMPOSER_CACHE_DIR": ".claude-cache/composer",
+    "COMPOSER_HOME": ".claude-cache/composer-home",
+    "PIP_CACHE_DIR": ".cache/pip",
+    "XDG_CACHE_HOME": ".cache",
+    "npm_config_cache": ".cache/npm"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(composer --version)",
+      "Bash(composer dump-autoload*)",
+      "Bash(composer install*)",
+      "Bash(composer update*)",
+      "Bash(composer validate*)",
+      "Bash(docker *)",
+      "Bash(docker-compose *)",
+      "Bash(find *)",
+      "Bash(git add*)",
+      "Bash(git branch*)",
+      "Bash(git checkout*)",
+      "Bash(git commit*)",
+      "Bash(git diff*)",
+      "Bash(git push*)",
+      "Bash(git log*)",
+      "Bash(git mv*)",
+      "Bash(git reset*)",
+      "Bash(git restore*)",
+      "Bash(git rm*)",
+      "Bash(git show*)",
+      "Bash(git status*)",
+      "Bash(git switch*)",
+      "Bash(grep:*)",
+      "Bash(lando *)",
+      "Bash(ls:*)",
+      "Bash(npm *)",
+      "Bash(npm run dev*)",
+      "Bash(bd *)",
+      "Bash(npx *)",
+      "Bash(printenv *)",
+      "WebFetch(domain:127.0.0.1)",
+      "WebFetch(domain:auth.docker.io)",
+      "WebFetch(domain:esm.sh)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:localhost)",
+      "WebFetch(domain:objects.githubusercontent.com)",
+      "WebFetch(domain:packagist.org)",
+      "WebFetch(domain:production.cloudflare.docker.com)",
+      "WebFetch(domain:registry-1.docker.io)",
+      "WebFetch(domain:registry.npmjs.org)",
+      "WebFetch(domain:unpkg.com)",
+      "mcp__claude-in-chrome__*",
+      "mcp__playwright__*"
+    ],
+    "ask": [],
+    "defaultMode": "acceptEdits",
+    "deny": [
+      "Bash(curl *)",
+      "Bash(git clone*)",
+      "Bash(git fetch*)",
+      "Bash(git ls-remote*)",
+      "Bash(git pull*)",
+      "Bash(git remote*)",
+      "Bash(git submodule*)",
+      "Bash(nc *)",
+      "Bash(socat *)",
+      "Bash(ssh *)",
+      "Bash(sudo *)",
+      "Bash(wget *)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Read(~/.aws/**)",
+      "Read(~/.ssh/**)"
+    ]
+  },
+  "sandbox": {
+    "allowUnsandboxedCommands": true,
+    "autoAllowBashIfSandboxed": true,
+    "enabled": true,
+    "excludedCommands": [
+      "docker",
+      "docker-compose",
+      "git",
+      "lando",
+      "npm",
+      "npx"
+    ],
+    "network": {
+      "allowLocalBinding": true,
+      "allowedDomains": [
+        "127.0.0.1",
+        "localhost",
+        "registry.npmjs.org",
+        "registry.yarnpkg.com",
+        "unpkg.com",
+        "github.com",
+        "objects.githubusercontent.com"
+      ]
+    }
+  }
+}
