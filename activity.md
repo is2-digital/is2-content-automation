@@ -2,8 +2,9 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 9
+**Tasks Completed:** 10
 **Current Task:** None
+**Tasks Completed:** 10
 
 ---
 
@@ -227,6 +228,26 @@ After completing each task, add an entry below in this format:
 - Resource limits: app (2 CPU/1G), postgres (2 CPU/1G), redis (0.5 CPU/256M)
 - No exposed ports on postgres or redis — internal docker network only
 - Validated with `docker compose config`
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
+
+### 2026-02-22 (session 10)
+**Completed:**
+- ica-1h1.15: Create environment-specific .env files
+
+**Changes Made:**
+- Updated `.gitignore` to add `.env.*` pattern with `!.env.example` exception
+- Created `.env.example` with all PRD 8.2 variables: POSTGRES_*, OPENROUTER_API_KEY, SLACK_BOT_TOKEN, SLACK_APP_TOKEN, SLACK_CHANNEL, GOOGLE_SHEETS_CREDENTIALS_PATH, GOOGLE_DOCS_CREDENTIALS_PATH, SEARCHAPI_API_KEY, TIMEZONE
+
+**Status:**
+- `.env.dev`, `.env.stage`, `.env.prod` are properly gitignored
+- `.env.example` is tracked and documents all required variables with placeholder values
 
 **Next:**
 - Next available task from `bd ready`
