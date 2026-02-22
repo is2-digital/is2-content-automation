@@ -2,7 +2,7 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 12
+**Tasks Completed:** 13
 **Current Task:** None
 **Tasks Completed This Session:** 1
 
@@ -318,6 +318,29 @@ After completing each task, add an entry below in this format:
 **Status:**
 - All 153 existing tests pass
 - All deps install successfully via `pip install -e ".[dev]"`
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
+
+### 2026-02-22 (session 14)
+**Completed:**
+- ica-0jh.3: Create theme generation prompt template
+
+**Changes Made:**
+- Created `ica/prompts/theme_generation.py` (THEME_GENERATION_SYSTEM_PROMPT, THEME_GENERATION_USER_PROMPT, _FEEDBACK_SECTION_TEMPLATE, build_theme_generation_prompt)
+- Created `tests/test_prompts/test_theme_generation.py` (84 tests)
+
+**Status:**
+- Theme generation prompt ported from n8n "Generate Data using LLM" node in `SUB/theme_generation_subworkflow.json`
+- System prompt: role description, accuracy control protocol (use only provided JSON data, industry_news routing to %I1/%I2)
+- User prompt: conditional feedback injection, full %XX_ marker output format (FA, M1, M2, Q1-Q3, I1-I2), 2-2-2 distribution, source mix, requirements verification, theme separator, recommendation section
+- `build_theme_generation_prompt()` returns (system, user) tuple ready for LLM call
+- All 299 tests pass (215 existing + 84 new)
 
 **Next:**
 - Next available task from `bd ready`
