@@ -4,6 +4,7 @@
 **Last Updated:** 2026-02-22
 **Tasks Completed:** 11
 **Current Task:** None
+**Tasks Completed This Session:** 1
 
 ---
 
@@ -270,6 +271,29 @@ After completing each task, add an entry below in this format:
 - `db-shell` uses env var defaults matching docker-compose.yml (ica / n8n_custom_data)
 - `clean` adds `-v` flag to also remove volumes
 - `make help` verified working
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
+
+### 2026-02-22 (session 12)
+**Completed:**
+- ica-1h1.1: Create pyproject.toml with full dependencies
+
+**Changes Made:**
+- Updated `pyproject.toml` with all PRD Section 11.5 dependencies: FastAPI, uvicorn, gunicorn, LiteLLM, slack-bolt, SQLAlchemy[asyncio], asyncpg, Alembic, google-api-python-client, google-auth, google-auth-oauthlib, httpx, APScheduler, pydantic-settings, Typer, Rich
+- Added dev dependencies: pytest, pytest-asyncio, pytest-cov, ruff, mypy
+- Added tool configs: ruff (py312, line-length 99), mypy (strict + pydantic plugin), hatch build targets
+- Added `[project.scripts]` entry point: `ica = "ica.__main__:main"`
+- Bumped requires-python to `>=3.12`
+
+**Status:**
+- All 153 existing tests pass
+- All deps install successfully via `pip install -e ".[dev]"`
 
 **Next:**
 - Next available task from `bd ready`
