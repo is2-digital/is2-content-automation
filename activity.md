@@ -2,7 +2,7 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 11
+**Tasks Completed:** 12
 **Current Task:** None
 **Tasks Completed This Session:** 1
 
@@ -271,6 +271,30 @@ After completing each task, add an entry below in this format:
 - `db-shell` uses env var defaults matching docker-compose.yml (ica / n8n_custom_data)
 - `clean` adds `-v` flag to also remove volumes
 - `make help` verified working
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
+
+### 2026-02-22 (session 13)
+**Completed:**
+- ica-qsq.11: Call LLM for email review generation
+
+**Changes Made:**
+- Created `ica/prompts/email_review.py` (EMAIL_REVIEW_SYSTEM_PROMPT, EMAIL_REVIEW_USER_PROMPT, _FEEDBACK_SECTION_TEMPLATE, build_email_review_prompt)
+- Created `tests/test_prompts/test_email_review.py` (62 tests)
+
+**Status:**
+- Email review prompt ported from n8n "Review data extractor - Review" node in email_subject_and_preview_subworkflow.json
+- System prompt: comprehensive strategic guide for creating subscriber-focused email introductions (100-120 words)
+- Covers: pre-draft analysis, structure framework ("Hi Friend,"), voice guidelines, quality control, content adaptation
+- User prompt: conditional feedback injection, compose instruction, newsletter text interpolation
+- `build_email_review_prompt()` returns (system, user) tuple ready for LLM call
+- All 215 tests pass (153 existing + 62 new)
 
 **Next:**
 - Next available task from `bd ready`
