@@ -59,6 +59,7 @@
       "Bash(git clone*)",
       "Bash(git fetch*)",
       "Bash(git ls-remote*)",
+      "Bash(git init*)",
       "Bash(git pull*)",
       "Bash(git remote*)",
       "Bash(git submodule*)",
@@ -95,6 +96,7 @@
         "registry.yarnpkg.com",
         "unpkg.com",
         "github.com",
+        "ssh.github.com",
         "objects.githubusercontent.com"
       ]
     }
