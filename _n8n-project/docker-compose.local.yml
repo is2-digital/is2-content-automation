@@ -1,0 +1,78 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: n8n-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # User passwords for init script
+      N8N_APP_PASSWORD: ${N8N_APP_PASSWORD}
+      N8N_CUSTOM_DATA_PASSWORD: ${N8N_CUSTOM_DATA_PASSWORD}
+      # Set timezone in PostgreSQL
+      TZ: ${TIMEZONE:-America/Los_Angeles}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-users.sh:/docker-entrypoint-initdb.d/init-users.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:2.4.6
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      # Timezone settings
+      - GENERIC_TIMEZONE=${TIMEZONE:-America/Los_Angeles}
+      - TZ=${TIMEZONE:-America/Los_Angeles}
+
+      # Core n8n settings
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_RUNNERS_ENABLED=true
+
+      # Database configuration
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_DATABASE=n8n_app
+      - DB_POSTGRESDB_USER=n8n_app_user
+      - DB_POSTGRESDB_PASSWORD=${N8N_APP_PASSWORD}
+      - DB_POSTGRESDB_POOL_SIZE=${DB_POOL_SIZE:-2}
+
+      # Basic n8n configuration
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - N8N_HOST=${N8N_DOMAIN:-localhost}
+      - N8N_LOG_LEVEL=${N8N_LOG_LEVEL:-info}
+      - N8N_DETAILED_ERROR_OUTPUT=${N8N_DETAILED_ERROR_OUTPUT:-true}
+
+      # Security settings (optional)
+      - N8N_BASIC_AUTH_ACTIVE=${N8N_BASIC_AUTH_ACTIVE:-false}
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-}
+
+      # Privacy settings
+      - N8N_DIAGNOSTICS_ENABLED=${N8N_DIAGNOSTICS_ENABLED:-false}
+      - N8N_VERSION_NOTIFICATIONS_ENABLED=${N8N_VERSION_NOTIFICATIONS_ENABLED:-false}
+      - N8N_ANONYMOUS_TELEMETRY=${N8N_ANONYMOUS_TELEMETRY:-false}
+
+      # Performance settings
+      - N8N_METRICS=${N8N_METRICS:-false}
+
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows:/home/node/workflows
+      - ./credentials:/home/node/credentials
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  n8n_data:
+    name: n8n_n8n_data
+  postgres_data:
+    name: n8n_postgres_data

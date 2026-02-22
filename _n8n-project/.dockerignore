@@ -1,0 +1,28 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+
+# Environment files (use App Platform environment variables instead)
+.env
+.env.example
+
+# Docker files (not needed in container)
+docker-compose.yml
+Dockerfile
+
+# Documentation
+README.md
+DATABASES.md
+
+# Database initialization (not needed for managed DB)
+init-users.sh
+
+# Backups directory
+backups
+
+# Claude
+.claude
