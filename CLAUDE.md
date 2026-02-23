@@ -77,4 +77,4 @@ FastAPI + CLI (Click/Typer), LiteLLM (unified LLM via OpenRouter), SQLAlchemy + 
 
 ## Database
 
-PostgreSQL database `n8n_custom_data` with 7 tables: `articles` (with type discriminator), `summarization_user_feedback`, `newsletter_themes`, `newsletter_themes_user_feedback`, `markdowngenerator_user_feedback`, `htmlgenerator_user_feedback`, `newsletter_email_subject_feedback`. Schema details in PRD Section 2.2.
+PostgreSQL database `n8n_custom_data` with 7 tables: `articles` (with type discriminator), `themes` (with type discriminator), `summarization_user_feedback`, `newsletter_themes_user_feedback`, `markdowngenerator_user_feedback`, `htmlgenerator_user_feedback`, `newsletter_email_subject_feedback`. Schema details in PRD Section 2.2.

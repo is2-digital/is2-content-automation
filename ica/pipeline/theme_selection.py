@@ -14,7 +14,7 @@ Flow:
 5. If theme selected → run freshness check via LLM.
 6. Format selected theme + freshness report for Slack.
 7. Build approval form (Approve / Reset / Feedback).
-8. Approve → upsert theme in ``newsletter_themes``, output result.
+8. Approve → upsert theme in ``themes``, output result.
 9. Feedback → extract learning data, store, return for regeneration.
 10. Reset → signal caller to regenerate from scratch.
 
@@ -643,7 +643,7 @@ async def save_approved_theme(
     *,
     newsletter_id: str | None = None,
 ) -> None:
-    """Save an approved theme to the ``newsletter_themes`` table.
+    """Save an approved theme to the ``themes`` table.
 
     Mirrors the n8n "Structure SQL Insert Query" + "Insert into table"
     nodes.  Uses upsert (ON CONFLICT DO UPDATE) to handle re-approvals.

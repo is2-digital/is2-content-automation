@@ -11,9 +11,9 @@ from ica.db.models import (
     HtmlGeneratorUserFeedback,
     MarkdownGeneratorUserFeedback,
     NewsletterEmailSubjectFeedback,
-    NewsletterTheme,
     NewsletterThemesUserFeedback,
     SummarizationUserFeedback,
+    Theme,
 )
 from ica.db.repository import SqlArticleRepository
 from ica.db.session import get_engine, get_session, get_session_factory
@@ -26,9 +26,9 @@ __all__ = [
     "HtmlGeneratorUserFeedback",
     "MarkdownGeneratorUserFeedback",
     "NewsletterEmailSubjectFeedback",
-    "NewsletterTheme",
     "NewsletterThemesUserFeedback",
     "SummarizationUserFeedback",
+    "Theme",
     # Session
     "get_engine",
     "get_session",

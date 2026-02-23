@@ -43,14 +43,20 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("url"),
     )
 
-    # newsletter_themes
+    # themes
     op.create_table(
-        "newsletter_themes",
+        "themes",
         sa.Column("theme", sa.Text(), nullable=False),
         sa.Column("theme_body", sa.Text(), nullable=True),
         sa.Column("theme_summary", sa.Text(), nullable=True),
         sa.Column("newsletter_id", sa.Text(), nullable=True),
         sa.Column("approved", sa.Boolean(), nullable=True),
+        sa.Column(
+            "type",
+            sa.String(50),
+            server_default="newsletter",
+            nullable=False,
+        ),
         sa.Column(
             "created_at",
             sa.DateTime(),
@@ -164,5 +170,5 @@ def downgrade() -> None:
     op.drop_table("htmlgenerator_user_feedback")
     op.drop_table("markdowngenerator_user_feedback")
     op.drop_table("summarization_user_feedback")
-    op.drop_table("newsletter_themes")
+    op.drop_table("themes")
     op.drop_table("articles")

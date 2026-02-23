@@ -2,9 +2,9 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 26
+**Tasks Completed:** 27
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 32)
+**Tasks Completed This Session:** 1 (session 34)
 
 ---
 
@@ -31,6 +31,30 @@ After completing each task, add an entry below in this format:
 
 ---
 -->
+
+### 2026-02-22 (session 34)
+**Completed:**
+- ica-tru.2: Rename newsletter_themes to themes
+
+**Changes Made:**
+- Updated `ica/db/models.py` — renamed `NewsletterTheme` class to `Theme`, table `newsletter_themes` → `themes`, added `type` column (`String(50)`, server_default `'newsletter'`)
+- Updated `ica/db/crud.py` — all `NewsletterTheme` references → `Theme`
+- Updated `ica/db/__init__.py` — re-exports `Theme` instead of `NewsletterTheme`
+- Updated `ica/db/migrations/versions/001_initial_tables.py` — table name `newsletter_themes` → `themes`, added `type` column
+- Updated `ica/pipeline/theme_selection.py` — docstring references
+- Updated `CLAUDE.md` — database table name reference
+
+**Status:**
+- All 1836 tests pass (no new tests needed — pure rename refactor)
+- No remaining `NewsletterTheme` or `newsletter_themes` references in `ica/` source (excluding `newsletter_themes_user_feedback` which is a separate table)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-22 (session 33)
 **Completed:**

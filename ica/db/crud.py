@@ -16,7 +16,7 @@ from ica.db.models import (
     Article,
     Base,
     FeedbackMixin,
-    NewsletterTheme,
+    Theme,
 )
 from ica.pipeline.article_collection import ArticleRecord
 
@@ -140,7 +140,7 @@ async def get_recent_feedback(
 
 
 # ---------------------------------------------------------------------------
-# newsletter_themes
+# themes
 # ---------------------------------------------------------------------------
 
 
@@ -153,7 +153,7 @@ async def upsert_theme(
     newsletter_id: str | None = None,
     approved: bool | None = None,
 ) -> None:
-    """Insert or update a newsletter theme.
+    """Insert or update a theme.
 
     On conflict (duplicate ``theme``) all provided non-PK columns are updated.
     """
@@ -165,7 +165,7 @@ async def upsert_theme(
         "approved": approved,
     }
 
-    stmt = pg_insert(NewsletterTheme).values(values)
+    stmt = pg_insert(Theme).values(values)
     stmt = stmt.on_conflict_do_update(
         index_elements=["theme"],
         set_={
@@ -183,14 +183,14 @@ async def get_themes(
     *,
     newsletter_id: str | None = None,
     approved: bool | None = None,
-) -> list[NewsletterTheme]:
-    """Retrieve newsletter themes with optional filters."""
-    stmt = select(NewsletterTheme)
+) -> list[Theme]:
+    """Retrieve themes with optional filters."""
+    stmt = select(Theme)
     if newsletter_id is not None:
-        stmt = stmt.where(NewsletterTheme.newsletter_id == newsletter_id)
+        stmt = stmt.where(Theme.newsletter_id == newsletter_id)
     if approved is not None:
-        stmt = stmt.where(NewsletterTheme.approved == approved)
-    stmt = stmt.order_by(NewsletterTheme.created_at.desc())
+        stmt = stmt.where(Theme.approved == approved)
+    stmt = stmt.order_by(Theme.created_at.desc())
 
     result = await session.execute(stmt)
     return list(result.scalars().all())
