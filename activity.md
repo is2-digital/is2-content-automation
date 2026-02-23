@@ -2,9 +2,9 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 31
+**Tasks Completed:** 32
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 38)
+**Tasks Completed This Session:** 1 (session 39)
 
 ---
 
@@ -31,6 +31,31 @@ After completing each task, add an entry below in this format:
 
 ---
 -->
+
+### 2026-02-22 (session 39)
+**Completed:**
+- ica-1si.13: Implement CLI interface
+
+**Changes Made:**
+- Created `ica/__main__.py` — Typer CLI with 4 commands: `serve` (start FastAPI via uvicorn), `run` (trigger pipeline via /trigger API), `status` (show run status via /status API), `collect-articles` (manual article collection via SearchApi)
+- Created `tests/test_cli.py` (38 tests)
+
+**Status:**
+- CLI entry point `ica = "ica.__main__:main"` (pyproject.toml) now functional
+- `ica serve` — starts uvicorn with `--host`, `--port`, `--reload` options
+- `ica run` — POSTs to /trigger with custom `--trigger` label and `--base-url`
+- `ica status [run_id]` — GETs /status or /status/{run_id}, Rich table for all runs, detail view for single run
+- `ica collect-articles` — runs article collection with `--schedule` option (daily/every_2_days), Rich table output
+- All commands handle connection errors and HTTP errors gracefully with exit code 1
+- All 2109 tests pass (2071 existing + 38 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-22 (session 38)
 **Completed:**
