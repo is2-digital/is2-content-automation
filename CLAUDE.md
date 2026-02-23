@@ -71,10 +71,10 @@ FastAPI + CLI (Click/Typer), LiteLLM (unified LLM via OpenRouter), SQLAlchemy + 
 
 - **`%XX_` markers** (e.g., `%FA_TITLE`, `%M1_SOURCE`): Used in theme generation step for structured content parsing. See PRD Section 3.3 and `project-details.md` Section 6.
 - **Slack `sendAndWait`**: Core human-in-the-loop primitive — implemented via `asyncio.Event` blocking.
-- **Feedback tables**: All 5 feedback tables use the same "last 40 entries" pattern for injecting learning data into LLM prompts.
+- **Notes table**: The consolidated ``notes`` table (with type discriminator) uses the "last 40 entries" pattern for injecting learning data into LLM prompts.
 - **Markdown validation**: 3-layer approach — (1) character count code-based, (2) structural LLM, (3) voice LLM — results merged before retry.
 - **LLM models**: Primarily `anthropic/claude-sonnet-4.5` via OpenRouter, plus `openai/gpt-4.1` for markdown validation and `google/gemini-2.5-flash` for freshness checks.
 
 ## Database
 
-PostgreSQL database `n8n_custom_data` with 7 tables: `articles` (with type discriminator), `themes` (with type discriminator), `summarization_user_feedback`, `newsletter_themes_user_feedback`, `markdowngenerator_user_feedback`, `htmlgenerator_user_feedback`, `newsletter_email_subject_feedback`. Schema details in PRD Section 2.2.
+PostgreSQL database `n8n_custom_data` with 3 tables: `articles` (with type discriminator), `themes` (with type discriminator), `notes` (with type discriminator for feedback/learning data). Schema details in PRD Section 2.2.

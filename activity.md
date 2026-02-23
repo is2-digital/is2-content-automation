@@ -2,9 +2,9 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 27
+**Tasks Completed:** 28
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 34)
+**Tasks Completed This Session:** 1 (session 35)
 
 ---
 
@@ -31,6 +31,33 @@ After completing each task, add an entry below in this format:
 
 ---
 -->
+
+### 2026-02-22 (session 35)
+**Completed:**
+- ica-tru.3: Consolidate user_feedback tables into notes
+
+**Changes Made:**
+- Updated `ica/db/models.py` — removed `FeedbackMixin` and 5 feedback classes (`SummarizationUserFeedback`, `MarkdownGeneratorUserFeedback`, `HtmlGeneratorUserFeedback`, `NewsletterThemesUserFeedback`, `NewsletterEmailSubjectFeedback`), added single `Note` class with `type` discriminator (`user_summarization`, `user_newsletter_themes`, `user_markdowngenerator`, `user_htmlgenerator`, `user_email_subject`)
+- Updated `ica/db/crud.py` — replaced generic `add_feedback(session, model, text)` and `get_recent_feedback(session, model)` with `add_note(session, note_type, text)` and `get_recent_notes(session, note_type)` that filter by `Note.type`
+- Updated `ica/db/__init__.py` — re-exports `Note` instead of 5 feedback classes
+- Updated `ica/db/migrations/versions/001_initial_tables.py` — replaced 5 feedback table creates with single `notes` table (with `type` column and composite index)
+- Updated `ica/pipeline/theme_generation.py` — `get_recent_notes(session, "user_newsletter_themes")` instead of `get_recent_feedback(session, NewsletterThemesUserFeedback)`
+- Updated `ica/pipeline/theme_selection.py` — `add_note(session, "user_newsletter_themes", ...)` instead of `add_feedback(session, NewsletterThemesUserFeedback, ...)`
+- Updated `ica/prompts/theme_generation.py`, `ica/prompts/markdown_generation.py` — docstring table name references
+- Updated `tests/test_pipeline/test_theme_selection.py`, `tests/test_pipeline/test_theme_generation.py` — mock patches and assertions
+- Updated `CLAUDE.md` — database table description (7 tables → 3 tables)
+
+**Status:**
+- All 1836 tests pass (no new tests needed — pure rename/consolidation refactor)
+- No remaining references to old feedback class names or table names in `ica/` source
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-22 (session 34)
 **Completed:**

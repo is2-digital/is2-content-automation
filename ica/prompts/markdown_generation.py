@@ -445,8 +445,8 @@ def build_markdown_generation_prompt(
         formatted_theme: JSON string containing the formatted theme data
             produced by Step 3 (theme generation).
         aggregated_feedback: Bullet-formatted list of learning data entries
-            from ``markdowngenerator_user_feedback``. Empty string when no
-            prior feedback exists.
+            from the ``notes`` table (type ``user_markdowngenerator``).
+            Empty string when no prior feedback exists.
         previous_markdown: The previously generated newsletter markdown.
             Empty string on the first generation attempt; populated on
             validator-driven regeneration attempts.

@@ -1,4 +1,4 @@
-"""CRUD operations for all 7 database tables.
+"""CRUD operations for all database tables.
 
 All functions take an :class:`~sqlalchemy.ext.asyncio.AsyncSession` as the
 first argument and do NOT commit — the caller manages the transaction.
@@ -6,22 +6,16 @@ first argument and do NOT commit — the caller manages the transaction.
 
 from __future__ import annotations
 
-from typing import TypeVar
-
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ica.db.models import (
     Article,
-    Base,
-    FeedbackMixin,
+    Note,
     Theme,
 )
 from ica.pipeline.article_collection import ArticleRecord
-
-# Generic type for feedback model classes
-F = TypeVar("F", bound=FeedbackMixin)
 
 
 # ---------------------------------------------------------------------------
@@ -92,47 +86,44 @@ async def get_articles(
 
 
 # ---------------------------------------------------------------------------
-# Feedback tables (generic)
+# notes (consolidated feedback / learning data)
 # ---------------------------------------------------------------------------
 
 
-async def add_feedback(
+async def add_note(
     session: AsyncSession,
-    model: type[F],
+    note_type: str,
     text: str,
     *,
     newsletter_id: str | None = None,
-) -> F:
-    """Insert a feedback row into any feedback table.
+) -> Note:
+    """Insert a row into the ``notes`` table.
 
     Args:
-        model: The feedback ORM class (e.g. ``SummarizationUserFeedback``).
-        text: The feedback content.
-        newsletter_id: Set only for models that have this column
-            (``NewsletterThemesUserFeedback``, ``NewsletterEmailSubjectFeedback``).
+        note_type: Discriminator value (e.g. ``"user_newsletter_themes"``).
+        text: The feedback / learning-data content.
+        newsletter_id: Optional newsletter association.
     """
-    kwargs: dict[str, object] = {"feedback_text": text}
-    if newsletter_id is not None and hasattr(model, "newsletter_id"):
-        kwargs["newsletter_id"] = newsletter_id
-    row = model(**kwargs)  # type: ignore[call-arg]
+    row = Note(feedback_text=text, type=note_type, newsletter_id=newsletter_id)
     session.add(row)
     await session.flush()
-    return row  # type: ignore[return-value]
+    return row
 
 
-async def get_recent_feedback(
+async def get_recent_notes(
     session: AsyncSession,
-    model: type[F],
+    note_type: str,
     limit: int = 40,
-) -> list[F]:
-    """Return the most recent *limit* feedback rows, newest first.
+) -> list[Note]:
+    """Return the most recent *limit* notes of a given type, newest first.
 
     The default of 40 matches the "last 40 entries" pattern used by every
     feedback-injection prompt in the pipeline (PRD Sections 3–6).
     """
     stmt = (
-        select(model)  # type: ignore[arg-type]
-        .order_by(model.created_at.desc())  # type: ignore[attr-defined]
+        select(Note)
+        .where(Note.type == note_type)
+        .order_by(Note.created_at.desc())
         .limit(limit)
     )
     result = await session.execute(stmt)

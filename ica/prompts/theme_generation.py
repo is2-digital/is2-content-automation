@@ -207,10 +207,10 @@ def build_theme_generation_prompt(
             element should contain at minimum ``Title``, ``Summary``,
             ``BusinessRelevance``, and ``Order`` fields.
         aggregated_feedback: Optional bullet-point list of prior editorial
-            feedback entries from the ``newsletter_themes_user_feedback``
-            table (last 40 entries).  When provided (non-empty), the
-            *Editorial Improvement Context* section is injected into the
-            user prompt.
+            feedback entries from the ``notes`` table
+            (type ``user_newsletter_themes``, last 40 entries).  When
+            provided (non-empty), the *Editorial Improvement Context*
+            section is injected into the user prompt.
 
     Returns:
         A ``(system_prompt, user_prompt)`` tuple ready to pass to the LLM.

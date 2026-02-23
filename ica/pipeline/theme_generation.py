@@ -1,11 +1,11 @@
 """Theme Generation Pipeline — Step 3 of the newsletter pipeline.
 
 Receives summarized articles from Step 2, fetches learning data from the
-``newsletter_themes_user_feedback`` table, calls the LLM with the theme
-generation prompt, and parses the output into structured themes.
+``notes`` table (type ``user_newsletter_themes``), calls the LLM with the
+theme generation prompt, and parses the output into structured themes.
 
 Flow:
-1. Fetch recent feedback (last 40 entries) from the database.
+1. Fetch recent notes (last 40 entries) from the database.
 2. Aggregate feedback into a bullet-point list for prompt injection.
 3. Build system/user prompts via :func:`build_theme_generation_prompt`.
 4. Call LLM via ``litellm.acompletion`` (model from :func:`get_model`).
@@ -26,8 +26,8 @@ import litellm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ica.config.llm_config import LLMPurpose, get_model
-from ica.db.crud import get_recent_feedback
-from ica.db.models import NewsletterThemesUserFeedback
+from ica.db.crud import get_recent_notes
+from ica.db.models import Note
 from ica.prompts.theme_generation import build_theme_generation_prompt
 from ica.utils.marker_parser import (
     FormattedTheme,
@@ -82,7 +82,7 @@ class ThemeGenerationResult:
 
 
 def aggregate_feedback(
-    feedback_rows: list[NewsletterThemesUserFeedback],
+    feedback_rows: list[Note],
 ) -> str | None:
     """Convert feedback rows into a bullet-point string for prompt injection.
 
@@ -91,7 +91,7 @@ def aggregate_feedback(
 
     Args:
         feedback_rows: Recent feedback rows ordered by ``created_at`` DESC
-            (as returned by :func:`get_recent_feedback`).
+            (as returned by :func:`get_recent_notes`).
 
     Returns:
         A newline-separated bullet list of feedback texts, or ``None``
@@ -198,7 +198,8 @@ async def generate_themes(
 ) -> ThemeGenerationResult:
     """Execute the full theme generation pipeline step.
 
-    1. Fetch recent feedback from ``newsletter_themes_user_feedback``.
+    1. Fetch recent notes from the ``notes`` table (type
+       ``user_newsletter_themes``).
     2. Aggregate feedback into a prompt-injectable string.
     3. Call the LLM with the theme generation prompt.
     4. Parse the LLM output into structured theme objects.
@@ -208,9 +209,9 @@ async def generate_themes(
             Each element should contain ``Title``, ``Summary``,
             ``BusinessRelevance``, and ``Order`` fields.
         session: Optional async database session.  When provided,
-            learning data is fetched from the
-            ``newsletter_themes_user_feedback`` table.  When ``None``,
-            no feedback is injected (useful for testing or first run).
+            learning data is fetched from the ``notes`` table.  When
+            ``None``, no feedback is injected (useful for testing or
+            first run).
         model: Override model identifier.
 
     Returns:
@@ -220,8 +221,8 @@ async def generate_themes(
     # Step 1: Fetch recent feedback
     aggregated = None
     if session is not None:
-        feedback_rows = await get_recent_feedback(
-            session, NewsletterThemesUserFeedback
+        feedback_rows = await get_recent_notes(
+            session, "user_newsletter_themes",
         )
         aggregated = aggregate_feedback(feedback_rows)
 

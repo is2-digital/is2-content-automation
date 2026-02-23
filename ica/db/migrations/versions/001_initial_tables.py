@@ -66,109 +66,28 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("theme"),
     )
 
-    # summarization_user_feedback
+    # notes (consolidated feedback / learning data)
     op.create_table(
-        "summarization_user_feedback",
+        "notes",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
         sa.Column("feedback_text", sa.Text(), nullable=False),
-        sa.Column(
-            "created_at",
-            sa.DateTime(),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(
-        "ix_summarization_user_feedback_created_at",
-        "summarization_user_feedback",
-        ["created_at"],
-    )
-
-    # markdowngenerator_user_feedback
-    op.create_table(
-        "markdowngenerator_user_feedback",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("feedback_text", sa.Text(), nullable=False),
-        sa.Column(
-            "created_at",
-            sa.DateTime(),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(
-        "ix_markdowngenerator_user_feedback_created_at",
-        "markdowngenerator_user_feedback",
-        ["created_at"],
-    )
-
-    # htmlgenerator_user_feedback
-    op.create_table(
-        "htmlgenerator_user_feedback",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("feedback_text", sa.Text(), nullable=False),
-        sa.Column(
-            "created_at",
-            sa.DateTime(),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(
-        "ix_htmlgenerator_user_feedback_created_at",
-        "htmlgenerator_user_feedback",
-        ["created_at"],
-    )
-
-    # newsletter_themes_user_feedback
-    op.create_table(
-        "newsletter_themes_user_feedback",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("feedback_text", sa.Text(), nullable=False),
-        sa.Column(
-            "created_at",
-            sa.DateTime(),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
+        sa.Column("type", sa.String(50), nullable=False),
         sa.Column("newsletter_id", sa.Text(), nullable=True),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index(
-        "ix_newsletter_themes_user_feedback_created_at",
-        "newsletter_themes_user_feedback",
-        ["created_at"],
-    )
-
-    # newsletter_email_subject_feedback
-    op.create_table(
-        "newsletter_email_subject_feedback",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("feedback_text", sa.Text(), nullable=False),
         sa.Column(
             "created_at",
             sa.DateTime(),
             server_default=sa.text("now()"),
             nullable=False,
         ),
-        sa.Column("newsletter_id", sa.Text(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
+    op.create_index("ix_notes_created_at", "notes", ["created_at"])
     op.create_index(
-        "ix_newsletter_email_subject_feedback_created_at",
-        "newsletter_email_subject_feedback",
-        ["created_at"],
+        "ix_notes_type_created_at", "notes", ["type", "created_at"],
     )
 
 
 def downgrade() -> None:
-    op.drop_table("newsletter_email_subject_feedback")
-    op.drop_table("newsletter_themes_user_feedback")
-    op.drop_table("htmlgenerator_user_feedback")
-    op.drop_table("markdowngenerator_user_feedback")
-    op.drop_table("summarization_user_feedback")
+    op.drop_table("notes")
     op.drop_table("themes")
     op.drop_table("articles")

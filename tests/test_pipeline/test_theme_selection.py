@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from ica.config.llm_config import LLMPurpose
-from ica.db.models import NewsletterThemesUserFeedback
+
 from ica.pipeline.theme_generation import GeneratedTheme, ThemeGenerationResult
 from ica.pipeline.theme_selection import (
     ADD_FEEDBACK_OPTION,
@@ -1040,8 +1040,8 @@ class TestStoreThemeFeedback:
     """Tests for store_theme_feedback()."""
 
     @pytest.mark.asyncio
-    async def test_calls_add_feedback(self):
-        with patch("ica.pipeline.theme_selection.add_feedback") as mock_add:
+    async def test_calls_add_note(self):
+        with patch("ica.pipeline.theme_selection.add_note") as mock_add:
             mock_add.return_value = MagicMock()
             mock_session = AsyncMock()
             await store_theme_feedback(
@@ -1050,13 +1050,13 @@ class TestStoreThemeFeedback:
 
         mock_add.assert_awaited_once()
         call_args = mock_add.call_args
-        assert call_args.args[1] is NewsletterThemesUserFeedback
+        assert call_args.args[1] == "user_newsletter_themes"
         assert call_args.args[2] == "learning note"
         assert call_args.kwargs["newsletter_id"] == "nl-001"
 
     @pytest.mark.asyncio
     async def test_default_newsletter_id_is_none(self):
-        with patch("ica.pipeline.theme_selection.add_feedback") as mock_add:
+        with patch("ica.pipeline.theme_selection.add_note") as mock_add:
             mock_add.return_value = MagicMock()
             mock_session = AsyncMock()
             await store_theme_feedback(mock_session, "feedback text")
@@ -1190,7 +1190,7 @@ class TestEndToEndScenarios:
 
         assert learning == "Use more diverse sources next time."
 
-        with patch("ica.pipeline.theme_selection.add_feedback") as mock_add:
+        with patch("ica.pipeline.theme_selection.add_note") as mock_add:
             mock_add.return_value = MagicMock()
             mock_session = AsyncMock()
             await store_theme_feedback(mock_session, learning)

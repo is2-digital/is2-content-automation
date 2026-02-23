@@ -8,11 +8,7 @@ Re-exports the most commonly used symbols so callers can do::
 from ica.db.models import (
     Article,
     Base,
-    HtmlGeneratorUserFeedback,
-    MarkdownGeneratorUserFeedback,
-    NewsletterEmailSubjectFeedback,
-    NewsletterThemesUserFeedback,
-    SummarizationUserFeedback,
+    Note,
     Theme,
 )
 from ica.db.repository import SqlArticleRepository
@@ -23,11 +19,7 @@ __all__ = [
     "Base",
     # Models
     "Article",
-    "HtmlGeneratorUserFeedback",
-    "MarkdownGeneratorUserFeedback",
-    "NewsletterEmailSubjectFeedback",
-    "NewsletterThemesUserFeedback",
-    "SummarizationUserFeedback",
+    "Note",
     "Theme",
     # Session
     "get_engine",

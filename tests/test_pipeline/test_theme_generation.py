@@ -221,7 +221,7 @@ This theme speaks directly to our core audience of solopreneurs and SMB professi
 
 @dataclass
 class FakeFeedbackRow:
-    """Minimal stand-in for NewsletterThemesUserFeedback."""
+    """Minimal stand-in for Note rows."""
 
     feedback_text: str
     created_at: datetime | None = None
@@ -657,7 +657,7 @@ class TestGenerateThemes:
         with (
             patch("ica.pipeline.theme_generation.litellm") as mock_litellm,
             patch(
-                "ica.pipeline.theme_generation.get_recent_feedback",
+                "ica.pipeline.theme_generation.get_recent_notes",
                 new_callable=AsyncMock,
                 return_value=feedback_rows,
             ) as mock_get_feedback,
@@ -688,7 +688,7 @@ class TestGenerateThemes:
         with (
             patch("ica.pipeline.theme_generation.litellm") as mock_litellm,
             patch(
-                "ica.pipeline.theme_generation.get_recent_feedback",
+                "ica.pipeline.theme_generation.get_recent_notes",
                 new_callable=AsyncMock,
                 return_value=feedback_rows,
             ),
@@ -716,7 +716,7 @@ class TestGenerateThemes:
         with (
             patch("ica.pipeline.theme_generation.litellm") as mock_litellm,
             patch(
-                "ica.pipeline.theme_generation.get_recent_feedback",
+                "ica.pipeline.theme_generation.get_recent_notes",
                 new_callable=AsyncMock,
                 return_value=[],
             ),

@@ -32,8 +32,7 @@ import litellm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ica.config.llm_config import LLMPurpose, get_model
-from ica.db.crud import add_feedback, upsert_theme
-from ica.db.models import NewsletterThemesUserFeedback
+from ica.db.crud import add_note, upsert_theme
 from ica.pipeline.theme_generation import GeneratedTheme, ThemeGenerationResult
 from ica.prompts.freshness_check import build_freshness_check_prompt
 from ica.prompts.learning_data_extraction import (
@@ -679,9 +678,9 @@ async def store_theme_feedback(
             :func:`extract_learning_data`.
         newsletter_id: Optional newsletter association.
     """
-    await add_feedback(
+    await add_note(
         session,
-        NewsletterThemesUserFeedback,
+        "user_newsletter_themes",
         feedback_text,
         newsletter_id=newsletter_id,
     )
