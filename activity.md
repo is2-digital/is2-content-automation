@@ -2,9 +2,9 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 20
+**Tasks Completed:** 21
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 26)
+**Tasks Completed This Session:** 1 (session 27)
 
 ---
 
@@ -31,6 +31,39 @@ After completing each task, add an entry below in this format:
 
 ---
 -->
+
+### 2026-02-22 (session 27)
+**Completed:**
+- ica-0jh.17: Core pipeline prompt templates
+
+**Changes Made:**
+- Created `ica/prompts/markdown_structural_validation.py` (STRUCTURAL_VALIDATION_PROMPT, build_structural_validation_prompt)
+- Created `ica/prompts/markdown_voice_validation.py` (VOICE_VALIDATION_PROMPT, build_voice_validation_prompt)
+- Created `ica/prompts/learning_data_extraction.py` (LEARNING_DATA_EXTRACTION_PROMPT, build_learning_data_extraction_prompt)
+- Created `ica/prompts/freshness_check.py` (FRESHNESS_CHECK_PROMPT, build_freshness_check_prompt)
+- Created `ica/prompts/html_generation.py` (HTML_GENERATION_SYSTEM_PROMPT, HTML_REGENERATION_SYSTEM_PROMPT, build_html_generation_prompt, build_html_regeneration_prompt)
+- Created `tests/test_prompts/test_markdown_structural_validation.py` (42 tests)
+- Created `tests/test_prompts/test_markdown_voice_validation.py` (43 tests)
+- Created `tests/test_prompts/test_learning_data_extraction.py` (31 tests)
+- Created `tests/test_prompts/test_freshness_check.py` (23 tests)
+- Created `tests/test_prompts/test_html_generation.py` (54 tests)
+
+**Status:**
+- 5 prompt modules ported from n8n workflows:
+  - Structural validation: non-numeric rule checks merged with upstream char errors (PRD 4.5)
+  - Voice validation: 4-section voice/tone evaluation with prior error merging (PRD 4.6)
+  - Learning data extraction: shared feedback→learning note converter used across 3 subworkflows (PRD 4.7)
+  - Freshness check: theme vs recent newsletters comparison via is2digital.com (PRD 4.8)
+  - HTML generation: template population + scoped regeneration with feedback (n8n html_generator_subworkflow)
+- All 1427 tests pass (1234 existing + 193 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-22 (session 26)
 **Completed:**
