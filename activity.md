@@ -2,9 +2,9 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 21
+**Tasks Completed:** 22
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 27)
+**Tasks Completed This Session:** 1 (session 28)
 
 ---
 
@@ -31,6 +31,31 @@ After completing each task, add an entry below in this format:
 
 ---
 -->
+
+### 2026-02-22 (session 28)
+**Completed:**
+- ica-578.21: Implement theme generation and parsing
+
+**Changes Made:**
+- Created `ica/pipeline/theme_generation.py` (GeneratedTheme, ThemeGenerationResult, aggregate_feedback, call_theme_llm, parse_theme_output, generate_themes)
+- Created `tests/test_pipeline/test_theme_generation.py` (63 tests)
+
+**Status:**
+- Theme generation pipeline step orchestrates all existing building blocks:
+  - Fetches last 40 feedback entries from `newsletter_themes_user_feedback` via CRUD
+  - Aggregates feedback into bullet-point list for prompt injection
+  - Calls LLM via `litellm.acompletion` with model from `LLMPurpose.THEME`
+  - Parses LLM output with `split_themes()` + `parse_markers()` into `GeneratedTheme` objects
+  - Returns `ThemeGenerationResult` with themes, recommendation, raw output, and model
+- All 1490 tests pass (1427 existing + 63 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-22 (session 27)
 **Completed:**
