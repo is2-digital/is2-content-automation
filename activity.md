@@ -2,9 +2,9 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 18
+**Tasks Completed:** 19
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 24)
+**Tasks Completed This Session:** 1 (session 25)
 
 ---
 
@@ -31,6 +31,26 @@ After completing each task, add an entry below in this format:
 
 ---
 -->
+
+### 2026-02-22 (session 25)
+**Completed:**
+- ica-dd0.1.3: Test theme body splitter
+
+**Changes Made:**
+- Created `tests/test_utils/test_theme_splitter.py` (83 tests)
+
+**Status:**
+- 11 test classes covering: basic splitting (theme count, order), RECOMMENDATION routing (position variants, multiple recs, substring matching), ParsedThemeBlock field extraction (name, description, special chars, whitespace), separator variations (exact 5 dashes, fewer/more, consecutive, embedded), empty/whitespace input, line endings (Windows/mixed/CR-only), content preservation (markers, URLs, unicode, emoji, blank lines), return types (frozen dataclasses), realistic LLM patterns (preamble, postamble, all marker types), RECOMMENDATION keyword edge cases (case sensitivity, missing colon, mid-word)
+- Parametrized tests: separator counting (1-5 themes), theme name extraction (7 variants), description extraction (5 variants)
+- All 1083 tests pass (1000 existing + 83 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-22 (session 24)
 **Completed:**
