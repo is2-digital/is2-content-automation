@@ -1,0 +1,246 @@
+"""FastAPI application for the ica newsletter pipeline.
+
+Provides REST API endpoints for triggering and monitoring pipeline runs,
+plus Slack Bolt integration for interactive message callbacks.
+
+PRD Section 11.1: Long-running service (FastAPI) with built-in scheduler,
+background task workers, and REST API for triggering/monitoring pipeline runs.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+import uuid
+from contextlib import asynccontextmanager
+from collections.abc import AsyncGenerator
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Any
+
+from fastapi import FastAPI, Request, Response
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Pipeline run tracking
+# ---------------------------------------------------------------------------
+
+
+class RunStatus(str, Enum):
+    """Status of a pipeline run."""
+
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+@dataclass
+class PipelineRun:
+    """Tracks the state of a single pipeline execution."""
+
+    run_id: str
+    status: RunStatus = RunStatus.PENDING
+    trigger: str = "manual"
+    started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    completed_at: datetime | None = None
+    current_step: str | None = None
+    error: str | None = None
+
+
+# In-memory run store. Keyed by run_id.
+_runs: dict[str, PipelineRun] = {}
+
+
+def get_runs() -> dict[str, PipelineRun]:
+    """Return the run store (exposed for testing)."""
+    return _runs
+
+
+# ---------------------------------------------------------------------------
+# Slack Bolt integration
+# ---------------------------------------------------------------------------
+
+
+def _create_slack_app() -> Any:
+    """Create the Slack Bolt async app.
+
+    Returns ``None`` when Slack env vars are missing (e.g. in tests).
+    The Bolt app is mounted as an ASGI sub-application on ``/slack/events``.
+    """
+    try:
+        from slack_bolt.async_app import AsyncApp
+        from slack_bolt.adapter.fastapi.async_handler import AsyncSlackRequestHandler
+        from ica.config.settings import get_settings
+
+        settings = get_settings()
+        bolt_app = AsyncApp(
+            token=settings.slack_bot_token,
+            signing_secret=None,  # Socket mode uses app-level token, not signing secret
+        )
+        handler = AsyncSlackRequestHandler(bolt_app)
+        return bolt_app, handler
+    except Exception:
+        logger.info("Slack Bolt not configured — Slack integration disabled")
+        return None, None
+
+
+# ---------------------------------------------------------------------------
+# FastAPI lifespan
+# ---------------------------------------------------------------------------
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Application startup/shutdown lifecycle."""
+    logger.info("ica application starting")
+    yield
+    logger.info("ica application shutting down")
+
+
+# ---------------------------------------------------------------------------
+# Application factory
+# ---------------------------------------------------------------------------
+
+
+def create_app(*, include_slack: bool = True) -> FastAPI:
+    """Create and configure the FastAPI application.
+
+    Args:
+        include_slack: Mount the Slack Bolt handler. Set to ``False`` in
+            tests that don't need Slack integration.
+    """
+    app = FastAPI(
+        title="ica",
+        description="AI newsletter generation pipeline",
+        version="0.1.0",
+        lifespan=lifespan,
+    )
+
+    # --- Slack Bolt mount ---
+    bolt_app: Any = None
+    slack_handler: Any = None
+    if include_slack:
+        bolt_app, slack_handler = _create_slack_app()
+        if bolt_app is not None:
+            app.state.slack_bolt = bolt_app
+
+    # ------------------------------------------------------------------
+    # Endpoints
+    # ------------------------------------------------------------------
+
+    @app.get("/health")
+    async def health() -> dict[str, str]:
+        """Health check endpoint.
+
+        Returns a simple JSON payload indicating the service is running.
+        Used by Docker health checks and load balancers.
+        """
+        return {"status": "ok"}
+
+    @app.post("/trigger")
+    async def trigger(request: Request) -> dict[str, str]:
+        """Trigger a new pipeline run.
+
+        Accepts an optional JSON body with ``trigger`` (string label for
+        what initiated the run, defaults to ``"api"``).
+
+        The pipeline runs as a background task — the endpoint returns
+        immediately with the ``run_id`` so callers can poll ``/status``.
+        """
+        body: dict[str, Any] = {}
+        if request.headers.get("content-type", "").startswith("application/json"):
+            try:
+                body = await request.json()
+            except Exception:
+                pass
+
+        trigger_label = body.get("trigger", "api")
+        run_id = uuid.uuid4().hex[:12]
+        run = PipelineRun(run_id=run_id, trigger=str(trigger_label))
+        _runs[run_id] = run
+
+        # Launch pipeline in background
+        asyncio.create_task(_run_pipeline(run))  # noqa: RUF006
+
+        return {"run_id": run_id, "status": run.status.value}
+
+    @app.get("/status")
+    async def status_all() -> dict[str, Any]:
+        """Return status of all pipeline runs."""
+        return {
+            "runs": [
+                _serialize_run(r) for r in _runs.values()
+            ],
+        }
+
+    @app.get("/status/{run_id}", response_model=None)
+    async def status_by_id(run_id: str) -> dict[str, Any] | Response:
+        """Return status of a specific pipeline run."""
+        run = _runs.get(run_id)
+        if run is None:
+            return Response(
+                content='{"detail":"Run not found"}',
+                status_code=404,
+                media_type="application/json",
+            )
+        return _serialize_run(run)
+
+    # --- Slack events route ---
+    if slack_handler is not None:
+
+        @app.post("/slack/events")
+        async def slack_events(req: Request) -> Response:
+            """Forward Slack events to the Bolt handler."""
+            return await slack_handler.handle(req)
+
+    return app
+
+
+# ---------------------------------------------------------------------------
+# Pipeline execution (placeholder)
+# ---------------------------------------------------------------------------
+
+
+async def _run_pipeline(run: PipelineRun) -> None:
+    """Execute the newsletter pipeline for *run*.
+
+    This is a placeholder that will be replaced by the real orchestrator
+    (PRD Section 11.6). For now it just transitions the run through
+    RUNNING → COMPLETED so the /status endpoint works end-to-end.
+    """
+    run.status = RunStatus.RUNNING
+    run.current_step = "starting"
+    logger.info("Pipeline run %s started (trigger=%s)", run.run_id, run.trigger)
+    try:
+        # Placeholder — real orchestrator will go here
+        run.current_step = "completed"
+        run.status = RunStatus.COMPLETED
+        run.completed_at = datetime.now(timezone.utc)
+        logger.info("Pipeline run %s completed", run.run_id)
+    except Exception as exc:
+        run.status = RunStatus.FAILED
+        run.error = str(exc)
+        run.completed_at = datetime.now(timezone.utc)
+        logger.exception("Pipeline run %s failed", run.run_id)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _serialize_run(run: PipelineRun) -> dict[str, Any]:
+    """Convert a PipelineRun to a JSON-serialisable dict."""
+    return {
+        "run_id": run.run_id,
+        "status": run.status.value,
+        "trigger": run.trigger,
+        "started_at": run.started_at.isoformat(),
+        "completed_at": run.completed_at.isoformat() if run.completed_at else None,
+        "current_step": run.current_step,
+        "error": run.error,
+    }

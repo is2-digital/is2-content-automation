@@ -2,9 +2,9 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 30
+**Tasks Completed:** 31
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 37)
+**Tasks Completed This Session:** 1 (session 38)
 
 ---
 
@@ -31,6 +31,36 @@ After completing each task, add an entry below in this format:
 
 ---
 -->
+
+### 2026-02-22 (session 38)
+**Completed:**
+- ica-1si.12: Implement FastAPI application
+
+**Changes Made:**
+- Created `ica/app.py` — FastAPI application factory with `create_app()`, RunStatus enum, PipelineRun dataclass, in-memory run store, `_serialize_run` helper, `_run_pipeline` placeholder, `_create_slack_app` Slack Bolt integration
+- Endpoints: `GET /health` (health check), `POST /trigger` (start pipeline run with background task, returns run_id), `GET /status` (all runs), `GET /status/{run_id}` (single run, 404 if not found), `POST /slack/events` (Slack Bolt handler, conditionally mounted)
+- Slack Bolt integration: creates AsyncApp + AsyncSlackRequestHandler when env vars present, gracefully disables when missing, mounted on `/slack/events`
+- `include_slack` flag on `create_app()` for test isolation
+- Created `tests/test_app.py` (39 tests)
+
+**Status:**
+- FastAPI application with all required endpoints implemented:
+  - `/health`: returns `{"status": "ok"}` for Docker health checks
+  - `/trigger`: creates PipelineRun, launches background task, returns run_id + status
+  - `/status`: lists all runs with full serialized state
+  - `/status/{run_id}`: single run lookup with 404 handling
+  - `/slack/events`: forwards to Slack Bolt handler (conditional mount)
+- Slack Bolt integration: graceful degradation when env vars missing
+- Pipeline execution: placeholder that transitions PENDING → RUNNING → COMPLETED (ready for real orchestrator)
+- All 2071 tests pass (2032 existing + 39 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-22 (session 37)
 **Completed:**
