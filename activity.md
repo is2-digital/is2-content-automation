@@ -2,9 +2,9 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 28
+**Tasks Completed:** 29
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 35)
+**Tasks Completed This Session:** 1 (session 36)
 
 ---
 
@@ -31,6 +31,35 @@ After completing each task, add an entry below in this format:
 
 ---
 -->
+
+### 2026-02-22 (session 36)
+**Completed:**
+- ica-duo.27: Implement per-article summarization loop
+
+**Changes Made:**
+- Updated `ica/pipeline/summarization.py` — added per-article loop (second half of Step 2): FetchResult dataclass, ArticleSummary dataclass, SummarizationLoopResult dataclass, HttpFetcher protocol, SlackManualFallback protocol, BROWSER_HEADERS constant, is_fetch_failure (error/captcha/YouTube detection), build_manual_fallback_message, strip_html_tags (HTML-to-text), build_article_input, aggregate_feedback (Note→bullet list), call_summary_llm (litellm.acompletion), parse_summary_output (regex URL/Title/Summary/BusinessRelevance), summarize_single_article (single-article orchestration), summarize_articles (loop orchestration)
+- Created `tests/test_pipeline/test_summarization_loop.py` (98 tests)
+
+**Status:**
+- Per-article summarization loop (Step 2, second half) fully implemented:
+  - HTTP page fetching with browser-like headers (n8n "Fetch Page Content" node)
+  - Fetch failure detection: error, captcha ("sgcaptcha"), YouTube URL (n8n "If" condition node)
+  - Slack manual fallback for failed fetches (n8n "Manual Article Content" sendAndWait node)
+  - HTML-to-text conversion: strips script/style, removes tags, unescapes entities
+  - Learning data fetch from notes table (last 40, type='user_summarization')
+  - Feedback aggregation into bullet-point list (n8n "Aggregate Feedback" Code node)
+  - LLM call via litellm.acompletion with summarization prompt
+  - Output parsing via regex (n8n "Format output" Code node patterns)
+  - Sequential loop matching n8n splitInBatches with batch size 1
+- All 1934 tests pass (1836 existing + 98 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-22 (session 35)
 **Completed:**
