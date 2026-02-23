@@ -1,4 +1,4 @@
-.PHONY: dev stage prod build down logs db-shell ps restart clean
+.PHONY: dev stage prod build down logs db-shell ps restart clean migrate migration
 
 COMPOSE = docker compose -f docker-compose.yml
 
@@ -31,6 +31,12 @@ restart: ## Restart all services
 
 clean: ## Stop containers and remove volumes
 	$(COMPOSE) down -v
+
+migrate: ## Run database migrations to latest
+	$(COMPOSE) exec app alembic -c alembic.ini upgrade head
+
+migration: ## Create a new migration (usage: make migration msg="description")
+	$(COMPOSE) exec app alembic -c alembic.ini revision --autogenerate -m "$(msg)"
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
