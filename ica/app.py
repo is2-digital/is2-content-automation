@@ -20,7 +20,12 @@ from typing import Any
 
 from fastapi import FastAPI, Request, Response
 
-from ica.logging import configure_logging, get_logger
+from ica.logging import bind_context, configure_logging, get_logger
+from ica.pipeline.orchestrator import (
+    PipelineContext,
+    build_default_steps,
+    run_pipeline,
+)
 
 logger = get_logger(__name__)
 
@@ -217,15 +222,27 @@ def create_app(*, include_slack: bool = True) -> FastAPI:
 async def _run_pipeline(run: PipelineRun) -> None:
     """Execute the newsletter pipeline for *run*.
 
-    This is a placeholder that will be replaced by the real orchestrator
-    (PRD Section 11.6). For now it just transitions the run through
-    RUNNING → COMPLETED so the /status endpoint works end-to-end.
+    Builds the default step lists, creates a :class:`PipelineContext`, and
+    delegates to :func:`~ica.pipeline.orchestrator.run_pipeline`.  Updates
+    the :class:`PipelineRun` status throughout so ``/status`` reflects
+    real-time progress.
+
+    See PRD Section 11.6.
     """
     run.status = RunStatus.RUNNING
     run.current_step = "starting"
     logger.info("Pipeline run %s started (trigger=%s)", run.run_id, run.trigger)
+
+    ctx = PipelineContext(run_id=run.run_id, trigger=run.trigger)
+    sequential, parallel = build_default_steps()
+
     try:
-        # Placeholder — real orchestrator will go here
+        async with bind_context(run_id=run.run_id):
+            ctx = await run_pipeline(
+                ctx,
+                sequential_steps=sequential,
+                parallel_steps=parallel,
+            )
         run.current_step = "completed"
         run.status = RunStatus.COMPLETED
         run.completed_at = datetime.now(timezone.utc)

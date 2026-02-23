@@ -2,13 +2,43 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 35
+**Tasks Completed:** 36
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 42)
+**Tasks Completed This Session:** 1 (session 43)
 
 ---
 
 ## Session Log
+
+### 2026-02-22 (session 43)
+**Completed:**
+- ica-1si.10: Wire pipeline orchestration
+
+**Changes Made:**
+- Created `ica/pipeline/orchestrator.py` (StepName enum, PipelineContext dataclass, StepResult dataclass, PipelineStep protocol, run_step, run_pipeline, _run_parallel_steps, _noop_step, build_default_steps)
+- Created `tests/test_pipeline/test_orchestrator.py` (51 tests)
+- Updated `ica/app.py` — replaced placeholder `_run_pipeline` with real orchestrator wiring (imports PipelineContext, build_default_steps, run_pipeline from orchestrator module)
+
+**Status:**
+- Pipeline orchestrator (PRD Section 11.6) fully implemented:
+  - `PipelineContext`: accumulates state across steps — articles, summaries, themes, doc IDs, step results, extra dict
+  - `StepResult`: frozen dataclass with step name, status, timing, and optional error
+  - `StepName`: enum with all 9 step names (5 sequential + 4 parallel)
+  - `run_step()`: executes a single step with timing, logging context (bind_context), and error recording
+  - `run_pipeline()`: orchestrates sequential steps then parallel outputs via asyncio.gather
+  - Sequential steps: context flows through each step; PipelineStopError halts execution
+  - Parallel steps: all receive the same context; failures are collected (don't cancel siblings)
+  - `build_default_steps()`: returns all 9 steps as noop stubs, ready for real implementations
+  - FastAPI `_run_pipeline` now creates PipelineContext + delegates to orchestrator
+- All 2462 tests pass (2411 existing + 51 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-22 (session 42)
 **Completed:**
