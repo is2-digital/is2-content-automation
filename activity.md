@@ -4,7 +4,7 @@
 **Last Updated:** 2026-02-22
 **Tasks Completed:** 16
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 21)
+**Tasks Completed This Session:** 1 (session 22)
 
 ---
 
@@ -504,6 +504,29 @@ After completing each task, add an entry below in this format:
 - Shared infrastructure (extract_section, count_chars, _range_check, CharacterCountError) ready for future section validators
 - Delta calculation: negative when too short (current - min), positive when too long (current - max)
 - All 631 tests pass (556 existing + 75 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
+
+### 2026-02-22 (session 22)
+**Completed:**
+- ica-dd0.1.4: Test %marker parser for all article types
+
+**Changes Made:**
+- Created `ica/utils/marker_parser.py` (FeaturedArticle, MainArticle, QuickHit, IndustryDevelopment, RequirementsVerified, FormattedTheme, ParsedThemeBlock, ThemeParseResult, split_themes, parse_markers)
+- Created `tests/test_utils/test_marker_parser.py` (101 tests)
+
+**Status:**
+- Marker parser ported from n8n "Selected Theme output" and "Prepare AI generated themes" Code nodes in theme_generation_subworkflow.json
+- `split_themes()`: splits raw LLM output on `-----` delimiter into theme blocks + recommendation
+- `parse_markers()`: extracts all %XX_ markers (FA, M1, M2, Q1-Q3, I1-I2, RV) into frozen dataclasses
+- Uses `[ \t]*` (horizontal whitespace) instead of `\s*` in regex to prevent newline bleeding
+- All 855 tests pass (754 existing + 101 new)
 
 **Next:**
 - Next available task from `bd ready`
