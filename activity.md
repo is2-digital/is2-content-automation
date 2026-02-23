@@ -32,6 +32,32 @@ After completing each task, add an entry below in this format:
 ---
 -->
 
+### 2026-02-22 (session 33)
+**Completed:**
+- ica-duo.26: Implement summarization data preparation
+
+**Changes Made:**
+- Created `ica/pipeline/summarization.py` (SheetReader protocol, CuratedArticle, SummarizationPrepResult, filter_approved_rows, normalize_article_row, upsert_curated_articles, prepare_summarization_data)
+- Updated `ica/utils/date_parser.py` — added `parse_date_mmddyyyy()` (reverse of `format_date_mmddyyyy`)
+- Created `tests/test_pipeline/test_summarization.py` (69 tests)
+
+**Status:**
+- Summarization data preparation (Step 2, first half) fully implemented:
+  - SheetReader protocol: reads all rows from Google Sheet
+  - filter_approved_rows: filters to approved=yes rows (n8n "Fetch Data from Sheet" filter)
+  - normalize_article_row: converts string fields to typed CuratedArticle (n8n "Field Mapping" Set node)
+  - upsert_curated_articles: PostgreSQL INSERT...ON CONFLICT upsert with type='curated' (n8n "Structure SQL Insert Query" Code node)
+  - prepare_summarization_data: orchestrates the full flow — get LLM config → fetch sheet → filter → normalize → upsert
+- All 1836 tests pass (1767 existing + 69 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
+
 ### 2026-02-22 (session 32)
 **Completed:**
 - ica-tru.1: Rename curated_articles to articles

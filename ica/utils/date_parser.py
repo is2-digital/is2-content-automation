@@ -1,13 +1,15 @@
-"""Relative date parser for SearchApi results.
+"""Date parsing utilities for article dates.
 
-SearchApi returns dates as relative strings (e.g., "3 days ago", "1 week ago").
-This module converts them to Python date objects.
+Includes:
+- Relative date parser for SearchApi results (e.g., "3 days ago")
+- MM/DD/YYYY parser for Google Sheets date strings
+- MM/DD/YYYY formatter for display
 """
 
 from __future__ import annotations
 
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 _RELATIVE_DATE_RE = re.compile(
     r"(\d+)\s*(day|days|week|weeks|hour|hours|minute|minutes)\s*ago",
@@ -53,6 +55,33 @@ def parse_relative_date(
         return ref - timedelta(weeks=value)
     # Hours/minutes → same day (no sub-day resolution for publish dates)
     return ref
+
+
+def parse_date_mmddyyyy(date_string: str | None) -> date | None:
+    """Parse a ``MM/DD/YYYY`` date string into a :class:`~datetime.date`.
+
+    Used to convert Google Sheets date values back to Python dates for
+    database insertion during the summarization data preparation step
+    (PRD Section 3.2).
+
+    Args:
+        date_string: A date string in ``MM/DD/YYYY`` format, or ``None``.
+
+    Returns:
+        A :class:`~datetime.date`, or ``None`` when *date_string* is ``None``,
+        empty, whitespace-only, or not in ``MM/DD/YYYY`` format.
+    """
+    if not date_string or not isinstance(date_string, str):
+        return None
+
+    cleaned = date_string.strip()
+    if not cleaned:
+        return None
+
+    try:
+        return datetime.strptime(cleaned, "%m/%d/%Y").date()
+    except ValueError:
+        return None
 
 
 def format_date_mmddyyyy(d: date) -> str:
