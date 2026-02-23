@@ -2,9 +2,9 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 32
+**Tasks Completed:** 33
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 39)
+**Tasks Completed This Session:** 1 (session 40)
 
 ---
 
@@ -31,6 +31,34 @@ After completing each task, add an entry below in this format:
 
 ---
 -->
+
+### 2026-02-22 (session 40)
+**Completed:**
+- ica-0jh.18: Output generator prompt templates
+
+**Changes Made:**
+- Created `ica/prompts/email_subject.py` (EMAIL_SUBJECT_SYSTEM_PROMPT, EMAIL_SUBJECT_USER_PROMPT, _FEEDBACK_SECTION_TEMPLATE, build_email_subject_prompt)
+- Created `ica/prompts/social_media.py` (SOCIAL_MEDIA_POST_SYSTEM_PROMPT/USER_PROMPT, SOCIAL_MEDIA_CAPTION_SYSTEM_PROMPT/USER_PROMPT, SOCIAL_MEDIA_REGENERATION_SYSTEM_PROMPT/USER_PROMPT, build_social_media_post_prompt, build_social_media_caption_prompt, build_social_media_regeneration_prompt)
+- Created `ica/prompts/linkedin_carousel.py` (LINKEDIN_CAROUSEL_SYSTEM_PROMPT/USER_PROMPT, LINKEDIN_REGENERATION_SYSTEM_PROMPT/USER_PROMPT, build_linkedin_carousel_prompt, build_linkedin_regeneration_prompt)
+- Created `tests/test_prompts/test_email_subject.py` (45 tests)
+- Created `tests/test_prompts/test_social_media.py` (80 tests)
+- Created `tests/test_prompts/test_linkedin_carousel.py` (57 tests)
+
+**Status:**
+- 3 prompt modules ported from n8n workflows:
+  - Email subject: up to 10 subjects (max 7 words), separator format, recommendation (n8n "Generate Data using LLM" in email_subject_and_preview_subworkflow)
+  - Social media: Phase 1 graphics-only posts (6 DYK + 6 IT), Phase 2 caption generation, feedback-driven regeneration (n8n social_media_generator_subworkflow)
+  - LinkedIn carousel: post copy (3 versions) + 10 carousel slides with character specs, feedback-driven regeneration (n8n linkedin_carousel_generator_subworkflow)
+- Note: alternates HTML has no LLM prompts (pure HTML templating); email preview/review already ported in session 13
+- All 2291 tests pass (2109 existing + 182 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-22 (session 39)
 **Completed:**
