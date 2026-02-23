@@ -2,9 +2,43 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 36
+**Tasks Completed:** 37
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 43)
+**Tasks Completed This Session:** 1 (session 44)
+
+---
+
+## Session Log
+
+### 2026-02-22 (session 44)
+**Completed:**
+- ica-1si.11: Implement scheduling
+
+**Changes Made:**
+- Created `ica/scheduler.py` (create_scheduler, run_article_collection, run_pipeline_trigger, get_scheduled_jobs, _SchedulerStubRepository)
+- Updated `ica/app.py` — added `include_scheduler` parameter to create_app, scheduler start/stop in lifespan, `/scheduler` status endpoint
+- Updated `tests/test_app.py` — added `include_scheduler=False` to all create_app calls, added /scheduler to route assertions
+- Created `tests/test_scheduler.py` (46 tests)
+
+**Status:**
+- APScheduler integration (PRD Section 10.1) fully implemented:
+  - `create_scheduler()`: factory with configurable timezone, article collection jobs, and pipeline trigger
+  - Article collection (daily): CronTrigger at configurable hour, google_news engine, 3 keywords
+  - Article collection (every 2 days): IntervalTrigger(days=2), default engine, 5 keywords
+  - Pipeline trigger: IntervalTrigger(days=5), disabled by default (manual-only)
+  - `run_article_collection()`: async job function with lazy imports, error handling, logging
+  - `run_pipeline_trigger()`: creates PipelineRun, launches background task via asyncio.create_task
+  - `get_scheduled_jobs()`: returns job summaries for /scheduler endpoint
+  - FastAPI lifecycle integration: scheduler.start() on startup, scheduler.shutdown() on teardown
+  - `/scheduler` GET endpoint: returns enabled status and job list with next_run_time
+  - Graceful degradation: scheduler=None when settings unavailable
+- All 2508 tests pass (2462 existing + 46 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
 
 ---
 

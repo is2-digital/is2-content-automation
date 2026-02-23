@@ -34,8 +34,8 @@ def _clear_runs():
 
 @pytest.fixture()
 def client() -> TestClient:
-    """FastAPI test client without Slack integration."""
-    app = create_app(include_slack=False)
+    """FastAPI test client without Slack or scheduler integration."""
+    app = create_app(include_slack=False, include_scheduler=False)
     return TestClient(app, raise_server_exceptions=False)
 
 
@@ -303,27 +303,28 @@ class TestPipelineExecution:
 
 class TestCreateApp:
     def test_include_slack_false(self):
-        app = create_app(include_slack=False)
+        app = create_app(include_slack=False, include_scheduler=False)
         assert not hasattr(app.state, "slack_bolt")
 
     def test_app_title(self):
-        app = create_app(include_slack=False)
+        app = create_app(include_slack=False, include_scheduler=False)
         assert app.title == "ica"
 
     def test_app_version(self):
-        app = create_app(include_slack=False)
+        app = create_app(include_slack=False, include_scheduler=False)
         assert app.version == "0.1.0"
 
     def test_routes_registered(self):
-        app = create_app(include_slack=False)
+        app = create_app(include_slack=False, include_scheduler=False)
         paths = {route.path for route in app.routes}
         assert "/health" in paths
         assert "/trigger" in paths
         assert "/status" in paths
         assert "/status/{run_id}" in paths
+        assert "/scheduler" in paths
 
     def test_no_slack_events_route_without_slack(self):
-        app = create_app(include_slack=False)
+        app = create_app(include_slack=False, include_scheduler=False)
         paths = {route.path for route in app.routes}
         assert "/slack/events" not in paths
 
@@ -336,7 +337,7 @@ class TestCreateApp:
 class TestSlackIntegration:
     def test_slack_env_missing_disables_integration(self):
         """When Slack env vars are missing, the app still starts."""
-        app = create_app(include_slack=True)
+        app = create_app(include_slack=True, include_scheduler=False)
         # Should not have slack_bolt on state (env vars missing → exception caught)
         assert not hasattr(app.state, "slack_bolt")
 
@@ -348,7 +349,7 @@ class TestSlackIntegration:
             "ica.app._create_slack_app",
             return_value=(mock_bolt, mock_handler),
         ):
-            app = create_app(include_slack=True)
+            app = create_app(include_slack=True, include_scheduler=False)
             assert app.state.slack_bolt is mock_bolt
 
     def test_slack_events_route_exists_when_configured(self):
@@ -359,7 +360,7 @@ class TestSlackIntegration:
             "ica.app._create_slack_app",
             return_value=(mock_bolt, mock_handler),
         ):
-            app = create_app(include_slack=True)
+            app = create_app(include_slack=True, include_scheduler=False)
             paths = {route.path for route in app.routes}
             assert "/slack/events" in paths
 

@@ -110,8 +110,21 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # Settings may not be available (e.g. missing env vars in tests).
         # Fall back to defaults so the app still starts.
         configure_logging()
+
+    # --- Start scheduler if enabled ---
+    scheduler = getattr(app.state, "scheduler", None)
+    if scheduler is not None:
+        scheduler.start()
+        logger.info("Scheduler started with %d jobs", len(scheduler.get_jobs()))
+
     logger.info("ica application starting")
     yield
+
+    # --- Shut down scheduler ---
+    if scheduler is not None and scheduler.running:
+        scheduler.shutdown(wait=False)
+        logger.info("Scheduler shut down")
+
     logger.info("ica application shutting down")
 
 
@@ -120,12 +133,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 # ---------------------------------------------------------------------------
 
 
-def create_app(*, include_slack: bool = True) -> FastAPI:
+def create_app(
+    *,
+    include_slack: bool = True,
+    include_scheduler: bool = True,
+) -> FastAPI:
     """Create and configure the FastAPI application.
 
     Args:
         include_slack: Mount the Slack Bolt handler. Set to ``False`` in
             tests that don't need Slack integration.
+        include_scheduler: Attach the APScheduler instance. Set to ``False``
+            in tests that don't need scheduled jobs.
     """
     app = FastAPI(
         title="ica",
@@ -133,6 +152,20 @@ def create_app(*, include_slack: bool = True) -> FastAPI:
         version="0.1.0",
         lifespan=lifespan,
     )
+
+    # --- Scheduler setup ---
+    if include_scheduler:
+        try:
+            from ica.config.settings import get_settings
+            from ica.scheduler import create_scheduler
+
+            settings = get_settings()
+            app.state.scheduler = create_scheduler(timezone=settings.timezone)
+        except Exception:
+            logger.info("Scheduler not configured — scheduled jobs disabled")
+            app.state.scheduler = None
+    else:
+        app.state.scheduler = None
 
     # --- Slack Bolt mount ---
     bolt_app: Any = None
@@ -202,6 +235,15 @@ def create_app(*, include_slack: bool = True) -> FastAPI:
                 media_type="application/json",
             )
         return _serialize_run(run)
+
+    @app.get("/scheduler")
+    async def scheduler_status() -> dict[str, Any]:
+        """Return status of scheduled jobs."""
+        sched = getattr(app.state, "scheduler", None)
+        if sched is None or not sched.running:
+            return {"enabled": False, "jobs": []}
+        from ica.scheduler import get_scheduled_jobs
+        return {"enabled": True, "jobs": get_scheduled_jobs(sched)}
 
     # --- Slack events route ---
     if slack_handler is not None:
