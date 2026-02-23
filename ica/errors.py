@@ -25,11 +25,12 @@ See PRD Section 7.
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass, field
 from typing import Protocol
 
-logger = logging.getLogger(__name__)
+from ica.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 # ---------------------------------------------------------------------------

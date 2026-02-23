@@ -2,13 +2,45 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 34
+**Tasks Completed:** 35
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 41)
+**Tasks Completed This Session:** 1 (session 42)
 
 ---
 
 ## Session Log
+
+### 2026-02-22 (session 42)
+**Completed:**
+- ica-drl.9: Implement structured logging
+
+**Changes Made:**
+- Created `ica/logging.py` (ContextFilter, JsonFormatter, TextFormatter, configure_logging, get_logger, bind_context, run_id_var, step_var)
+- Created `tests/test_logging.py` (56 tests)
+- Updated `ica/config/settings.py` — added `log_level` and `log_format` settings
+- Updated `ica/app.py` — wired `configure_logging()` into FastAPI lifespan, switched to `get_logger()`
+- Updated `ica/errors.py` — switched from `logging.getLogger()` to `get_logger()`
+
+**Status:**
+- Structured logging module with:
+  - Async-safe context variables (`run_id_var`, `step_var`) via `contextvars`
+  - `ContextFilter`: injects context vars into every log record
+  - `JsonFormatter`: JSON-lines output for production (timestamp, level, logger, message, run_id, step, exception)
+  - `TextFormatter`: human-readable output for dev, with `[run=X step=Y]` context tag when bound
+  - `configure_logging(level, log_format)`: one-call root logger setup (text or json)
+  - `get_logger(name)`: logger factory with ContextFilter attached (idempotent)
+  - `bind_context(run_id, step)`: sync/async context manager for setting pipeline context (nestable, exception-safe)
+- Settings: `LOG_LEVEL` (default INFO) and `LOG_FORMAT` (default text) env vars
+- FastAPI app startup calls `configure_logging()` from Settings in lifespan
+- All 2411 tests pass (2355 existing + 56 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 <!--
 After completing each task, add an entry below in this format:

@@ -10,7 +10,6 @@ background task workers, and REST API for triggering/monitoring pipeline runs.
 from __future__ import annotations
 
 import asyncio
-import logging
 import uuid
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
@@ -21,7 +20,9 @@ from typing import Any
 
 from fastapi import FastAPI, Request, Response
 
-logger = logging.getLogger(__name__)
+from ica.logging import configure_logging, get_logger
+
+logger = get_logger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -96,6 +97,14 @@ def _create_slack_app() -> Any:
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application startup/shutdown lifecycle."""
+    try:
+        from ica.config.settings import get_settings
+        settings = get_settings()
+        configure_logging(level=settings.log_level, log_format=settings.log_format)
+    except Exception:
+        # Settings may not be available (e.g. missing env vars in tests).
+        # Fall back to defaults so the app still starts.
+        configure_logging()
     logger.info("ica application starting")
     yield
     logger.info("ica application shutting down")

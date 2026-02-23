@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     # --- General ---
     timezone: str = "America/Los_Angeles"
 
+    # --- Logging ---
+    log_level: str = "INFO"
+    log_format: str = "text"
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def database_url(self) -> str:
