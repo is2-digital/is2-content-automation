@@ -2,9 +2,9 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 14
+**Tasks Completed:** 15
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 18)
+**Tasks Completed This Session:** 1 (session 19)
 
 ---
 
@@ -436,6 +436,29 @@ After completing each task, add an entry below in this format:
 - Only `"yes"` (case-insensitive, whitespace-trimmed) maps to True; everything else (no, true, false, empty string, None) maps to False
 - Bool passthrough: Python `True`/`False` pass through unchanged
 - All 556 tests pass (505 existing + 51 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
+
+### 2026-02-22 (session 19)
+**Completed:**
+- ica-dd0.2.1: Test Quick Highlights character counting
+
+**Changes Made:**
+- Created `ica/validators/__init__.py`, `ica/validators/character_count.py` (CharacterCountError, extract_section, count_chars, _range_check, _extract_bullets, validate_quick_highlights, validate_character_counts)
+- Created `tests/test_validators/__init__.py`, `tests/test_validators/test_quick_highlights.py` (75 tests)
+
+**Status:**
+- Character count validator module ported from n8n "Validation Character count" Code node in markdown_generator_subworkflow.json
+- Quick Highlights: extracts QUICK HIGHLIGHTS section, splits into bullets (• or - prefix), validates each of 3 bullets is 150-190 chars
+- Shared infrastructure (extract_section, count_chars, _range_check, CharacterCountError) ready for future section validators
+- Delta calculation: negative when too short (current - min), positive when too long (current - max)
+- All 631 tests pass (556 existing + 75 new)
 
 **Next:**
 - Next available task from `bd ready`
