@@ -2,9 +2,9 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 13
+**Tasks Completed:** 14
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 16)
+**Tasks Completed This Session:** 1 (session 17)
 
 ---
 
@@ -390,6 +390,30 @@ After completing each task, add an entry below in this format:
 - `get_settings()` with lru_cache for singleton pattern / FastAPI dependency injection
 - Loads from environment variables with .env file fallback
 - All 437 tests pass (397 existing + 40 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
+
+### 2026-02-22 (session 17)
+**Completed:**
+- ica-dd0.1.7: Test conditional output router
+
+**Changes Made:**
+- Created `ica/utils/output_router.py` (UserChoice enum, RouterResult dataclass, normalize_switch_value, conditional_output_router)
+- Created `tests/test_utils/__init__.py`, `tests/test_utils/test_output_router.py` (68 tests)
+
+**Status:**
+- Conditional output router ported from n8n "Conditional output" Code node (PRD Section 9.8)
+- Handles all combinations: user choice (yes/provide feedback/restart chat/unknown/None) x regenerated text (present/None) x content validity (True/False)
+- normalize_switch_value: case-insensitive, whitespace-tolerant parsing of Slack form values
+- RouterResult: frozen dataclass with (text, feedback) outputs
+- Exhaustive parametrized state matrix test covers all 15 input combinations
+- All 505 tests pass (437 existing + 68 new)
 
 **Next:**
 - Next available task from `bd ready`
