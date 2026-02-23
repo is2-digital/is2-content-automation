@@ -18,9 +18,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # curated_articles
+    # articles
     op.create_table(
-        "curated_articles",
+        "articles",
         sa.Column("url", sa.Text(), nullable=False),
         sa.Column("title", sa.Text(), nullable=True),
         sa.Column("origin", sa.Text(), nullable=True),
@@ -28,6 +28,12 @@ def upgrade() -> None:
         sa.Column("approved", sa.Boolean(), nullable=True),
         sa.Column("industry_news", sa.Boolean(), nullable=True),
         sa.Column("newsletter_id", sa.Text(), nullable=True),
+        sa.Column(
+            "type",
+            sa.String(50),
+            server_default="curated",
+            nullable=False,
+        ),
         sa.Column(
             "created_at",
             sa.DateTime(),
@@ -159,4 +165,4 @@ def downgrade() -> None:
     op.drop_table("markdowngenerator_user_feedback")
     op.drop_table("summarization_user_feedback")
     op.drop_table("newsletter_themes")
-    op.drop_table("curated_articles")
+    op.drop_table("articles")

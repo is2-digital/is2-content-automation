@@ -13,8 +13,8 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ica.db.models import (
+    Article,
     Base,
-    CuratedArticle,
     FeedbackMixin,
     NewsletterTheme,
 )
@@ -25,7 +25,7 @@ F = TypeVar("F", bound=FeedbackMixin)
 
 
 # ---------------------------------------------------------------------------
-# curated_articles
+# articles
 # ---------------------------------------------------------------------------
 
 
@@ -54,7 +54,7 @@ async def upsert_articles(
         for a in articles
     ]
 
-    stmt = pg_insert(CuratedArticle).values(values)
+    stmt = pg_insert(Article).values(values)
     stmt = stmt.on_conflict_do_update(
         index_elements=["url"],
         set_={
@@ -73,19 +73,19 @@ async def get_articles(
     *,
     approved: bool | None = None,
     newsletter_id: str | None = None,
-) -> list[CuratedArticle]:
-    """Retrieve curated articles with optional filters.
+) -> list[Article]:
+    """Retrieve articles with optional filters.
 
     Args:
         approved: Filter by approval status when not ``None``.
         newsletter_id: Filter by newsletter association when not ``None``.
     """
-    stmt = select(CuratedArticle)
+    stmt = select(Article)
     if approved is not None:
-        stmt = stmt.where(CuratedArticle.approved == approved)
+        stmt = stmt.where(Article.approved == approved)
     if newsletter_id is not None:
-        stmt = stmt.where(CuratedArticle.newsletter_id == newsletter_id)
-    stmt = stmt.order_by(CuratedArticle.created_at.desc())
+        stmt = stmt.where(Article.newsletter_id == newsletter_id)
+    stmt = stmt.order_by(Article.created_at.desc())
 
     result = await session.execute(stmt)
     return list(result.scalars().all())

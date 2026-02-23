@@ -2,12 +2,12 @@
 
 Re-exports the most commonly used symbols so callers can do::
 
-    from ica.db import Base, CuratedArticle, get_session, SqlArticleRepository
+    from ica.db import Base, Article, get_session, SqlArticleRepository
 """
 
 from ica.db.models import (
+    Article,
     Base,
-    CuratedArticle,
     HtmlGeneratorUserFeedback,
     MarkdownGeneratorUserFeedback,
     NewsletterEmailSubjectFeedback,
@@ -22,7 +22,7 @@ __all__ = [
     # Base
     "Base",
     # Models
-    "CuratedArticle",
+    "Article",
     "HtmlGeneratorUserFeedback",
     "MarkdownGeneratorUserFeedback",
     "NewsletterEmailSubjectFeedback",

@@ -53,7 +53,7 @@ class ArticleRepository(Protocol):
     """Database interface for article persistence."""
 
     async def upsert_articles(self, articles: list[ArticleRecord]) -> int:
-        """Insert or update articles in the curated_articles table.
+        """Insert or update articles in the articles table.
 
         Args:
             articles: List of article records to upsert.

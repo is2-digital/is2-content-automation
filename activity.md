@@ -2,9 +2,9 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 25
+**Tasks Completed:** 26
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 31)
+**Tasks Completed This Session:** 1 (session 32)
 
 ---
 
@@ -31,6 +31,32 @@ After completing each task, add an entry below in this format:
 
 ---
 -->
+
+### 2026-02-22 (session 32)
+**Completed:**
+- ica-tru.1: Rename curated_articles to articles
+
+**Changes Made:**
+- Updated `ica/db/models.py` — renamed `CuratedArticle` class to `Article`, table `curated_articles` → `articles`, added `type` column (`String(50)`, server_default `'curated'`)
+- Updated `ica/db/crud.py` — all `CuratedArticle` references → `Article`
+- Updated `ica/db/__init__.py` — re-exports `Article` instead of `CuratedArticle`
+- Updated `ica/db/migrations/versions/001_initial_tables.py` — table name `curated_articles` → `articles`, added `type` column
+- Updated `ica/pipeline/article_curation.py` — import and type hints `CuratedArticle` → `Article`
+- Updated `ica/pipeline/article_collection.py` — docstring reference
+- Updated `tests/test_pipeline/test_article_curation.py` — comments
+- Updated `CLAUDE.md` — database table name reference
+
+**Status:**
+- All 1767 tests pass (no new tests needed — pure rename refactor)
+- No remaining `CuratedArticle` or `curated_articles` references in `ica/` source
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-22 (session 31)
 **Completed:**

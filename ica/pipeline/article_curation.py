@@ -27,7 +27,7 @@ from typing import Any, Protocol
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ica.db.models import CuratedArticle
+from ica.db.models import Article
 from ica.utils.date_parser import format_date_mmddyyyy
 
 
@@ -183,7 +183,7 @@ APPROVE_LABEL = "Proceed to next steps"
 # ---------------------------------------------------------------------------
 
 
-def format_article_for_sheet(article: CuratedArticle) -> SheetArticle:
+def format_article_for_sheet(article: Article) -> SheetArticle:
     """Convert a DB article to sheet-ready format.
 
     Ports the n8n "Process Input" Code node logic:
@@ -231,7 +231,7 @@ async def fetch_unapproved_articles(
     session: AsyncSession,
     *,
     limit: int = DEFAULT_FETCH_LIMIT,
-) -> list[CuratedArticle]:
+) -> list[Article]:
     """Fetch articles that have not been approved.
 
     Matches the n8n query ``WHERE approved != TRUE`` which catches both
@@ -239,14 +239,14 @@ async def fetch_unapproved_articles(
     ``publish_date DESC`` with a default limit of 30.
     """
     stmt = (
-        select(CuratedArticle)
+        select(Article)
         .where(
             or_(
-                CuratedArticle.approved == False,  # noqa: E712
-                CuratedArticle.approved.is_(None),
+                Article.approved == False,  # noqa: E712
+                Article.approved.is_(None),
             )
         )
-        .order_by(CuratedArticle.publish_date.desc())
+        .order_by(Article.publish_date.desc())
         .limit(limit)
     )
     result = await session.execute(stmt)

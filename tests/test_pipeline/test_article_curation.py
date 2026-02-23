@@ -47,13 +47,13 @@ from ica.pipeline.article_curation import (
 
 
 # ---------------------------------------------------------------------------
-# Helpers — lightweight CuratedArticle stand-in
+# Helpers — lightweight Article stand-in
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class FakeArticle:
-    """Mimics CuratedArticle ORM model for testing without a database."""
+    """Mimics Article ORM model for testing without a database."""
 
     url: str = "https://example.com/article"
     title: str | None = "Test Article"

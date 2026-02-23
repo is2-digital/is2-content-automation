@@ -2,7 +2,7 @@
 
 Schema matches PRD Section 2.2. The database ``n8n_custom_data`` contains:
 
-- ``curated_articles`` — discovered articles with editorial metadata
+- ``articles`` — discovered articles with editorial metadata (type discriminator)
 - ``newsletter_themes`` — generated themes with approval status
 - 5 feedback tables sharing a common ``FeedbackMixin`` pattern
 """
@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, Index, Text, func
+from sqlalchemy import Boolean, Date, Index, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -37,14 +37,19 @@ class FeedbackMixin:
 
 
 # ---------------------------------------------------------------------------
-# curated_articles
+# articles
 # ---------------------------------------------------------------------------
 
 
-class CuratedArticle(Base):
-    """An article discovered by the collection pipeline."""
+class Article(Base):
+    """An article discovered by the collection pipeline.
 
-    __tablename__ = "curated_articles"
+    The ``type`` column acts as a discriminator: ``'curated'`` (default) for
+    articles sourced from the collection utility, ``'curated'`` updated during
+    summarization data prep (PRD Section 3.2).
+    """
+
+    __tablename__ = "articles"
 
     url: Mapped[str] = mapped_column(Text, primary_key=True)
     title: Mapped[str | None] = mapped_column(Text)
@@ -53,6 +58,9 @@ class CuratedArticle(Base):
     approved: Mapped[bool | None] = mapped_column(Boolean)
     industry_news: Mapped[bool | None] = mapped_column(Boolean)
     newsletter_id: Mapped[str | None] = mapped_column(Text)
+    type: Mapped[str] = mapped_column(
+        String(50), nullable=False, server_default="curated",
+    )
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
