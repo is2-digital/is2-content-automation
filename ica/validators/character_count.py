@@ -143,6 +143,22 @@ def _split_paragraphs(text: str) -> list[str]:
     return [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
 
 
+def _strip_source_links(text: str) -> str:
+    """Remove markdown source-link lines containing ``→`` (e.g. ``[Read more →](url)``)."""
+    return re.sub(r"^\[.*→\]\(.*?\)$", "", text, flags=re.MULTILINE).strip()
+
+
+def _find_callout(paras: list[str]) -> str:
+    """Find the callout paragraph (bold label pattern like ``**Label:**`` text).
+
+    Matches the n8n regex ``/^(\\*\\*|\\*)[^*]+:\\1/`` — a paragraph that starts
+    with ``**`` or ``*``, followed by non-asterisk text and a colon, closed by the
+    same delimiter.
+    """
+    pattern = re.compile(r"^(\*\*|\*)[^*]+:\1")
+    return next((p for p in paras if pattern.match(p)), "")
+
+
 def validate_featured_article(raw: str) -> list[CharacterCountError]:
     """Validate Featured Article section: P1 (300-400), P2 (300-400), Key Insight (300-370).
 
@@ -175,6 +191,44 @@ def validate_featured_article(raw: str) -> list[CharacterCountError]:
     return errors
 
 
+def validate_main_articles(raw: str) -> list[CharacterCountError]:
+    """Validate Main Article 1 and 2 sections.
+
+    For each article (ported from n8n ``parseMain``):
+    1. Extract the ``MAIN ARTICLE N`` section.
+    2. Strip the ``## ...`` subheading line.
+    3. Remove source-link lines (``[text →](url)``).
+    4. Split remaining text into paragraphs on blank lines.
+    5. Callout = first paragraph matching bold-label pattern (``**Label:**``).
+    6. Content = first paragraph that is NOT the callout.
+
+    Ranges:
+    - Callout Paragraph: 180–250 characters.
+    - Content Paragraph: max 750 characters (no minimum).
+    """
+    errors: list[CharacterCountError] = []
+    for index in (1, 2):
+        section = extract_section(raw, f"MAIN ARTICLE {index}")
+        body = _strip_subheading(section)
+        body = _strip_source_links(body)
+        paras = _split_paragraphs(body)
+
+        callout = _find_callout(paras)
+        content = next((p for p in paras if p != callout), "") if callout else (paras[0] if paras else "")
+
+        section_name = f"Main Article {index}"
+
+        err = _range_check(section_name, "Callout Paragraph", count_chars(callout), 180, 250)
+        if err:
+            errors.append(err)
+
+        err = _range_check(section_name, "Content Paragraph", count_chars(content), 0, 750)
+        if err:
+            errors.append(err)
+
+    return errors
+
+
 def validate_character_counts(raw: str) -> list[CharacterCountError]:
     """Run all character-count validations on markdown content.
 
@@ -183,5 +237,6 @@ def validate_character_counts(raw: str) -> list[CharacterCountError]:
     errors: list[CharacterCountError] = []
     errors.extend(validate_quick_highlights(raw))
     errors.extend(validate_featured_article(raw))
-    # Future tasks will add: Main Articles, Industry Developments, Footer
+    errors.extend(validate_main_articles(raw))
+    # Future tasks will add: Industry Developments, Footer
     return errors

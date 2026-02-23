@@ -4,7 +4,7 @@
 **Last Updated:** 2026-02-22
 **Tasks Completed:** 16
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 20)
+**Tasks Completed This Session:** 1 (session 21)
 
 ---
 
@@ -458,6 +458,29 @@ After completing each task, add an entry below in this format:
 - Strips `## ...` subheading line, removes CTA line (containing →), splits on blank lines
 - P1: 300-400 chars, P2: 300-400 chars, Key Insight (starts with `**`): 300-370 chars
 - All 693 tests pass (631 existing + 62 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
+
+### 2026-02-22 (session 19)
+**Completed:**
+- ica-dd0.2.3: Test Main Article character counting
+
+**Changes Made:**
+- Updated `ica/validators/character_count.py` — added `_strip_source_links`, `_find_callout`, `validate_main_articles`; wired into `validate_character_counts`
+- Created `tests/test_validators/test_main_articles.py` (61 tests)
+
+**Status:**
+- Main Article 1 & 2 validator ported from n8n `parseMain` in "Validation Character count" Code node
+- Strips `## ...` subheading, removes `[text →](url)` source links, splits paragraphs
+- Callout: bold-label pattern (`**Label:**` or `*Label:*`) → 180-250 chars
+- Content: first non-callout paragraph → max 750 chars (no minimum)
+- All 754 tests pass (693 existing + 61 new)
 
 **Next:**
 - Next available task from `bd ready`
