@@ -4,12 +4,13 @@ Verifies date conversion handles various input formats and UTC edge cases,
 matching the n8n date formatting used for Google Sheets display and the
 SearchApi relative-date parsing for article publish dates.
 
-Task: ica-dd0.1.1 — Test MM/DD/YYYY date formatter
+Tasks: ica-dd0.1.1 — Test MM/DD/YYYY date formatter
+       ica-dd0.1.2 — Test relative date parser edge cases
 """
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
@@ -498,3 +499,334 @@ class TestRoundTrip:
     def test_parse_then_format(self, relative: str, expected: str) -> None:
         parsed = parse_relative_date(relative, reference=REF_DATE)
         assert format_date_mmddyyyy(parsed) == expected
+
+
+# ===========================================================================
+# Task ica-dd0.1.2 — Relative date parser edge cases
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# parse_relative_date — embedded text (SearchApi contextual strings)
+# ---------------------------------------------------------------------------
+
+
+class TestParseEmbeddedText:
+    """SearchApi may return relative dates with surrounding context text."""
+
+    def test_prefix_text(self) -> None:
+        result = parse_relative_date("Published 3 days ago", reference=REF_DATE)
+        assert result == date(2026, 2, 19)
+
+    def test_suffix_text(self) -> None:
+        result = parse_relative_date("3 days ago on TechCrunch", reference=REF_DATE)
+        assert result == date(2026, 2, 19)
+
+    def test_prefix_and_suffix_text(self) -> None:
+        result = parse_relative_date(
+            "Article published 2 weeks ago by Reuters", reference=REF_DATE
+        )
+        assert result == date(2026, 2, 8)
+
+    def test_date_in_parentheses(self) -> None:
+        result = parse_relative_date("(5 days ago)", reference=REF_DATE)
+        assert result == date(2026, 2, 17)
+
+    def test_date_with_dash_prefix(self) -> None:
+        result = parse_relative_date("- 1 week ago", reference=REF_DATE)
+        assert result == date(2026, 2, 15)
+
+    def test_date_in_sentence(self) -> None:
+        result = parse_relative_date(
+            "This article was posted 4 days ago and has 100 views",
+            reference=REF_DATE,
+        )
+        assert result == date(2026, 2, 18)
+
+
+# ---------------------------------------------------------------------------
+# parse_relative_date — multiple relative dates in one string
+# ---------------------------------------------------------------------------
+
+
+class TestParseMultipleDates:
+    """When a string contains multiple relative date patterns, .search() picks first."""
+
+    def test_picks_first_match(self) -> None:
+        result = parse_relative_date(
+            "Updated 2 days ago, originally 5 days ago", reference=REF_DATE
+        )
+        assert result == date(2026, 2, 20)
+
+    def test_different_units_picks_first(self) -> None:
+        result = parse_relative_date(
+            "1 week ago (originally 30 days ago)", reference=REF_DATE
+        )
+        assert result == date(2026, 2, 15)
+
+
+# ---------------------------------------------------------------------------
+# parse_relative_date — zero values for all units
+# ---------------------------------------------------------------------------
+
+
+class TestParseZeroValues:
+    """Zero quantity for each unit type."""
+
+    def test_zero_days(self) -> None:
+        result = parse_relative_date("0 days ago", reference=REF_DATE)
+        assert result == REF_DATE
+
+    def test_zero_weeks(self) -> None:
+        result = parse_relative_date("0 weeks ago", reference=REF_DATE)
+        assert result == REF_DATE
+
+    def test_zero_hours(self) -> None:
+        result = parse_relative_date("0 hours ago", reference=REF_DATE)
+        assert result == REF_DATE
+
+    def test_zero_minutes(self) -> None:
+        result = parse_relative_date("0 minutes ago", reference=REF_DATE)
+        assert result == REF_DATE
+
+
+# ---------------------------------------------------------------------------
+# parse_relative_date — large values for all units
+# ---------------------------------------------------------------------------
+
+
+class TestParseLargeValues:
+    """Very large numeric quantities should still compute correctly."""
+
+    def test_large_weeks(self) -> None:
+        result = parse_relative_date("52 weeks ago", reference=REF_DATE)
+        assert result == date(2025, 2, 23)
+
+    def test_100_weeks(self) -> None:
+        result = parse_relative_date("100 weeks ago", reference=REF_DATE)
+        assert result == date(2024, 3, 24)
+
+    def test_999_hours(self) -> None:
+        """Large hours still resolve to reference date (no sub-day precision)."""
+        result = parse_relative_date("999 hours ago", reference=REF_DATE)
+        assert result == REF_DATE
+
+    def test_9999_minutes(self) -> None:
+        """Large minutes still resolve to reference date."""
+        result = parse_relative_date("9999 minutes ago", reference=REF_DATE)
+        assert result == REF_DATE
+
+    def test_1000_days(self) -> None:
+        result = parse_relative_date("1000 days ago", reference=REF_DATE)
+        expected = REF_DATE - timedelta(days=1000)
+        assert result == expected
+
+
+# ---------------------------------------------------------------------------
+# parse_relative_date — unusual whitespace
+# ---------------------------------------------------------------------------
+
+
+class TestParseUnusualWhitespace:
+    """Tab, newline, and multi-space handling."""
+
+    def test_tab_between_number_and_unit(self) -> None:
+        result = parse_relative_date("3\tdays\tago", reference=REF_DATE)
+        assert result == date(2026, 2, 19)
+
+    def test_tab_and_spaces_mixed(self) -> None:
+        result = parse_relative_date("2 \t weeks \t ago", reference=REF_DATE)
+        assert result == date(2026, 2, 8)
+
+    def test_newline_between_tokens(self) -> None:
+        """Newlines are matched by \\s in the regex."""
+        result = parse_relative_date("3\ndays\nago", reference=REF_DATE)
+        assert result == date(2026, 2, 19)
+
+    def test_whitespace_only_returns_reference(self) -> None:
+        result = parse_relative_date("   ", reference=REF_DATE)
+        assert result == REF_DATE
+
+    def test_tabs_only_returns_reference(self) -> None:
+        result = parse_relative_date("\t\t", reference=REF_DATE)
+        assert result == REF_DATE
+
+    def test_newlines_only_returns_reference(self) -> None:
+        result = parse_relative_date("\n\n", reference=REF_DATE)
+        assert result == REF_DATE
+
+
+# ---------------------------------------------------------------------------
+# parse_relative_date — partial / malformed patterns
+# ---------------------------------------------------------------------------
+
+
+class TestParseMalformed:
+    """Incomplete or malformed patterns that should NOT match."""
+
+    def test_missing_ago_keyword(self) -> None:
+        result = parse_relative_date("3 days", reference=REF_DATE)
+        assert result == REF_DATE
+
+    def test_missing_number(self) -> None:
+        result = parse_relative_date("days ago", reference=REF_DATE)
+        assert result == REF_DATE
+
+    def test_missing_unit(self) -> None:
+        result = parse_relative_date("3 ago", reference=REF_DATE)
+        assert result == REF_DATE
+
+    def test_decimal_number(self) -> None:
+        """Decimals don't match \\d+ pattern."""
+        result = parse_relative_date("3.5 days ago", reference=REF_DATE)
+        # "3.5" won't match \d+ as a whole, but \d+ matches "3" and then
+        # ".5 days" doesn't match — however .search() finds "5 days ago"
+        # because it searches the entire string. So this matches 5 days ago.
+        assert result == date(2026, 2, 17)
+
+    def test_negative_number(self) -> None:
+        """Negative sign is not matched by \\d+."""
+        result = parse_relative_date("-3 days ago", reference=REF_DATE)
+        # .search() finds "3 days ago" inside "-3 days ago"
+        assert result == date(2026, 2, 19)
+
+    def test_just_ago(self) -> None:
+        result = parse_relative_date("ago", reference=REF_DATE)
+        assert result == REF_DATE
+
+    def test_reversed_order(self) -> None:
+        result = parse_relative_date("ago 3 days", reference=REF_DATE)
+        assert result == REF_DATE
+
+    def test_seconds_ago_unsupported(self) -> None:
+        result = parse_relative_date("30 seconds ago", reference=REF_DATE)
+        assert result == REF_DATE
+
+    def test_month_ago_unsupported(self) -> None:
+        result = parse_relative_date("1 month ago", reference=REF_DATE)
+        assert result == REF_DATE
+
+    def test_year_ago_unsupported(self) -> None:
+        result = parse_relative_date("1 year ago", reference=REF_DATE)
+        assert result == REF_DATE
+
+    def test_plural_seconds_unsupported(self) -> None:
+        result = parse_relative_date("45 seconds ago", reference=REF_DATE)
+        assert result == REF_DATE
+
+
+# ---------------------------------------------------------------------------
+# parse_relative_date — non-string input types
+# ---------------------------------------------------------------------------
+
+
+class TestParseNonStringTypes:
+    """Non-string inputs should gracefully return reference date."""
+
+    def test_boolean_true(self) -> None:
+        result = parse_relative_date(True, reference=REF_DATE)  # type: ignore[arg-type]
+        assert result == REF_DATE
+
+    def test_boolean_false(self) -> None:
+        result = parse_relative_date(False, reference=REF_DATE)  # type: ignore[arg-type]
+        assert result == REF_DATE
+
+    def test_list_input(self) -> None:
+        result = parse_relative_date(["3 days ago"], reference=REF_DATE)  # type: ignore[arg-type]
+        assert result == REF_DATE
+
+    def test_dict_input(self) -> None:
+        result = parse_relative_date({"days": 3}, reference=REF_DATE)  # type: ignore[arg-type]
+        assert result == REF_DATE
+
+    def test_zero_int(self) -> None:
+        result = parse_relative_date(0, reference=REF_DATE)  # type: ignore[arg-type]
+        assert result == REF_DATE
+
+
+# ---------------------------------------------------------------------------
+# parse_relative_date — singular vs plural unit forms
+# ---------------------------------------------------------------------------
+
+
+class TestParseSingularPlural:
+    """Verify both singular and plural forms work for all units."""
+
+    @pytest.mark.parametrize(
+        ("singular", "plural"),
+        [
+            ("1 day ago", "2 days ago"),
+            ("1 week ago", "2 weeks ago"),
+            ("1 hour ago", "2 hours ago"),
+            ("1 minute ago", "2 minutes ago"),
+        ],
+        ids=["day/days", "week/weeks", "hour/hours", "minute/minutes"],
+    )
+    def test_both_forms_parse(self, singular: str, plural: str) -> None:
+        """Both singular and plural forms should successfully parse."""
+        s_result = parse_relative_date(singular, reference=REF_DATE)
+        p_result = parse_relative_date(plural, reference=REF_DATE)
+        assert isinstance(s_result, date)
+        assert isinstance(p_result, date)
+
+    def test_singular_day_equals_one_day(self) -> None:
+        result = parse_relative_date("1 day ago", reference=REF_DATE)
+        assert result == REF_DATE - timedelta(days=1)
+
+    def test_singular_week_equals_seven_days(self) -> None:
+        result = parse_relative_date("1 week ago", reference=REF_DATE)
+        assert result == REF_DATE - timedelta(weeks=1)
+
+
+# ---------------------------------------------------------------------------
+# parse_relative_date — week/day equivalence
+# ---------------------------------------------------------------------------
+
+
+class TestParseWeekDayEquivalence:
+    """Verify that N weeks == N*7 days."""
+
+    @pytest.mark.parametrize("weeks", [1, 2, 3, 4, 8], ids=lambda w: f"{w}-weeks")
+    def test_weeks_equals_days(self, weeks: int) -> None:
+        week_result = parse_relative_date(f"{weeks} weeks ago", reference=REF_DATE)
+        day_result = parse_relative_date(f"{weeks * 7} days ago", reference=REF_DATE)
+        assert week_result == day_result
+
+
+# ---------------------------------------------------------------------------
+# parse_relative_date — month boundary crossings (parametrized)
+# ---------------------------------------------------------------------------
+
+
+class TestParseMonthBoundaries:
+    """Parametrized tests for crossing various month boundaries."""
+
+    @pytest.mark.parametrize(
+        ("ref", "relative", "expected"),
+        [
+            # Feb → Jan
+            (date(2026, 2, 1), "1 day ago", date(2026, 1, 31)),
+            # Mar → Feb (non-leap)
+            (date(2025, 3, 1), "1 day ago", date(2025, 2, 28)),
+            # Mar → Feb (leap)
+            (date(2024, 3, 1), "1 day ago", date(2024, 2, 29)),
+            # Jan → Dec (year boundary)
+            (date(2026, 1, 1), "1 day ago", date(2025, 12, 31)),
+            # Apr → Mar (31-day month)
+            (date(2026, 4, 1), "1 day ago", date(2026, 3, 31)),
+            # Jul → Jun (30-day month)
+            (date(2026, 7, 1), "1 day ago", date(2026, 6, 30)),
+        ],
+        ids=[
+            "feb-to-jan",
+            "mar-to-feb-nonleap",
+            "mar-to-feb-leap",
+            "jan-to-dec",
+            "apr-to-mar",
+            "jul-to-jun",
+        ],
+    )
+    def test_month_boundary(
+        self, ref: date, relative: str, expected: date
+    ) -> None:
+        assert parse_relative_date(relative, reference=ref) == expected
