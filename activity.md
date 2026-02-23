@@ -2,13 +2,44 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 38
+**Tasks Completed:** 39
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 45)
+**Tasks Completed This Session:** 1 (session 46)
 
 ---
 
 ## Session Log
+
+### 2026-02-22 (session 46)
+**Completed:**
+- ica-e1k.2: Slack Service
+
+**Changes Made:**
+- Created `ica/services/slack.py` (SlackService class, Block Kit helpers, interaction handlers)
+- Created `tests/test_services/test_slack.py` (75 tests)
+
+**Status:**
+- Slack service (PRD Section 11.2, 11.7) fully implemented:
+  - `SlackService`: unified class satisfying all 5 Slack protocols used across the pipeline
+  - `send_message(channel, text)`: plain-text channel posting (SlackNotifier)
+  - `send_channel_message(text, blocks)`: default-channel posting with optional Block Kit (SlackSummaryReview)
+  - `send_error(message)`: error notification to default channel (SlackErrorNotifier)
+  - `send_and_wait(channel, text, approve_label)`: approval button with asyncio.Event blocking (SlackApprovalSender)
+  - `send_and_wait_form(message, form_fields, ...)`: form trigger button → modal → submission (SlackSummaryReview)
+  - `send_and_wait_freetext(message, ...)`: freetext trigger button → modal → submission (SlackManualFallback + SlackSummaryReview)
+  - `register_handlers(bolt_app)`: registers action/view handlers on Slack Bolt app via regex patterns
+  - Block Kit helpers: _text_block, _button_block, _build_approval_blocks, _build_trigger_blocks, _build_modal_blocks, _build_freetext_modal_blocks, _extract_modal_values
+  - Modal title auto-truncation to Slack's 24-char limit
+  - n8n-style form field conversion: dropdown → static_select, text → plain_text_input, textarea → multiline
+- All 2645 tests pass (2570 existing + 75 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-22 (session 45)
 **Completed:**
