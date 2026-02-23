@@ -21,11 +21,20 @@ Ports the n8n ``summarization_subworkflow.json``:
    g. Parse output into structured :class:`ArticleSummary`
 7. Collect all summaries
 
+**Output and feedback** (third part):
+
+8. Format summaries as Slack Block Kit + mrkdwn text
+9. Share in Slack channel
+10. Send next-steps form (Yes / Provide Feedback / Restart Chat)
+11. Feedback loop: collect feedback → regenerate → extract learning data →
+    store in ``notes`` table → re-share → ask again
+
 See PRD Section 3.2.
 """
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from datetime import date
@@ -37,11 +46,20 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ica.config.llm_config import LLMPurpose, get_model
-from ica.db.crud import get_recent_notes
+from ica.db.crud import add_note, get_recent_notes
 from ica.db.models import Article, Note
-from ica.prompts.summarization import build_summarization_prompt
+from ica.prompts.learning_data_extraction import build_learning_data_extraction_prompt
+from ica.prompts.summarization import (
+    build_summarization_prompt,
+    build_summarization_regeneration_prompt,
+)
 from ica.utils.boolean_normalizer import normalize_boolean
 from ica.utils.date_parser import parse_date_mmddyyyy
+from ica.utils.output_router import (
+    UserChoice,
+    conditional_output_router,
+    normalize_switch_value,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -713,3 +731,541 @@ async def summarize_articles(
         summaries=summaries,
         model=model_id,
     )
+
+
+# ---------------------------------------------------------------------------
+# Protocols — output and feedback
+# ---------------------------------------------------------------------------
+
+
+class SlackSummaryReview(Protocol):
+    """Slack interactions for the summarization review loop.
+
+    Ports three n8n Slack nodes:
+
+    - "Share summarized content" → :meth:`send_channel_message`
+    - "Next steps selection" → :meth:`send_and_wait_form`
+    - "Feedback form" → :meth:`send_and_wait_freetext`
+    """
+
+    async def send_channel_message(
+        self,
+        text: str,
+        *,
+        blocks: list[dict[str, object]] | None = None,
+    ) -> None:
+        """Send a message to the Slack channel (``chat.postMessage``)."""
+        ...
+
+    async def send_and_wait_form(
+        self,
+        message: str,
+        *,
+        form_fields: list[dict[str, object]],
+        button_label: str = "Proceed to Next Steps",
+        form_title: str = "Proceed to next step",
+        form_description: str = "",
+    ) -> dict[str, str]:
+        """Send a form and wait for user response.
+
+        Returns a dict mapping field labels to selected values.
+        """
+        ...
+
+    async def send_and_wait_freetext(
+        self,
+        message: str,
+        *,
+        button_label: str = "Add feedback",
+        form_title: str = "Feedback Form",
+        form_description: str = "",
+    ) -> str:
+        """Send a free-text form and wait for user response."""
+        ...
+
+
+# ---------------------------------------------------------------------------
+# Data types — output
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class SummarizationOutput:
+    """Final output of the summarization pipeline step.
+
+    Contains the article data ready for Step 3 (theme generation)
+    and the formatted text used for Slack display.
+
+    Attributes:
+        articles: List of article dicts in PRD Section 5.2 output format.
+        text: The Slack mrkdwn text (original or regenerated).
+        model: The LLM model identifier used for summarization.
+    """
+
+    articles: list[dict[str, object]]
+    text: str
+    model: str
+
+
+# ---------------------------------------------------------------------------
+# Constants — Slack form config
+# ---------------------------------------------------------------------------
+
+SUMMARY_HEADER = "Article Summaries for Review"
+"""Expected header in formatted summary text; used for content validation."""
+
+NEXT_STEPS_FIELD_LABEL = "Ready to proceed to next step ?"
+NEXT_STEPS_OPTIONS: list[str] = ["Yes", "Provide Feedback", "Restart Chat"]
+NEXT_STEPS_BUTTON_LABEL = "Proceed to Next Steps"
+NEXT_STEPS_FORM_TITLE = "Proceed to next step"
+NEXT_STEPS_FORM_DESCRIPTION = (
+    "All articles have been successfully summarized."
+)
+NEXT_STEPS_MESSAGE = "*All articles have been successfully summarized.*"
+
+FEEDBACK_MESSAGE = (
+    "*Please provide feedback to improve summarized content*"
+)
+FEEDBACK_BUTTON_LABEL = "Add feedback"
+FEEDBACK_FORM_TITLE = "Feedback Form"
+FEEDBACK_FORM_DESCRIPTION = (
+    "Please provide feedback to improve summarized content"
+)
+
+SUMMARY_DIVIDER = "\u2500" * 30
+"""Visual divider line used between article summaries."""
+
+
+# ---------------------------------------------------------------------------
+# Output formatting
+# ---------------------------------------------------------------------------
+
+
+def format_summary_slack_text(summaries: list[ArticleSummary]) -> str:
+    """Build Slack mrkdwn text displaying all article summaries.
+
+    Ports the n8n "Format output" Code node ``combinedText`` construction.
+    Produces a flat mrkdwn string with a header, article count, and each
+    article's title, URL, summary, and business relevance separated by
+    divider lines.
+
+    Args:
+        summaries: Ordered list of article summaries.
+
+    Returns:
+        Slack mrkdwn text ready for ``chat.postMessage``.
+    """
+    parts: list[str] = [
+        f"*{SUMMARY_HEADER}*\n\n_Total Articles:_ {len(summaries)}\n",
+    ]
+
+    for summary in summaries:
+        parts.append(
+            f"*{summary.order}. {summary.title}*\n"
+            f"*URL:* {summary.url}\n\n"
+            f"*Summary:*\n{summary.summary}\n\n"
+            f"*Business Relevance:*\n{summary.business_relevance}\n"
+            f"{SUMMARY_DIVIDER}\n"
+        )
+
+    return "\n".join(parts)
+
+
+def build_summary_slack_blocks(
+    summaries: list[ArticleSummary],
+) -> list[dict[str, object]]:
+    """Build Slack Block Kit blocks for article summaries.
+
+    Ports the n8n "Format output" Code node ``blocks`` array
+    construction.  Creates a header section, divider, and one section
+    per article with a divider between each.
+
+    Args:
+        summaries: Ordered list of article summaries.
+
+    Returns:
+        List of Slack Block Kit block dicts.
+    """
+    blocks: list[dict[str, object]] = [
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"*{SUMMARY_HEADER}*\n\n"
+                    f"_Total Articles:_ {len(summaries)}"
+                ),
+            },
+        },
+        {"type": "divider"},
+    ]
+
+    for summary in summaries:
+        blocks.append({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": (
+                    f"*{summary.order}. {summary.title}*\n"
+                    f"*URL:* {summary.url}\n\n"
+                    f"*Summary:*\n{summary.summary}\n\n"
+                    f"*Business Relevance:*\n{summary.business_relevance}"
+                ),
+            },
+        })
+        blocks.append({"type": "divider"})
+
+    return blocks
+
+
+# ---------------------------------------------------------------------------
+# Form builders
+# ---------------------------------------------------------------------------
+
+
+def build_next_steps_form() -> list[dict[str, object]]:
+    """Build the Slack sendAndWait form for next-steps selection.
+
+    Ports the n8n "Next steps selection" sendAndWait node form
+    definition.  Presents a required dropdown with options: Yes /
+    Provide Feedback / Restart Chat.
+
+    Returns:
+        JSON-serialisable form field list for Slack sendAndWait.
+    """
+    return [
+        {
+            "fieldLabel": NEXT_STEPS_FIELD_LABEL,
+            "fieldType": "dropdown",
+            "fieldOptions": {
+                "values": [{"option": opt} for opt in NEXT_STEPS_OPTIONS],
+            },
+            "requiredField": True,
+        },
+    ]
+
+
+def parse_next_steps_response(response: dict[str, str]) -> UserChoice | None:
+    """Parse the user's selection from the next-steps form response.
+
+    Extracts the dropdown value from the form response dict and
+    normalizes it to a :class:`~ica.utils.output_router.UserChoice`.
+
+    Args:
+        response: The raw Slack form response dict mapping field labels
+            to selected values.
+
+    Returns:
+        The user's choice, or ``None`` if the value is unrecognized.
+    """
+    value = response.get(NEXT_STEPS_FIELD_LABEL, "")
+    return normalize_switch_value(value)
+
+
+def summaries_to_output_articles(
+    summaries: list[ArticleSummary],
+) -> list[dict[str, object]]:
+    """Convert :class:`ArticleSummary` list to the PRD Section 5.2 format.
+
+    Produces the JSON-compatible dict structure expected by Step 3
+    (theme generation)::
+
+        {
+            "URL": "...",
+            "Title": "...",
+            "Summary": "3-4 sentences",
+            "BusinessRelevance": "2-3 sentences",
+            "order": 1,
+            "newsletter_id": "...",
+            "industry_news": true
+        }
+
+    Args:
+        summaries: Ordered list of article summaries.
+
+    Returns:
+        List of article dicts in the PRD output format.
+    """
+    return [
+        {
+            "URL": s.url,
+            "Title": s.title,
+            "Summary": s.summary,
+            "BusinessRelevance": s.business_relevance,
+            "order": s.order,
+            "newsletter_id": s.newsletter_id,
+            "industry_news": s.industry_news,
+        }
+        for s in summaries
+    ]
+
+
+# ---------------------------------------------------------------------------
+# LLM calls — regeneration and learning data extraction
+# ---------------------------------------------------------------------------
+
+
+async def call_regeneration_llm(
+    original_text: str,
+    user_feedback: str,
+    *,
+    model: str | None = None,
+) -> str:
+    """Call the LLM to regenerate summaries based on user feedback.
+
+    Ports the n8n "Re-Generate Data using LLM" node in the
+    summarization subworkflow.
+
+    Args:
+        original_text: The original formatted summary text.
+        user_feedback: The user's free-text feedback from Slack.
+        model: Override model identifier.  Defaults to
+            ``get_model(LLMPurpose.SUMMARY_REGENERATION)``.
+
+    Returns:
+        The regenerated summary text.
+
+    Raises:
+        RuntimeError: If the LLM returns an empty response.
+    """
+    model_id = model or get_model(LLMPurpose.SUMMARY_REGENERATION)
+    system_prompt, user_prompt = build_summarization_regeneration_prompt(
+        original_content=original_text,
+        user_feedback=user_feedback,
+    )
+
+    response = await litellm.acompletion(
+        model=model_id,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    )
+
+    content = response.choices[0].message.content  # type: ignore[union-attr]
+    if not content or not content.strip():
+        raise RuntimeError(
+            "LLM returned an empty response for summarization regeneration"
+        )
+
+    return content.strip()
+
+
+async def extract_summary_learning_data(
+    feedback: str,
+    input_text: str,
+    model_output: str,
+    *,
+    model: str | None = None,
+) -> str:
+    """Call the LLM to extract learning data from user feedback.
+
+    Ports the n8n "Learning data extractor" node in the summarization
+    subworkflow.  Converts raw user feedback into a concise, structured
+    summary that is stored in the ``notes`` table for future prompt
+    injection.
+
+    Args:
+        feedback: The user's free-text feedback from the Slack form.
+        input_text: The original formatted summary text.
+        model_output: The regenerated summary text.
+        model: Override model identifier.  Defaults to
+            ``get_model(LLMPurpose.SUMMARY_LEARNING_DATA)``.
+
+    Returns:
+        Extracted ``learning_feedback`` text.  If the LLM returns valid
+        JSON with a ``learning_feedback`` key, that value is extracted;
+        otherwise the raw response is returned.
+
+    Raises:
+        RuntimeError: If the LLM returns an empty response.
+    """
+    model_id = model or get_model(LLMPurpose.SUMMARY_LEARNING_DATA)
+    system_prompt, user_prompt = build_learning_data_extraction_prompt(
+        feedback=feedback,
+        input_text=input_text,
+        model_output=model_output,
+    )
+
+    response = await litellm.acompletion(
+        model=model_id,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+    )
+
+    content = response.choices[0].message.content  # type: ignore[union-attr]
+    if not content or not content.strip():
+        raise RuntimeError(
+            "LLM returned an empty response for learning data extraction"
+        )
+
+    text = content.strip()
+
+    # Try to parse JSON and extract the learning_feedback field.
+    try:
+        data = json.loads(text)
+        if isinstance(data, dict) and "learning_feedback" in data:
+            return str(data["learning_feedback"])
+    except (json.JSONDecodeError, TypeError):
+        pass
+
+    return text
+
+
+# ---------------------------------------------------------------------------
+# Database operations — feedback storage
+# ---------------------------------------------------------------------------
+
+
+async def store_summarization_feedback(
+    session: AsyncSession,
+    feedback_text: str,
+    *,
+    newsletter_id: str | None = None,
+) -> None:
+    """Store processed learning feedback in the ``notes`` table.
+
+    Ports the n8n "Insert user feedback" Postgres node in the
+    summarization subworkflow.  Inserts with ``type='user_summarization'``.
+
+    Args:
+        session: Active async database session.
+        feedback_text: The processed learning note from
+            :func:`extract_summary_learning_data`.
+        newsletter_id: Optional newsletter association.
+    """
+    await add_note(
+        session,
+        "user_summarization",
+        feedback_text,
+        newsletter_id=newsletter_id,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Main orchestration — output sharing and feedback loop
+# ---------------------------------------------------------------------------
+
+
+async def run_summarization_output(
+    summaries: list[ArticleSummary],
+    *,
+    slack: SlackSummaryReview,
+    session: AsyncSession | None = None,
+    newsletter_id: str | None = None,
+) -> SummarizationOutput:
+    """Run the summarization output sharing and feedback loop.
+
+    Orchestrates PRD Section 3.2 steps 7-10 and the feedback loop:
+
+    1. Format all summaries as Slack mrkdwn + Block Kit.
+    2. Share in Slack channel.
+    3. Send next-steps form (Yes / Provide Feedback / Restart Chat).
+    4. **Yes** → return final output with article data.
+    5. **Provide Feedback** → collect feedback → regenerate via LLM →
+       extract learning data → store in ``notes`` → re-share (loop).
+    6. **Restart Chat** → reset to original text → re-share (loop).
+
+    Mirrors the n8n loop: "Share summarized content" → "Next steps
+    selection" → "Switch" → feedback path / restart path / final output.
+
+    Args:
+        summaries: Ordered article summaries from
+            :func:`summarize_articles`.
+        slack: Slack interaction handler for channel messages, forms,
+            and free-text input.
+        session: Optional async database session for storing learning
+            data.  When ``None``, feedback is not persisted.
+        newsletter_id: Optional newsletter association for feedback
+            storage.
+
+    Returns:
+        :class:`SummarizationOutput` with the final article data, text,
+        and model identifier.
+    """
+    model_id = get_model(LLMPurpose.SUMMARY)
+
+    # Build initial formatted text and output articles
+    original_text = format_summary_slack_text(summaries)
+    output_articles = summaries_to_output_articles(summaries)
+    blocks = build_summary_slack_blocks(summaries)
+    form_fields = build_next_steps_form()
+
+    # Loop state
+    regenerated_text: str | None = None
+    switch_value: str | None = None
+
+    while True:
+        # Step 1: Route content via conditional output router
+        route = conditional_output_router(
+            switch_value=switch_value,
+            original_text=original_text,
+            re_generated_text=regenerated_text,
+            content_valid=(
+                SUMMARY_HEADER in regenerated_text
+                if regenerated_text is not None
+                else True
+            ),
+        )
+        current_text = route.text
+
+        # Step 2: Share in Slack channel
+        await slack.send_channel_message(current_text, blocks=blocks)
+
+        # Step 3: Send next-steps form and wait for response
+        response = await slack.send_and_wait_form(
+            NEXT_STEPS_MESSAGE,
+            form_fields=form_fields,
+            button_label=NEXT_STEPS_BUTTON_LABEL,
+            form_title=NEXT_STEPS_FORM_TITLE,
+            form_description=NEXT_STEPS_FORM_DESCRIPTION,
+        )
+
+        choice = parse_next_steps_response(response)
+        switch_value = response.get(NEXT_STEPS_FIELD_LABEL, "")
+
+        # Step 4: Route based on user selection
+        if choice == UserChoice.YES:
+            return SummarizationOutput(
+                articles=output_articles,
+                text=current_text,
+                model=model_id,
+            )
+
+        if choice == UserChoice.PROVIDE_FEEDBACK:
+            # Step 5a: Collect feedback
+            user_feedback = await slack.send_and_wait_freetext(
+                FEEDBACK_MESSAGE,
+                button_label=FEEDBACK_BUTTON_LABEL,
+                form_title=FEEDBACK_FORM_TITLE,
+                form_description=FEEDBACK_FORM_DESCRIPTION,
+            )
+
+            # Step 5b: Regenerate via LLM
+            regenerated_text = await call_regeneration_llm(
+                original_text=current_text,
+                user_feedback=user_feedback,
+            )
+
+            # Step 5c: Extract learning data
+            learning_note = await extract_summary_learning_data(
+                feedback=user_feedback,
+                input_text=current_text,
+                model_output=regenerated_text,
+            )
+
+            # Step 5d: Store learning data
+            if session is not None:
+                await store_summarization_feedback(
+                    session,
+                    learning_note,
+                    newsletter_id=newsletter_id,
+                )
+
+            # Loop back — regenerated_text will be picked up by router
+            continue
+
+        # Restart Chat or unrecognized — reset and loop
+        regenerated_text = None

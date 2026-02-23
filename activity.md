@@ -2,9 +2,9 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 29
+**Tasks Completed:** 30
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 36)
+**Tasks Completed This Session:** 1 (session 37)
 
 ---
 
@@ -31,6 +31,35 @@ After completing each task, add an entry below in this format:
 
 ---
 -->
+
+### 2026-02-22 (session 37)
+**Completed:**
+- ica-duo.28: Implement summarization output and feedback
+
+**Changes Made:**
+- Updated `ica/pipeline/summarization.py` — added SlackSummaryReview protocol, SummarizationOutput dataclass, Slack constants (SUMMARY_HEADER, NEXT_STEPS_*, FEEDBACK_*, SUMMARY_DIVIDER), format_summary_slack_text (mrkdwn text builder), build_summary_slack_blocks (Block Kit builder), build_next_steps_form (dropdown form), parse_next_steps_response (UserChoice mapping), summaries_to_output_articles (PRD Section 5.2 format), call_regeneration_llm (regeneration via SUMMARY_REGENERATION model), extract_summary_learning_data (learning data extraction via SUMMARY_LEARNING_DATA model with JSON parsing), store_summarization_feedback (notes table with type='user_summarization'), run_summarization_output (main orchestrator with feedback loop)
+- Created `tests/test_pipeline/test_summarization_output.py` (98 tests)
+
+**Status:**
+- Summarization output and feedback loop (Step 2, third part) fully implemented:
+  - Slack mrkdwn text formatting with header, article count, per-article title/URL/summary/relevance (n8n "Format output" Code node)
+  - Slack Block Kit blocks with section + divider pattern (n8n blocks array)
+  - Next-steps dropdown form: Yes / Provide Feedback / Restart Chat (n8n "Next steps selection" sendAndWait)
+  - Feedback collection via free-text form (n8n "Feedback form" sendAndWait)
+  - Regeneration LLM call with summarization regeneration prompt (n8n "Re-Generate Data using LLM")
+  - Learning data extraction with JSON parsing (n8n "Learning data extractor")
+  - Feedback storage in notes table with type='user_summarization' (n8n "Insert user feedback" Postgres)
+  - Conditional output routing via output_router (n8n "Conditional output" Code node)
+  - Full orchestration loop matching n8n flow: share → ask → feedback/restart/exit
+- All 2032 tests pass (1934 existing + 98 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-22 (session 36)
 **Completed:**
