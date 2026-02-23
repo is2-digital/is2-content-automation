@@ -2,9 +2,9 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 22
+**Tasks Completed:** 23
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 28)
+**Tasks Completed This Session:** 1 (session 29)
 
 ---
 
@@ -31,6 +31,31 @@ After completing each task, add an entry below in this format:
 
 ---
 -->
+
+### 2026-02-22 (session 29)
+**Completed:**
+- ica-578.22: Implement theme selection and approval
+
+**Changes Made:**
+- Created `ica/pipeline/theme_selection.py` (ThemeSelectionResult, ApprovalChoice, format_theme_body, format_recommendation, format_themes_slack_message, format_selected_theme_body, format_freshness_slack_message, build_theme_selection_form, build_approval_form, extract_selected_theme, is_feedback_selection, parse_approval_choice, run_freshness_check, extract_learning_data, save_approved_theme, store_theme_feedback)
+- Created `tests/test_pipeline/test_theme_selection.py` (139 tests)
+
+**Status:**
+- Theme selection and approval pipeline step (Step 3, second half) fully implemented:
+  - Slack formatting: themes overview with marker-to-mrkdwn conversion, selected theme detail view, freshness report display
+  - Form builders: theme selection (radio: themes + "Add Feedback"), final approval (Approve/Reset/Feedback)
+  - Response parsing: theme extraction with case-insensitive matching, feedback detection, approval choice routing (contains-based, matching n8n "Final Switch" logic)
+  - LLM calls: freshness check via `LLMPurpose.THEME_FRESHNESS_CHECK` (gemini-2.5-flash), learning data extraction via `LLMPurpose.THEME_LEARNING_DATA` (claude-sonnet)
+  - DB operations: save approved theme via `upsert_theme()`, store feedback via `add_feedback()`
+- All 1629 tests pass (1490 existing + 139 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-22 (session 28)
 **Completed:**
