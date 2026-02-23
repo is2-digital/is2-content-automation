@@ -2,9 +2,9 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 15
+**Tasks Completed:** 16
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 19)
+**Tasks Completed This Session:** 1 (session 20)
 
 ---
 
@@ -436,6 +436,28 @@ After completing each task, add an entry below in this format:
 - Only `"yes"` (case-insensitive, whitespace-trimmed) maps to True; everything else (no, true, false, empty string, None) maps to False
 - Bool passthrough: Python `True`/`False` pass through unchanged
 - All 556 tests pass (505 existing + 51 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
+
+### 2026-02-22 (session 20)
+**Completed:**
+- ica-dd0.2.2: Test Featured Article character counting
+
+**Changes Made:**
+- Updated `ica/validators/character_count.py` — added `_strip_subheading`, `_extract_cta`, `_split_paragraphs`, `validate_featured_article`; wired into `validate_character_counts`
+- Created `tests/test_validators/test_featured_article.py` (62 tests)
+
+**Status:**
+- Featured Article validator ported from n8n "Validation Character count" Code node in markdown_generator_subworkflow.json
+- Strips `## ...` subheading line, removes CTA line (containing →), splits on blank lines
+- P1: 300-400 chars, P2: 300-400 chars, Key Insight (starts with `**`): 300-370 chars
+- All 693 tests pass (631 existing + 62 new)
 
 **Next:**
 - Next available task from `bd ready`

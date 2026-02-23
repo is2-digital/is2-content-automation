@@ -121,6 +121,60 @@ def validate_quick_highlights(raw: str) -> list[CharacterCountError]:
     return errors
 
 
+def _strip_subheading(text: str) -> str:
+    """Remove a ``## ...`` subheading line from section content."""
+    return re.sub(r"^##\s+.*$", "", text, count=1, flags=re.MULTILINE).strip()
+
+
+def _extract_cta(text: str) -> tuple[str, str]:
+    """Find the CTA line (contains ``→``) and return ``(cta, text_without_cta)``.
+
+    Returns ``("", text)`` if no CTA line is found.
+    """
+    match = re.search(r"^.*→.*$", text, re.MULTILINE)
+    if not match:
+        return "", text
+    cta = match.group(0)
+    return cta, text.replace(cta, "").strip()
+
+
+def _split_paragraphs(text: str) -> list[str]:
+    """Split text on blank lines, returning non-empty trimmed paragraphs."""
+    return [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+
+
+def validate_featured_article(raw: str) -> list[CharacterCountError]:
+    """Validate Featured Article section: P1 (300-400), P2 (300-400), Key Insight (300-370).
+
+    Matches the n8n logic:
+    1. Extract the FEATURED ARTICLE section.
+    2. Strip the ``## ...`` subheading line.
+    3. Find and remove the CTA line (contains ``→``).
+    4. Split remaining text into paragraphs on blank lines.
+    5. P1 = first paragraph, P2 = second paragraph.
+    6. Key Insight = first paragraph starting with ``**``.
+    """
+    featured = extract_section(raw, "FEATURED ARTICLE")
+    body = _strip_subheading(featured)
+    _cta, body_no_cta = _extract_cta(body)
+    paras = _split_paragraphs(body_no_cta)
+
+    p1 = paras[0] if len(paras) > 0 else ""
+    p2 = paras[1] if len(paras) > 1 else ""
+    insight = next((p for p in paras if p.startswith("**")), "")
+
+    errors: list[CharacterCountError] = []
+    for field, text, lo, hi in [
+        ("Paragraph 1", p1, 300, 400),
+        ("Paragraph 2", p2, 300, 400),
+        ("Key Insight paragraph", insight, 300, 370),
+    ]:
+        err = _range_check("Featured Article", field, count_chars(text), lo, hi)
+        if err:
+            errors.append(err)
+    return errors
+
+
 def validate_character_counts(raw: str) -> list[CharacterCountError]:
     """Run all character-count validations on markdown content.
 
@@ -128,6 +182,6 @@ def validate_character_counts(raw: str) -> list[CharacterCountError]:
     """
     errors: list[CharacterCountError] = []
     errors.extend(validate_quick_highlights(raw))
-    # Future tasks will add: Featured Article, Main Articles,
-    # Industry Developments, Footer
+    errors.extend(validate_featured_article(raw))
+    # Future tasks will add: Main Articles, Industry Developments, Footer
     return errors
