@@ -2,9 +2,9 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 24
+**Tasks Completed:** 25
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 30)
+**Tasks Completed This Session:** 1 (session 31)
 
 ---
 
@@ -31,6 +31,33 @@ After completing each task, add an entry below in this format:
 
 ---
 -->
+
+### 2026-02-22 (session 31)
+**Completed:**
+- ica-bfc.13: Implement article curation approval flow
+
+**Changes Made:**
+- Updated `ica/pipeline/article_curation.py` — added SlackApprovalSender protocol, SheetReader protocol, ApprovedArticle dataclass, ApprovalResult dataclass, build_approval_message, build_revalidation_message, _is_approved, validate_sheet_data, parse_approved_articles, run_approval_flow
+- Updated `tests/test_pipeline/test_article_curation.py` (+78 tests, 60→138 total)
+
+**Status:**
+- Article curation approval flow (Step 1, second half) fully implemented:
+  - SlackApprovalSender protocol: sendAndWait abstraction for Slack approval buttons
+  - SheetReader protocol: reads all rows from Google Sheet after user approval
+  - build_approval_message: constructs Slack message with Google Sheets link (n8n "User message" Code node)
+  - build_revalidation_message: constructs re-validation instructions (n8n "User re-validation message" Code node)
+  - validate_sheet_data: checks at least one row has approved=yes AND newsletter_id (n8n "Validate data for required fields" Code node)
+  - parse_approved_articles: filters approved rows and normalizes to ApprovedArticle output format (PRD Section 5.1)
+  - run_approval_flow: orchestrates the full loop — sendAndWait → fetch sheet → validate → retry or return
+- All 1767 tests pass (1689 existing + 78 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-22 (session 30)
 **Completed:**

@@ -1,10 +1,16 @@
-"""Tests for the article curation data flow (Step 1 data preparation).
+"""Tests for the article curation data flow and approval flow (Step 1).
 
 Tests cover:
 - format_article_for_sheet: date formatting, approved normalization, nullable fields
 - articles_to_row_dicts: conversion to dict list, column presence, empty list
 - fetch_unapproved_articles: SQL generation for approved=false and NULL, limit, ordering
 - prepare_curation_data: full orchestration with mock dependencies
+- build_approval_message / build_revalidation_message: message formatting
+- _is_approved: string-to-boolean normalization
+- validate_sheet_data: validation of at least one approved article with newsletter_id
+- parse_approved_articles: filtering and conversion to output format
+- run_approval_flow: full approval loop orchestration
+- ApprovedArticle / ApprovalResult: dataclass properties
 """
 
 from __future__ import annotations
@@ -17,14 +23,26 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from ica.pipeline.article_curation import (
+    APPROVAL_MESSAGE_TEMPLATE,
+    APPROVE_LABEL,
     INITIAL_NOTIFICATION,
+    REVALIDATION_MESSAGE_TEMPLATE,
     SHEET_COLUMNS,
+    STATUS_MESSAGE,
+    ApprovalResult,
+    ApprovedArticle,
     CurationDataResult,
     SheetArticle,
+    _is_approved,
     articles_to_row_dicts,
+    build_approval_message,
+    build_revalidation_message,
     fetch_unapproved_articles,
     format_article_for_sheet,
+    parse_approved_articles,
     prepare_curation_data,
+    run_approval_flow,
+    validate_sheet_data,
 )
 
 
@@ -805,3 +823,751 @@ class TestEdgeCases:
         for key, value in rows[0].items():
             if key != "url":
                 assert value == ""
+
+
+# ===========================================================================
+# Approval flow tests (steps 6–10)
+# ===========================================================================
+
+
+# ---------------------------------------------------------------------------
+# Fake protocol implementations for approval flow
+# ---------------------------------------------------------------------------
+
+
+class FakeSlackApproval:
+    """Records sendAndWait calls for verification."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, str]] = []
+
+    async def send_and_wait(
+        self,
+        channel: str,
+        text: str,
+        *,
+        approve_label: str = "Proceed to next steps",
+    ) -> None:
+        self.calls.append((channel, text, approve_label))
+
+
+class FakeSheetReader:
+    """Returns pre-configured rows from read_rows calls."""
+
+    def __init__(self, responses: list[list[dict[str, str]]]) -> None:
+        self._responses = list(responses)
+        self._call_index = 0
+        self.calls: list[tuple[str, str]] = []
+
+    async def read_rows(
+        self, spreadsheet_id: str, sheet_name: str
+    ) -> list[dict[str, str]]:
+        self.calls.append((spreadsheet_id, sheet_name))
+        rows = self._responses[self._call_index]
+        self._call_index += 1
+        return rows
+
+
+def _make_sheet_row(
+    url: str = "https://example.com/a",
+    title: str = "Article",
+    publish_date: str = "02/15/2026",
+    origin: str = "google_news",
+    approved: str = "yes",
+    newsletter_id: str = "NL-001",
+    industry_news: str = "",
+) -> dict[str, str]:
+    """Helper to create a sheet row dict."""
+    return {
+        "url": url,
+        "title": title,
+        "publish_date": publish_date,
+        "origin": origin,
+        "approved": approved,
+        "newsletter_id": newsletter_id,
+        "industry_news": industry_news,
+    }
+
+
+# ---------------------------------------------------------------------------
+# build_approval_message
+# ---------------------------------------------------------------------------
+
+
+class TestBuildApprovalMessage:
+    """Tests for Slack approval message construction."""
+
+    def test_contains_spreadsheet_id(self) -> None:
+        msg = build_approval_message("abc123")
+        assert "abc123" in msg
+
+    def test_contains_google_sheets_url(self) -> None:
+        msg = build_approval_message("abc123")
+        assert "https://docs.google.com/spreadsheets/d/abc123" in msg
+
+    def test_contains_approval_text(self) -> None:
+        msg = build_approval_message("abc123")
+        assert "Approve Curated Articles" in msg
+
+    def test_contains_proceed_text(self) -> None:
+        msg = build_approval_message("abc123")
+        assert "proceed to next steps" in msg
+
+    def test_different_spreadsheet_ids(self) -> None:
+        msg1 = build_approval_message("id-one")
+        msg2 = build_approval_message("id-two")
+        assert "id-one" in msg1
+        assert "id-two" in msg2
+        assert "id-one" not in msg2
+
+    def test_uses_template(self) -> None:
+        msg = build_approval_message("test-id")
+        expected = APPROVAL_MESSAGE_TEMPLATE.format(spreadsheet_id="test-id")
+        assert msg == expected
+
+
+# ---------------------------------------------------------------------------
+# build_revalidation_message
+# ---------------------------------------------------------------------------
+
+
+class TestBuildRevalidationMessage:
+    """Tests for Slack re-validation message construction."""
+
+    def test_contains_spreadsheet_id(self) -> None:
+        msg = build_revalidation_message("abc123")
+        assert "abc123" in msg
+
+    def test_contains_google_sheets_url(self) -> None:
+        msg = build_revalidation_message("abc123")
+        assert "https://docs.google.com/spreadsheets/d/abc123" in msg
+
+    def test_contains_revalidation_instructions(self) -> None:
+        msg = build_revalidation_message("abc123")
+        assert "approved column" in msg.lower()
+        assert "newsletter_id" in msg
+
+    def test_contains_proceed_text(self) -> None:
+        msg = build_revalidation_message("abc123")
+        assert "proceed to next steps" in msg
+
+    def test_uses_template(self) -> None:
+        msg = build_revalidation_message("test-id")
+        expected = REVALIDATION_MESSAGE_TEMPLATE.format(spreadsheet_id="test-id")
+        assert msg == expected
+
+
+# ---------------------------------------------------------------------------
+# _is_approved
+# ---------------------------------------------------------------------------
+
+
+class TestIsApproved:
+    """Tests for the string-to-boolean approval check."""
+
+    def test_yes_lowercase(self) -> None:
+        assert _is_approved("yes") is True
+
+    def test_yes_uppercase(self) -> None:
+        assert _is_approved("YES") is True
+
+    def test_yes_mixed_case(self) -> None:
+        assert _is_approved("Yes") is True
+
+    def test_yes_with_leading_spaces(self) -> None:
+        assert _is_approved("  yes") is True
+
+    def test_yes_with_trailing_spaces(self) -> None:
+        assert _is_approved("yes  ") is True
+
+    def test_yes_with_surrounding_spaces(self) -> None:
+        assert _is_approved("  yes  ") is True
+
+    def test_no(self) -> None:
+        assert _is_approved("no") is False
+
+    def test_true_string(self) -> None:
+        assert _is_approved("true") is False
+
+    def test_false_string(self) -> None:
+        assert _is_approved("false") is False
+
+    def test_empty_string(self) -> None:
+        assert _is_approved("") is False
+
+    def test_whitespace_only(self) -> None:
+        assert _is_approved("   ") is False
+
+    def test_random_text(self) -> None:
+        assert _is_approved("approved") is False
+
+    def test_yes_substring(self) -> None:
+        """'yesterday' should not be approved."""
+        assert _is_approved("yesterday") is False
+
+    @pytest.mark.parametrize("value", ["yEs", "yES", "yeS", "YeS"])
+    def test_case_insensitive_variants(self, value: str) -> None:
+        assert _is_approved(value) is True
+
+
+# ---------------------------------------------------------------------------
+# validate_sheet_data
+# ---------------------------------------------------------------------------
+
+
+class TestValidateSheetData:
+    """Tests for the sheet data validation logic."""
+
+    def test_valid_row(self) -> None:
+        rows = [_make_sheet_row(approved="yes", newsletter_id="NL-001")]
+        assert validate_sheet_data(rows) is True
+
+    def test_no_rows(self) -> None:
+        assert validate_sheet_data([]) is False
+
+    def test_no_approved_articles(self) -> None:
+        rows = [
+            _make_sheet_row(approved="", newsletter_id="NL-001"),
+            _make_sheet_row(approved="no", newsletter_id="NL-002"),
+        ]
+        assert validate_sheet_data(rows) is False
+
+    def test_approved_but_no_newsletter_id(self) -> None:
+        rows = [_make_sheet_row(approved="yes", newsletter_id="")]
+        assert validate_sheet_data(rows) is False
+
+    def test_approved_with_whitespace_only_newsletter_id(self) -> None:
+        rows = [_make_sheet_row(approved="yes", newsletter_id="   ")]
+        assert validate_sheet_data(rows) is False
+
+    def test_one_valid_among_many(self) -> None:
+        rows = [
+            _make_sheet_row(approved="", newsletter_id=""),
+            _make_sheet_row(approved="no", newsletter_id=""),
+            _make_sheet_row(approved="yes", newsletter_id="NL-003"),
+            _make_sheet_row(approved="", newsletter_id="NL-004"),
+        ]
+        assert validate_sheet_data(rows) is True
+
+    def test_approved_case_insensitive(self) -> None:
+        rows = [_make_sheet_row(approved="YES", newsletter_id="NL-001")]
+        assert validate_sheet_data(rows) is True
+
+    def test_missing_approved_key(self) -> None:
+        rows = [{"newsletter_id": "NL-001"}]
+        assert validate_sheet_data(rows) is False
+
+    def test_missing_newsletter_id_key(self) -> None:
+        rows = [{"approved": "yes"}]
+        assert validate_sheet_data(rows) is False
+
+    def test_short_circuits_on_first_valid(self) -> None:
+        """Validation stops at first valid row (matching n8n break)."""
+        rows = [
+            _make_sheet_row(approved="yes", newsletter_id="NL-001"),
+            _make_sheet_row(approved="yes", newsletter_id="NL-002"),
+        ]
+        assert validate_sheet_data(rows) is True
+
+
+# ---------------------------------------------------------------------------
+# parse_approved_articles
+# ---------------------------------------------------------------------------
+
+
+class TestParseApprovedArticles:
+    """Tests for filtering and converting sheet rows to ApprovedArticle."""
+
+    def test_single_approved(self) -> None:
+        rows = [_make_sheet_row(approved="yes", newsletter_id="NL-001")]
+        result = parse_approved_articles(rows)
+        assert len(result) == 1
+        assert result[0].url == "https://example.com/a"
+        assert result[0].newsletter_id == "NL-001"
+
+    def test_filters_unapproved(self) -> None:
+        rows = [
+            _make_sheet_row(url="https://a.com", approved="yes", newsletter_id="NL-1"),
+            _make_sheet_row(url="https://b.com", approved="", newsletter_id="NL-2"),
+            _make_sheet_row(url="https://c.com", approved="no", newsletter_id="NL-3"),
+        ]
+        result = parse_approved_articles(rows)
+        assert len(result) == 1
+        assert result[0].url == "https://a.com"
+
+    def test_multiple_approved(self) -> None:
+        rows = [
+            _make_sheet_row(url="https://a.com", approved="yes", newsletter_id="NL-1"),
+            _make_sheet_row(url="https://b.com", approved="Yes", newsletter_id="NL-2"),
+        ]
+        result = parse_approved_articles(rows)
+        assert len(result) == 2
+
+    def test_empty_rows(self) -> None:
+        assert parse_approved_articles([]) == []
+
+    def test_none_approved(self) -> None:
+        rows = [
+            _make_sheet_row(approved="", newsletter_id="NL-1"),
+            _make_sheet_row(approved="no", newsletter_id="NL-2"),
+        ]
+        result = parse_approved_articles(rows)
+        assert result == []
+
+    def test_approved_always_true(self) -> None:
+        rows = [_make_sheet_row(approved="yes")]
+        result = parse_approved_articles(rows)
+        assert result[0].approved is True
+
+    def test_industry_news_yes(self) -> None:
+        rows = [_make_sheet_row(approved="yes", industry_news="yes")]
+        result = parse_approved_articles(rows)
+        assert result[0].industry_news is True
+
+    def test_industry_news_empty(self) -> None:
+        rows = [_make_sheet_row(approved="yes", industry_news="")]
+        result = parse_approved_articles(rows)
+        assert result[0].industry_news is False
+
+    def test_industry_news_no(self) -> None:
+        rows = [_make_sheet_row(approved="yes", industry_news="no")]
+        result = parse_approved_articles(rows)
+        assert result[0].industry_news is False
+
+    def test_missing_fields_default_to_empty(self) -> None:
+        rows = [{"approved": "yes"}]
+        result = parse_approved_articles(rows)
+        assert len(result) == 1
+        assert result[0].url == ""
+        assert result[0].title == ""
+        assert result[0].publish_date == ""
+        assert result[0].origin == ""
+        assert result[0].newsletter_id == ""
+
+    def test_preserves_field_values(self) -> None:
+        rows = [
+            _make_sheet_row(
+                url="https://example.com/test",
+                title="Test Title",
+                publish_date="03/15/2026",
+                origin="default",
+                approved="yes",
+                newsletter_id="NL-007",
+                industry_news="yes",
+            )
+        ]
+        result = parse_approved_articles(rows)
+        art = result[0]
+        assert art.url == "https://example.com/test"
+        assert art.title == "Test Title"
+        assert art.publish_date == "03/15/2026"
+        assert art.origin == "default"
+        assert art.approved is True
+        assert art.newsletter_id == "NL-007"
+        assert art.industry_news is True
+
+    def test_preserves_order(self) -> None:
+        rows = [
+            _make_sheet_row(url=f"https://example.com/{i}", approved="yes")
+            for i in range(5)
+        ]
+        result = parse_approved_articles(rows)
+        for i, art in enumerate(result):
+            assert art.url == f"https://example.com/{i}"
+
+    def test_case_insensitive_approved(self) -> None:
+        rows = [
+            _make_sheet_row(url="https://a.com", approved="YES"),
+            _make_sheet_row(url="https://b.com", approved="Yes"),
+            _make_sheet_row(url="https://c.com", approved="yEs"),
+        ]
+        result = parse_approved_articles(rows)
+        assert len(result) == 3
+
+
+# ---------------------------------------------------------------------------
+# ApprovedArticle dataclass
+# ---------------------------------------------------------------------------
+
+
+class TestApprovedArticle:
+    """Tests for ApprovedArticle dataclass properties."""
+
+    def test_is_frozen(self) -> None:
+        art = ApprovedArticle(
+            url="u", title="t", publish_date="d",
+            origin="o", approved=True, newsletter_id="n",
+            industry_news=False,
+        )
+        with pytest.raises(AttributeError):
+            art.url = "changed"  # type: ignore[misc]
+
+    def test_equality(self) -> None:
+        a = ApprovedArticle("u", "t", "d", "o", True, "n", False)
+        b = ApprovedArticle("u", "t", "d", "o", True, "n", False)
+        assert a == b
+
+    def test_inequality(self) -> None:
+        a = ApprovedArticle("u1", "t", "d", "o", True, "n", False)
+        b = ApprovedArticle("u2", "t", "d", "o", True, "n", False)
+        assert a != b
+
+    def test_field_types(self) -> None:
+        art = ApprovedArticle(
+            url="https://example.com", title="Test",
+            publish_date="02/15/2026", origin="google_news",
+            approved=True, newsletter_id="NL-001",
+            industry_news=True,
+        )
+        assert isinstance(art.url, str)
+        assert isinstance(art.approved, bool)
+        assert isinstance(art.industry_news, bool)
+
+
+# ---------------------------------------------------------------------------
+# ApprovalResult dataclass
+# ---------------------------------------------------------------------------
+
+
+class TestApprovalResult:
+    """Tests for ApprovalResult dataclass properties."""
+
+    def test_is_frozen(self) -> None:
+        result = ApprovalResult(articles=[], validation_attempts=1)
+        with pytest.raises(AttributeError):
+            result.validation_attempts = 2  # type: ignore[misc]
+
+    def test_field_access(self) -> None:
+        arts = [ApprovedArticle("u", "t", "d", "o", True, "n", False)]
+        result = ApprovalResult(articles=arts, validation_attempts=3)
+        assert result.articles == arts
+        assert result.validation_attempts == 3
+
+
+# ---------------------------------------------------------------------------
+# run_approval_flow
+# ---------------------------------------------------------------------------
+
+
+class TestRunApprovalFlow:
+    """Tests for the full approval loop orchestration."""
+
+    @pytest.mark.asyncio
+    async def test_success_on_first_attempt(self) -> None:
+        valid_rows = [_make_sheet_row(approved="yes", newsletter_id="NL-1")]
+        slack = FakeSlack()
+        approval = FakeSlackApproval()
+        reader = FakeSheetReader([valid_rows])
+
+        result = await run_approval_flow(
+            slack, approval, reader,
+            spreadsheet_id="abc123", channel="#test",
+        )
+
+        assert result.validation_attempts == 1
+        assert len(result.articles) == 1
+
+    @pytest.mark.asyncio
+    async def test_success_after_one_failure(self) -> None:
+        invalid_rows = [_make_sheet_row(approved="", newsletter_id="")]
+        valid_rows = [_make_sheet_row(approved="yes", newsletter_id="NL-1")]
+        slack = FakeSlack()
+        approval = FakeSlackApproval()
+        reader = FakeSheetReader([invalid_rows, valid_rows])
+
+        result = await run_approval_flow(
+            slack, approval, reader,
+            spreadsheet_id="abc123", channel="#test",
+        )
+
+        assert result.validation_attempts == 2
+
+    @pytest.mark.asyncio
+    async def test_success_after_multiple_failures(self) -> None:
+        invalid = [_make_sheet_row(approved="", newsletter_id="")]
+        valid = [_make_sheet_row(approved="yes", newsletter_id="NL-1")]
+        slack = FakeSlack()
+        approval = FakeSlackApproval()
+        reader = FakeSheetReader([invalid, invalid, invalid, valid])
+
+        result = await run_approval_flow(
+            slack, approval, reader,
+            spreadsheet_id="abc123", channel="#test",
+        )
+
+        assert result.validation_attempts == 4
+
+    @pytest.mark.asyncio
+    async def test_sends_initial_approval_message(self) -> None:
+        valid_rows = [_make_sheet_row(approved="yes", newsletter_id="NL-1")]
+        slack = FakeSlack()
+        approval = FakeSlackApproval()
+        reader = FakeSheetReader([valid_rows])
+
+        await run_approval_flow(
+            slack, approval, reader,
+            spreadsheet_id="abc123", channel="#test",
+        )
+
+        # First sendAndWait should use the approval message
+        channel, text, label = approval.calls[0]
+        assert channel == "#test"
+        assert "abc123" in text
+        assert "Approve Curated Articles" in text
+        assert label == APPROVE_LABEL
+
+    @pytest.mark.asyncio
+    async def test_sends_revalidation_message_on_failure(self) -> None:
+        invalid = [_make_sheet_row(approved="", newsletter_id="")]
+        valid = [_make_sheet_row(approved="yes", newsletter_id="NL-1")]
+        slack = FakeSlack()
+        approval = FakeSlackApproval()
+        reader = FakeSheetReader([invalid, valid])
+
+        await run_approval_flow(
+            slack, approval, reader,
+            spreadsheet_id="abc123", channel="#test",
+        )
+
+        # Second sendAndWait should use the re-validation message
+        _, text, _ = approval.calls[1]
+        assert "approved column" in text.lower()
+        assert "newsletter_id" in text
+
+    @pytest.mark.asyncio
+    async def test_sends_status_message_on_success(self) -> None:
+        valid_rows = [_make_sheet_row(approved="yes", newsletter_id="NL-1")]
+        slack = FakeSlack()
+        approval = FakeSlackApproval()
+        reader = FakeSheetReader([valid_rows])
+
+        await run_approval_flow(
+            slack, approval, reader,
+            spreadsheet_id="abc123", channel="#test",
+        )
+
+        assert len(slack.messages) == 1
+        assert slack.messages[0] == ("#test", STATUS_MESSAGE)
+
+    @pytest.mark.asyncio
+    async def test_returns_only_approved_articles(self) -> None:
+        rows = [
+            _make_sheet_row(url="https://a.com", approved="yes", newsletter_id="NL-1"),
+            _make_sheet_row(url="https://b.com", approved="", newsletter_id=""),
+            _make_sheet_row(url="https://c.com", approved="yes", newsletter_id="NL-2"),
+        ]
+        slack = FakeSlack()
+        approval = FakeSlackApproval()
+        reader = FakeSheetReader([rows])
+
+        result = await run_approval_flow(
+            slack, approval, reader,
+            spreadsheet_id="abc123", channel="#test",
+        )
+
+        assert len(result.articles) == 2
+        urls = {a.url for a in result.articles}
+        assert urls == {"https://a.com", "https://c.com"}
+
+    @pytest.mark.asyncio
+    async def test_default_sheet_name(self) -> None:
+        valid_rows = [_make_sheet_row(approved="yes", newsletter_id="NL-1")]
+        slack = FakeSlack()
+        approval = FakeSlackApproval()
+        reader = FakeSheetReader([valid_rows])
+
+        await run_approval_flow(
+            slack, approval, reader,
+            spreadsheet_id="abc123", channel="#test",
+        )
+
+        assert reader.calls[0] == ("abc123", "Sheet1")
+
+    @pytest.mark.asyncio
+    async def test_custom_sheet_name(self) -> None:
+        valid_rows = [_make_sheet_row(approved="yes", newsletter_id="NL-1")]
+        slack = FakeSlack()
+        approval = FakeSlackApproval()
+        reader = FakeSheetReader([valid_rows])
+
+        await run_approval_flow(
+            slack, approval, reader,
+            spreadsheet_id="abc123", sheet_name="Articles",
+            channel="#test",
+        )
+
+        assert reader.calls[0] == ("abc123", "Articles")
+
+    @pytest.mark.asyncio
+    async def test_spreadsheet_id_in_all_calls(self) -> None:
+        invalid = [_make_sheet_row(approved="", newsletter_id="")]
+        valid = [_make_sheet_row(approved="yes", newsletter_id="NL-1")]
+        slack = FakeSlack()
+        approval = FakeSlackApproval()
+        reader = FakeSheetReader([invalid, valid])
+
+        await run_approval_flow(
+            slack, approval, reader,
+            spreadsheet_id="my-sheet-id", channel="#test",
+        )
+
+        # Both sendAndWait messages should reference the spreadsheet
+        for _, text, _ in approval.calls:
+            assert "my-sheet-id" in text
+        # Both read_rows calls should use the spreadsheet_id
+        for sid, _ in reader.calls:
+            assert sid == "my-sheet-id"
+
+    @pytest.mark.asyncio
+    async def test_execution_order(self) -> None:
+        """Verify: sendAndWait → read_rows → validate → (status msg or loop)."""
+        call_order: list[str] = []
+
+        class TrackingSlack:
+            async def send_message(self, channel: str, text: str) -> None:
+                call_order.append("status_message")
+
+        class TrackingApproval:
+            async def send_and_wait(
+                self, channel: str, text: str, *, approve_label: str = ""
+            ) -> None:
+                call_order.append("send_and_wait")
+
+        class TrackingReader:
+            async def read_rows(
+                self, spreadsheet_id: str, sheet_name: str
+            ) -> list[dict[str, str]]:
+                call_order.append("read_rows")
+                return [_make_sheet_row(approved="yes", newsletter_id="NL-1")]
+
+        await run_approval_flow(
+            TrackingSlack(),
+            TrackingApproval(),
+            TrackingReader(),
+            spreadsheet_id="abc123",
+            channel="#test",
+        )
+
+        assert call_order == ["send_and_wait", "read_rows", "status_message"]
+
+    @pytest.mark.asyncio
+    async def test_execution_order_with_retry(self) -> None:
+        """Verify order when validation fails once."""
+        call_order: list[str] = []
+        attempt = 0
+
+        class TrackingSlack:
+            async def send_message(self, channel: str, text: str) -> None:
+                call_order.append("status_message")
+
+        class TrackingApproval:
+            async def send_and_wait(
+                self, channel: str, text: str, *, approve_label: str = ""
+            ) -> None:
+                call_order.append("send_and_wait")
+
+        class TrackingReader:
+            async def read_rows(
+                self, spreadsheet_id: str, sheet_name: str
+            ) -> list[dict[str, str]]:
+                nonlocal attempt
+                attempt += 1
+                call_order.append("read_rows")
+                if attempt == 1:
+                    return [_make_sheet_row(approved="", newsletter_id="")]
+                return [_make_sheet_row(approved="yes", newsletter_id="NL-1")]
+
+        await run_approval_flow(
+            TrackingSlack(),
+            TrackingApproval(),
+            TrackingReader(),
+            spreadsheet_id="abc123",
+            channel="#test",
+        )
+
+        assert call_order == [
+            "send_and_wait", "read_rows",  # first attempt (fail)
+            "send_and_wait", "read_rows",  # second attempt (pass)
+            "status_message",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_returns_approval_result_type(self) -> None:
+        valid_rows = [_make_sheet_row(approved="yes", newsletter_id="NL-1")]
+        slack = FakeSlack()
+        approval = FakeSlackApproval()
+        reader = FakeSheetReader([valid_rows])
+
+        result = await run_approval_flow(
+            slack, approval, reader,
+            spreadsheet_id="abc123", channel="#test",
+        )
+
+        assert isinstance(result, ApprovalResult)
+
+    @pytest.mark.asyncio
+    async def test_industry_news_normalized(self) -> None:
+        rows = [
+            _make_sheet_row(
+                url="https://a.com", approved="yes",
+                newsletter_id="NL-1", industry_news="yes",
+            ),
+            _make_sheet_row(
+                url="https://b.com", approved="yes",
+                newsletter_id="NL-2", industry_news="",
+            ),
+        ]
+        slack = FakeSlack()
+        approval = FakeSlackApproval()
+        reader = FakeSheetReader([rows])
+
+        result = await run_approval_flow(
+            slack, approval, reader,
+            spreadsheet_id="abc123", channel="#test",
+        )
+
+        assert result.articles[0].industry_news is True
+        assert result.articles[1].industry_news is False
+
+    @pytest.mark.asyncio
+    async def test_channel_passed_correctly(self) -> None:
+        valid_rows = [_make_sheet_row(approved="yes", newsletter_id="NL-1")]
+        slack = FakeSlack()
+        approval = FakeSlackApproval()
+        reader = FakeSheetReader([valid_rows])
+
+        await run_approval_flow(
+            slack, approval, reader,
+            spreadsheet_id="abc123", channel="#my-channel",
+        )
+
+        assert approval.calls[0][0] == "#my-channel"
+        assert slack.messages[0][0] == "#my-channel"
+
+
+# ---------------------------------------------------------------------------
+# Approval flow constants
+# ---------------------------------------------------------------------------
+
+
+class TestApprovalFlowConstants:
+    """Tests for approval-flow module-level constants."""
+
+    def test_approval_message_template_has_placeholder(self) -> None:
+        assert "{spreadsheet_id}" in APPROVAL_MESSAGE_TEMPLATE
+
+    def test_revalidation_message_template_has_placeholder(self) -> None:
+        assert "{spreadsheet_id}" in REVALIDATION_MESSAGE_TEMPLATE
+
+    def test_status_message_content(self) -> None:
+        assert "google sheet" in STATUS_MESSAGE.lower()
+        assert "next steps" in STATUS_MESSAGE.lower()
+
+    def test_approve_label(self) -> None:
+        assert APPROVE_LABEL == "Proceed to next steps"
+
+    def test_approval_message_template_has_google_sheets_url(self) -> None:
+        assert "docs.google.com/spreadsheets" in APPROVAL_MESSAGE_TEMPLATE
+
+    def test_revalidation_message_template_has_google_sheets_url(self) -> None:
+        assert "docs.google.com/spreadsheets" in REVALIDATION_MESSAGE_TEMPLATE
