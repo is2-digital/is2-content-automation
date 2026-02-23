@@ -2,9 +2,9 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 23
+**Tasks Completed:** 24
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 29)
+**Tasks Completed This Session:** 1 (session 30)
 
 ---
 
@@ -31,6 +31,31 @@ After completing each task, add an entry below in this format:
 
 ---
 -->
+
+### 2026-02-22 (session 30)
+**Completed:**
+- ica-bfc.12: Implement article curation data flow
+
+**Changes Made:**
+- Created `ica/pipeline/article_curation.py` (SlackNotifier protocol, SheetWriter protocol, SheetArticle, CurationDataResult, format_article_for_sheet, articles_to_row_dicts, fetch_unapproved_articles, prepare_curation_data)
+- Created `tests/test_pipeline/test_article_curation.py` (60 tests)
+
+**Status:**
+- Article curation data preparation (Step 1, first half) fully implemented:
+  - Protocol-based dependency injection: SlackNotifier for Slack messages, SheetWriter for Google Sheets operations
+  - format_article_for_sheet: publish_date → MM/DD/YYYY, approved false/None → "", industry_news → "yes"/"", newsletter_id None → ""
+  - fetch_unapproved_articles: WHERE approved=false OR approved IS NULL, ORDER BY publish_date DESC, LIMIT 30 (matches n8n behavior)
+  - prepare_curation_data orchestrator: Slack notify → clear sheet → fetch DB → format → append to sheet
+  - articles_to_row_dicts: converts SheetArticle list to dict list with all 7 SHEET_COLUMNS
+- All 1689 tests pass (1629 existing + 60 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-22 (session 29)
 **Completed:**
