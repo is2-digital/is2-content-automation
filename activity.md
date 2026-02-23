@@ -1,14 +1,45 @@
 # ims-tt - Activity Log
 
 ## Current Status
-**Last Updated:** 2026-02-22
-**Tasks Completed:** 42
+**Last Updated:** 2026-02-23
+**Tasks Completed:** 43
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 49)
+**Tasks Completed This Session:** 1 (session 50)
 
 ---
 
 ## Session Log
+
+### 2026-02-23 (session 50)
+**Completed:**
+- ica-e1k.6: Web Fetcher Service
+
+**Changes Made:**
+- Created `ica/services/web_fetcher.py` (WebFetcherService class, FetchResult, BROWSER_HEADERS, is_fetch_failure, strip_html_tags)
+- Created `tests/test_services/test_web_fetcher.py` (70 tests)
+- Updated `ica/pipeline/summarization.py` — moved FetchResult, BROWSER_HEADERS, CAPTCHA_MARKER, YOUTUBE_DOMAIN, is_fetch_failure, strip_html_tags to service module; summarization.py now imports from service
+
+**Status:**
+- Web fetcher service (PRD Section 2.7) fully implemented:
+  - `WebFetcherService`: async HTTP client using `httpx.AsyncClient`
+  - `get(url, headers=None) -> FetchResult`: HTTP GET with error handling, satisfies `HttpFetcher` protocol
+  - Default browser-like headers (User-Agent Safari/537.36, Accept, Referer google.com, etc.)
+  - Transport error handling: timeouts, connection errors, HTTP status errors → FetchResult.error
+  - `follow_redirects=True`, configurable timeout (default 30s)
+  - Async context manager support, proper client lifecycle (owns vs injected)
+  - `FetchResult`: frozen dataclass with content/error fields
+  - `is_fetch_failure()`: error/captcha/YouTube detection
+  - `strip_html_tags()`: HTML-to-text with script/style removal, entity unescaping
+- Consolidated web-fetching concerns from summarization.py into dedicated service module
+- All 2864 tests pass (2794 existing + 70 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-22 (session 49)
 **Completed:**

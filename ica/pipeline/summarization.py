@@ -38,7 +38,6 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import date
-from html import unescape
 from typing import Protocol
 
 import litellm
@@ -53,6 +52,14 @@ from ica.prompts.summarization import (
     build_summarization_prompt,
     build_summarization_regeneration_prompt,
 )
+from ica.services.web_fetcher import (
+    BROWSER_HEADERS,
+    CAPTCHA_MARKER,
+    YOUTUBE_DOMAIN,
+    FetchResult,
+    is_fetch_failure,
+    strip_html_tags,
+)
 from ica.utils.boolean_normalizer import normalize_boolean
 from ica.utils.date_parser import parse_date_mmddyyyy
 from ica.utils.output_router import (
@@ -60,32 +67,6 @@ from ica.utils.output_router import (
     conditional_output_router,
     normalize_switch_value,
 )
-
-
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
-BROWSER_HEADERS: dict[str, str] = {
-    "User-Agent": "Safari/537.36",
-    "Accept": (
-        "text/html,application/xhtml+xml,application/xml;"
-        "q=0.9,image/webp,*/*;q=0.8"
-    ),
-    "Accept-Language": "en-US,en;q=0.9",
-    "Referer": "https://www.google.com/",
-    "Connection": "keep-alive",
-}
-"""Browser-like headers for HTTP fetching.
-
-Matches the n8n "Fetch Page Content" httpRequest node configuration.
-"""
-
-CAPTCHA_MARKER = "sgcaptcha"
-"""String present in captcha challenge pages."""
-
-YOUTUBE_DOMAIN = "youtube.com"
-"""YouTube URLs cannot be scraped and require manual fallback."""
 
 
 # ---------------------------------------------------------------------------
@@ -138,19 +119,6 @@ class SlackManualFallback(Protocol):
 # ---------------------------------------------------------------------------
 # Data types
 # ---------------------------------------------------------------------------
-
-
-@dataclass(frozen=True)
-class FetchResult:
-    """Result of an HTTP page fetch.
-
-    Attributes:
-        content: The response body text (HTML), or ``None`` on failure.
-        error: ``None`` on success, or an error description string.
-    """
-
-    content: str | None
-    error: str | None
 
 
 @dataclass(frozen=True)
@@ -371,42 +339,6 @@ async def prepare_summarization_data(
 
 
 # ---------------------------------------------------------------------------
-# Per-article loop — fetch failure detection
-# ---------------------------------------------------------------------------
-
-
-def is_fetch_failure(
-    result: FetchResult,
-    url: str,
-) -> bool:
-    """Determine whether an HTTP fetch should be treated as a failure.
-
-    Ports the n8n "If" condition node which checks three conditions (AND):
-
-    1. Error message exists (HTTP request threw an error)
-    2. Response contains captcha marker (``sgcaptcha``)
-    3. URL is a YouTube link (cannot be scraped)
-
-    In the n8n workflow, all three conditions being *false* means success.
-    Here we invert: any single condition being *true* means failure.
-
-    Args:
-        result: The :class:`FetchResult` from the HTTP fetch.
-        url: The original article URL.
-
-    Returns:
-        ``True`` if the fetch failed and manual fallback is needed.
-    """
-    if result.error is not None:
-        return True
-    if result.content is not None and CAPTCHA_MARKER in result.content:
-        return True
-    if YOUTUBE_DOMAIN in url.lower():
-        return True
-    return False
-
-
-# ---------------------------------------------------------------------------
 # Per-article loop — Slack manual fallback
 # ---------------------------------------------------------------------------
 
@@ -424,46 +356,6 @@ def build_manual_fallback_message(url: str) -> str:
         Formatted Slack mrkdwn message string.
     """
     return f"*Please provide article or blog data :*\n\U0001f517 *URL:* {url}"
-
-
-# ---------------------------------------------------------------------------
-# Per-article loop — HTML to text conversion
-# ---------------------------------------------------------------------------
-
-
-def strip_html_tags(html: str) -> str:
-    """Convert HTML to plain text by stripping tags.
-
-    Provides a simple alternative to the n8n Markdown node (Turndown).
-    Removes ``<script>`` and ``<style>`` elements, strips all tags,
-    unescapes HTML entities, and normalizes whitespace.
-
-    Args:
-        html: Raw HTML string.
-
-    Returns:
-        Plain text content suitable for LLM consumption.
-    """
-    if not html:
-        return ""
-    # Remove script and style elements entirely
-    text = re.sub(
-        r"<(script|style)\b[^>]*>.*?</\1>",
-        "",
-        html,
-        flags=re.DOTALL | re.IGNORECASE,
-    )
-    # Replace block-level tags with newlines for readability
-    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
-    text = re.sub(r"</?(p|div|h[1-6]|li|tr)\b[^>]*>", "\n", text, flags=re.IGNORECASE)
-    # Strip remaining tags
-    text = re.sub(r"<[^>]+>", " ", text)
-    # Unescape HTML entities
-    text = unescape(text)
-    # Normalize whitespace (collapse runs of spaces, preserve newlines)
-    text = re.sub(r"[^\S\n]+", " ", text)
-    text = re.sub(r"\n\s*\n", "\n\n", text)
-    return text.strip()
 
 
 # ---------------------------------------------------------------------------
