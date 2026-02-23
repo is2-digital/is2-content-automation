@@ -2,13 +2,44 @@
 
 ## Current Status
 **Last Updated:** 2026-02-22
-**Tasks Completed:** 37
+**Tasks Completed:** 38
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 44)
+**Tasks Completed This Session:** 1 (session 45)
 
 ---
 
 ## Session Log
+
+### 2026-02-22 (session 45)
+**Completed:**
+- ica-e1k.1: LLM Service
+
+**Changes Made:**
+- Created `ica/services/llm.py` (LLMResponse frozen dataclass, completion async function, _retryable_errors helper)
+- Created `tests/test_services/__init__.py`
+- Created `tests/test_services/test_llm.py` (62 tests)
+
+**Status:**
+- Unified LLM service wrapper (PRD Section 11.3) fully implemented:
+  - `completion()`: single async function replacing all direct `litellm.acompletion` calls
+  - Model routing: accepts `LLMPurpose` for config-based lookup or explicit model string
+  - Message construction: builds system+user messages list automatically
+  - Response extraction: extracts text content, validates non-empty, strips whitespace
+  - Token usage: captures prompt_tokens/completion_tokens/total_tokens when available
+  - Retry with exponential back-off: retries RateLimitError, ServiceUnavailableError, Timeout, InternalServerError, APIConnectionError
+  - Configurable retry params: max_retries (default 3), retry_base_delay (default 1s), retry_max_delay (default 30s)
+  - Error mapping: non-retryable errors wrapped as LLMError with step name; exhausted retries raise LLMError with cause chain
+  - Extra kwargs forwarded to litellm (temperature, max_tokens, etc.)
+  - `LLMResponse`: frozen dataclass with text, model, purpose, usage
+- All 2570 tests pass (2508 existing + 62 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-22 (session 44)
 **Completed:**
