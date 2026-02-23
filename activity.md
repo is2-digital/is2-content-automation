@@ -4,7 +4,7 @@
 **Last Updated:** 2026-02-22
 **Tasks Completed:** 14
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 17)
+**Tasks Completed This Session:** 1 (session 18)
 
 ---
 
@@ -414,6 +414,28 @@ After completing each task, add an entry below in this format:
 - RouterResult: frozen dataclass with (text, feedback) outputs
 - Exhaustive parametrized state matrix test covers all 15 input combinations
 - All 505 tests pass (437 existing + 68 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
+
+### 2026-02-22 (session 18)
+**Completed:**
+- ica-dd0.1.8: Test boolean normalizer
+
+**Changes Made:**
+- Created `ica/utils/boolean_normalizer.py` (normalize_boolean function)
+- Created `tests/test_utils/test_boolean_normalizer.py` (51 tests)
+
+**Status:**
+- Boolean normalizer ported from n8n Field Mapping Set node expression: `$json.approved.toString().toLowerCase() === 'yes'`
+- Only `"yes"` (case-insensitive, whitespace-trimmed) maps to True; everything else (no, true, false, empty string, None) maps to False
+- Bool passthrough: Python `True`/`False` pass through unchanged
+- All 556 tests pass (505 existing + 51 new)
 
 **Next:**
 - Next available task from `bd ready`
