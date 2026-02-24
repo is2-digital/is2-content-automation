@@ -18,7 +18,9 @@
 
 # --- Configuration ---
 TIMESTAMP=$(TZ="America/Los_Angeles" date +"%Y%m%d_%H%M%S")
-TEXT_LOG="ralph_session_${TIMESTAMP}.md"
+LOG_DIR=".ralph-logs"
+mkdir -p "$LOG_DIR"
+TEXT_LOG="${LOG_DIR}/ralph_session_${TIMESTAMP}.md"
 KEEP_JSONL="${KEEP_JSONL:-0}"  # Set KEEP_JSONL=1 to save raw JSON event log
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
@@ -26,21 +28,20 @@ PROMPT_FILE="${PROMPT_FILE:-${SCRIPT_DIR}/prompt.md}"
 CLAUDE_BIN="${CLAUDE_BIN:-claude}"
 
 if [ "$KEEP_JSONL" = "1" ]; then
-  LOG_FILE="claude_session_${TIMESTAMP}.jsonl"
+  LOG_FILE="${LOG_DIR}/claude_session_${TIMESTAMP}.jsonl"
 fi
 
 # --- Required args ---
-# Both args are required:
-#  $1 = iterations
-#  $2 = whether to include --dangerously-skip-permissions ("on" or "off")
-if [ -z "${1:-}" ] || [ -z "${2:-}" ]; then
-  echo "Usage: $0 <iterations> <dangerously_skip_permissions>"
-  echo "  dangerously_skip_permissions: on | off"
+#  $1 = iterations (required)
+#  $2 = whether to include --dangerously-skip-permissions (default: "on")
+if [ -z "${1:-}" ]; then
+  echo "Usage: $0 <iterations> [dangerously_skip_permissions]"
+  echo "  dangerously_skip_permissions: on | off (default: on)"
   exit 1
 fi
 
 ITERATIONS="$1"
-SKIP_PERMS_ARG="$2"
+SKIP_PERMS_ARG="${2:-on}"
 
 DANGEROUS_FLAG=""
 case "$SKIP_PERMS_ARG" in

@@ -113,14 +113,21 @@ A **separate scheduled job** runs independently for article collection:
 
 PostgreSQL `n8n_custom_data` with 3 tables: `articles` (PK: `url`), `themes` (PK: `theme`), `notes` (PK: `id`, auto-increment). All use `type` column as discriminator. CRUD in `db/crud.py` uses PostgreSQL `ON CONFLICT DO UPDATE` for upserts. Async sessions via `db/session.py`.
 
+## Project Status
+
+All 388 implementation tasks are closed. The codebase is **feature-complete at the code level** — every pipeline step, service, prompt, validator, and database layer is implemented with unit tests (57 test files, 32K+ lines). Remaining work is integration testing with real services, end-to-end pipeline validation, and production deployment. See `docs/prd.md` for the full remaining-work checklist.
+
 ## Key Reference Files
 
 | File | What it contains |
 |---|---|
-| `_context/PRD.md` | Complete functional spec for the Python rewrite (~1128 lines) |
-| `_context/project-details.md` | Technical analysis of all 12 n8n workflows: every node, code block, prompt, SQL query (~1397 lines) |
-| `_context/tasks.csv` | 350 granular implementation tasks with parent/child relationships |
-| `_n8n-project/workflows/` | Source n8n JSON files (the reference implementation to port from) |
+| `docs/user-guide.md` | User-facing guide: what the app does, pipeline steps, interaction patterns |
+| `docs/prd.md` | Remaining development work: integration testing, E2E validation, deployment |
+| `docs/credentials.md` | Credential setup for all 5 external services |
+| `_context/APPLICATION.md` | Full application reference: functional spec + technical spec + DB schema |
+| `_context/PRD.md` | Original functional spec for the Python rewrite (~1128 lines) |
+| `_context/project-details.md` | Technical analysis of all 12 n8n workflows (~1397 lines) |
+| `_n8n-project/workflows/` | Source n8n JSON files (the reference implementation ported from) |
 
 ## Tool Configuration
 

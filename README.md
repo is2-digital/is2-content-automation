@@ -1,6 +1,149 @@
-# is2-content-automation
+# ICA (is2-content-automation)
 
-This project's purpose is to rebuild the n8n project (is2-news) as a standalone Python application (is2-content-automation, or ica for short) that replicates the full behavior of the n8n system.
+Automated AI newsletter generation pipeline for [is2digital.com/newsletters](https://is2digital.com/newsletters). This application is a high-performance Python replacement for a legacy 12-workflow n8n system (originally 281 nodes).
 
-_n8n-project is currently an n8n-based workflow automation platform for AI newsletter generation. It consists of 12 interconnected workflows (1 main orchestrator, 8 subworkflows, 2 utilities, 1 article curation scheduler) totaling ~151 nodes across ~500KB of JSON. The system uses human-in-the-loop approvals via Slack, AI content generation via OpenRouter, data persistence in PostgreSQL, and document management via Google Docs/Sheets.
+ICA discovers articles via web search, curates them through Slack-based editorial review, generates content using multiple LLMs via OpenRouter, validates it automatically, and produces all deliverables with human approval at every step.
 
+## Project Status (February 2026)
+
+* **Core Development:** Complete. All 389 tracked tasks are closed with zero TODOs in the codebase.
+* **Testing:** 57 test files (~33K lines) implemented using mocks.
+* **Next Steps:** Transitioning from mock environments to live integration with external credentials (Slack, Google, OpenRouter, etc.).
+
+---
+
+## How It Works
+
+The system consists of two independent processes:
+
+### 1. Article Collector (Automated)
+
+* **Daily:** Searches Google News for AGI, Automation, and AI (15 results each).
+* **Every 2 Days:** Searches the web for 5 specific AI keywords (10 results each).
+* **Processing:** Deduplicates, parses dates, and upserts into PostgreSQL.
+
+### 2. Newsletter Pipeline (Manual or Every 5 Days)
+
+| Step | Process | User Interaction (Slack/Google) |
+| --- | --- | --- |
+| **1. Curation** | Articles synced to Google Sheet | Mark approved & click **Proceed** in Slack |
+| **2. Summarization** | HTTP fetch + LLM summary + feedback loop | Approve or provide feedback |
+| **3. Theme Gen** | LLM proposes 2 themes via radio buttons | Pick one theme via Slack |
+| **4. Markdown** | LLM writes body; 3-layer auto-validation | Approve or edit in Google Docs |
+| **5. HTML** | Markdown converted to email-ready HTML | Review final layout in Slack |
+| **6. Parallel** | Alt HTML, Subjects, Social Posts, LinkedIn Carousel | Select/approve each deliverable |
+
+---
+
+## Tech Stack
+
+| Component | Technology |
+| --- | --- |
+| **Runtime** | Python 3.12+ |
+| **Web Framework** | FastAPI + Uvicorn |
+| **CLI** | Typer + Rich |
+| **Database** | PostgreSQL 16 + SQLAlchemy 2.0 (Async) + Alembic |
+| **LLMs** | LiteLLM via OpenRouter (Claude Sonnet 4.5, GPT-4.1, Gemini 2.5 Flash) |
+| **Slack** | Slack Bolt (Socket Mode) |
+| **Google APIs** | Sheets + Docs via Service Account |
+| **Scheduler** | APScheduler |
+
+---
+
+## The Validation System (Step 4)
+
+The newsletter generation uses a rigorous 3-layer validation check before presenting the draft to the user:
+
+1. **Character Counting:** Python logic ensures sections (e.g., "Quick Highlights") hit specific target ranges.
+2. **Structural Validation (GPT-4.1):** Checks heading order, link formatting, and CTA patterns.
+3. **Voice Validation (GPT-4.1):** Enforces tone, contractions, authority, and formatting frequency.
+
+*Note: If errors are found, the system attempts up to 3 regenerations before force-accepting.*
+
+---
+
+## Project Structure
+
+```text
+ica/
+├── config/          Settings, LLM model mapping (21 models), startup validation
+├── pipeline/        12 pipeline steps + orchestrator + step adapter
+├── services/        Slack, LLM, Google Sheets/Docs, SearchApi, web fetcher
+├── prompts/         LLM prompt templates (one per concern)
+├── validators/      Character count and structural validation logic
+├── db/              SQLAlchemy models (Articles, Themes, Notes), CRUD, Alembic
+├── utils/           Date parsing, marker parsing, boolean normalization
+├── app.py           FastAPI (Endpoints: /trigger, /status, /health)
+├── scheduler.py     APScheduler for collection and pipeline triggers
+├── errors.py        Exception hierarchy + Slack error notifications
+└── logging.py       Structured logging with async context vars
+
+```
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+* Python 3.12+ & PostgreSQL 16
+* API Keys: OpenRouter, Slack (Bot + App tokens), Google Service Account, SearchApi
+
+### Installation & Setup
+
+```bash
+# Install dependencies
+pip install -e ".[dev]"
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your credentials (see docs/credentials.md)
+
+# Database migrations
+alembic -c alembic.ini upgrade head
+
+```
+
+### Running the Application
+
+```bash
+# Start the full service (FastAPI + Slack + Scheduler)
+python -m ica serve
+
+# Manual CLI Commands
+python -m ica run                # Trigger a pipeline run
+python -m ica status             # Show pipeline status
+python -m ica collect-articles   # Run article collection manually
+
+```
+
+**Using Docker:**
+
+```bash
+make dev                         # Start app, PostgreSQL, and Redis
+make migrate                     # Run migrations within container
+
+```
+
+---
+
+## Development & Testing
+
+```bash
+# Run all tests (57 files, all using mocks)
+pytest
+
+# Linting and Type Checking
+ruff check .
+ruff format .
+mypy ica
+
+```
+
+---
+
+## Documentation
+
+* `docs/credentials.md` — Detailed setup for external services.
+* `docs/kevin/user-guide.md` — End-user functionality guide.
+* `docs/kevin/prd.md` — Remaining integration and deployment checklist.

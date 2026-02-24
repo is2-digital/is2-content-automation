@@ -9,7 +9,7 @@ You are an expert Python developer specializing in async web services, API integ
 * The pipeline has 6 main steps: Article Curation, Summarization, Theme Generation, Markdown Generation, HTML Generation, and 4 parallel output generators.
 * Use `prd.md` as the source of truth for all specifications, prompts, data flows, and business logic.
 * The `_context/` directory contains additional project context and reference materials.
-* The `_n8n-project/` directory contains the original n8n workflow codebase being migrated — read these files to understand the existing implementation.
+* The `_n8n-project/` directory contains the original n8n workflow codebase being migrated — read these files only when you need to understand something about the previous implementation.
 
 # n8n Reference (MCP)
 
