@@ -2,13 +2,50 @@
 
 ## Current Status
 **Last Updated:** 2026-02-23
-**Tasks Completed:** ica-5fn (Social media generator)
+**Tasks Completed:** ica-72k (LinkedIn carousel generator)
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 54)
+**Tasks Completed This Session:** 1 (session 55)
 
 ---
 
 ## Session Log
+
+### 2026-02-23 (session 55)
+**Completed:**
+- ica-72k: Implement LinkedIn carousel generator
+
+**Changes Made:**
+- Created `ica/pipeline/linkedin_carousel.py` — full Step 6d implementation:
+  - SlackLinkedInReview protocol, GoogleDocsService protocol
+  - SlideError dataclass with to_dict() serialization
+  - ValidationResult dataclass, LinkedInCarouselResult dataclass
+  - validate_slide_bodies: regex-based `*Body:*` extraction, char count with -4 offset, annotation
+  - build_next_steps_form: Yes / Regenerate / Provide Feedback dropdown
+  - call_carousel_llm: LLM generation with previous_output for retry context
+  - call_regeneration_llm: feedback-driven revision LLM call
+  - generate_with_validation: generation + character validation retry loop (max 2 attempts, force-accept)
+  - create_carousel_doc: Google Doc creation
+  - run_linkedin_carousel_generation: full orchestration — approval → fetch HTML → generate + validate → Slack share → Yes/Feedback/Regenerate loop → Google Doc → share link
+- Created `tests/test_pipeline/test_linkedin_carousel.py` (74 tests)
+
+**Status:**
+- LinkedIn carousel generator pipeline step (PRD Section 3.9) fully implemented:
+  - Receives HTML doc ID + formatted_theme from pipeline context
+  - Slack approval to proceed, then fetches HTML newsletter from Google Docs
+  - LLM generates post copy (3 versions) + 10 carousel slides (TL;DR + 8 article slides)
+  - Character validation: `*Body:*` marker extraction, 265-315 char range per slide (with -4 offset)
+  - Auto-retry: up to 2 validation attempts, then force-accept (matches n8n static data counter)
+  - Slack review: Yes → Google Doc creation / Provide Feedback → regeneration LLM / Regenerate → full re-generation
+  - No database writes (matches n8n workflow which has no Postgres nodes)
+- All 3156 tests pass (3082 existing + 74 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-23 (session 54)
 **Completed:**
