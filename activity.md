@@ -1,14 +1,27 @@
 # ims-tt - Activity Log
 
 ## Current Status
-**Last Updated:** 2026-02-23
-**Tasks Completed:** ica-6oq (Wire all pipeline steps into orchestrator)
+**Last Updated:** 2026-02-24
+**Tasks Completed:** ica-d0z (Create schema.py and loader.py modules)
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 57)
+**Tasks Completed This Session:** 1 (session 58)
 
 ---
 
 ## Session Log
+
+### 2026-02-24 (session 58)
+**Completed:**
+- ica-d0z: Create schema.py and loader.py modules
+
+**Changes Made:**
+- Created `ica/llm_configs/__init__.py` — package init
+- Created `ica/llm_configs/schema.py` — Pydantic models (`ProcessConfig`, `PromptsConfig`, `MetadataConfig`) matching the `ica-llm-config/v1` JSON schema with camelCase aliases and populate_by_name
+- Created `ica/llm_configs/loader.py` — `load_process_config()` (JSON loading with file-mtime cache invalidation), `get_process_model()` (env-var > JSON > LLMConfig default priority), `get_process_prompts()` (returns system + instruction tuple), `clear_cache()`
+- Created `tests/test_llm_configs/test_schema.py` — 18 tests covering validation, defaults, aliases, serialization round-trips
+- Created `tests/test_llm_configs/test_loader.py` — 18 tests covering loading, caching, mtime invalidation, model resolution priority, error handling
+
+**No blockers.**
 
 ### 2026-02-23 (session 57)
 **Completed:**
