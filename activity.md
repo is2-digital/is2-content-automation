@@ -2,13 +2,60 @@
 
 ## Current Status
 **Last Updated:** 2026-02-23
-**Tasks Completed:** ica-72k (LinkedIn carousel generator)
+**Tasks Completed:** ica-9qv (Email subject & preview generator)
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 55)
+**Tasks Completed This Session:** 1 (session 56)
 
 ---
 
 ## Session Log
+
+### 2026-02-23 (session 56)
+**Completed:**
+- ica-9qv: Implement email subject & preview generator
+
+**Changes Made:**
+- Created `ica/pipeline/email_subject.py` — full Step 6b implementation:
+  - SlackEmailSubjectReview protocol, GoogleDocsService protocol
+  - ParsedSubject dataclass, EmailSubjectResult dataclass
+  - strip_html_to_text: HTML-to-text conversion (ports n8n "Process Input" Code node)
+  - aggregate_feedback: notes → bullet-point string
+  - call_email_subject_llm: subject generation (EMAIL_SUBJECT model)
+  - parse_subjects: split on "-----", extract Subject_N patterns + RECOMMENDATION
+  - format_recommendation: Slack mrkdwn bold on RECOMMENDATION/Explanation keywords
+  - build_subjects_slack_blocks: Block Kit for subject display
+  - format_subjects_slack_message: flattened message from blocks
+  - build_subject_selection_form: radio buttons (subjects + "Add Feedback") + textarea
+  - is_subject_selection: "SUBJECT" contains check (matches n8n Switch)
+  - extract_selected_subject: SUBJECT N pattern → 1-based index lookup
+  - call_email_review_llm: review generation (EMAIL_PREVIEW model)
+  - build_review_slack_blocks: Block Kit for review display
+  - build_review_approval_form: Approve/Reset All/Add feedback + textarea
+  - parse_review_approval: contains-based routing (matches n8n "Final Switch")
+  - extract_email_learning_data: JSON parsing with fallback
+  - store_email_feedback: notes table (type='user_email_subject')
+  - create_email_doc: Google Doc with "SUBJECT: {text}" + review
+  - run_email_subject_generation: full orchestration — two-phase flow
+- Created `tests/test_pipeline/test_email_subject.py` (105 tests)
+
+**Status:**
+- Email subject & preview generator (APPLICATION.md Section 2.8) fully implemented:
+  - Phase 1 — Subject Generation: fetch HTML doc → strip to text → learning data → LLM generates up to 10 subjects → parse → Slack display → radio selection form
+  - Subject feedback loop: "Add Feedback" → learning data extraction → store → regenerate with updated feedback
+  - Phase 2 — Review Generation: selected subject → LLM generates email review (100-120 words) → Slack display → approval form
+  - Review feedback loop: "Add a feedback" → regenerate review with Editor Notes
+  - Reset All: loops back to Phase 1 with cleared feedback (matches n8n "Final Switch" third output)
+  - Google Doc creation: "SUBJECT: {text}" + review content, share link in Slack
+  - No database writes outside learning data (matches n8n workflow)
+- All 3261 tests pass (3156 existing + 105 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-23 (session 55)
 **Completed:**
