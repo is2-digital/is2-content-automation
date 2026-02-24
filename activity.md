@@ -1,14 +1,30 @@
 # ims-tt - Activity Log
 
 ## Current Status
-**Last Updated:** 2026-02-23
-**Tasks Completed:** ica-zfz (Create remaining 17 JSON config files)
+**Last Updated:** 2026-02-24
+**Tasks Completed:** ica-p8k (Update model resolution to check JSON config)
 **Current Task:** None
-**Tasks Completed This Session:** 2 (session 62)
+**Tasks Completed This Session:** 1 (session 63)
 
 ---
 
 ## Session Log
+
+### 2026-02-24 (session 63)
+**Completed:**
+- ica-p8k: Update model resolution to check JSON config
+
+**Changes Made:**
+- Updated `ica/config/llm_config.py`:
+  - Added `_PURPOSE_TO_PROCESS` mapping (18 entries) from LLMPurpose field names to JSON config process names
+  - Rewrote `get_model()` to implement 3-tier resolution: (1) env var override, (2) JSON config `model` field, (3) hardcoded default
+  - Deferred import of `load_process_config` to avoid circular imports with `ica.llm_configs.loader`
+- Updated `tests/test_config/test_llm_config.py`:
+  - Added `TestGetModelThreeTier` (6 tests): JSON overrides default, env var overrides JSON, missing JSON fallback, unmapped purpose fallback, non-default model (GPT), freshness check (Gemini)
+  - Added `TestPurposeToProcess` (3 tests): validates mapping keys/values against real files and LLMConfig fields
+- All 135 llm_config tests pass, all 16 loader tests pass, no regressions
+
+**No blockers.**
 
 ### 2026-02-23 (session 62)
 **Completed:**

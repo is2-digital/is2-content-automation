@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from ica.config.llm_config import (
+    _PURPOSE_TO_PROCESS,
     LLMConfig,
     LLMPurpose,
     get_llm_config,
@@ -172,6 +175,158 @@ class TestGetModel:
             result = get_model(purpose)
         assert isinstance(result, str)
         assert len(result) > 0
+
+
+# ---------------------------------------------------------------------------
+# get_model() 3-tier resolution: env var > JSON config > hardcoded default
+# ---------------------------------------------------------------------------
+
+
+def _write_json_config(
+    tmp_path: Path, process_name: str, model: str = "custom/json-model"
+) -> None:
+    """Write a minimal valid JSON config file for testing."""
+    data = {
+        "$schema": "ica-llm-config/v1",
+        "processName": process_name,
+        "description": "Test config",
+        "model": model,
+        "prompts": {"system": "Test system.", "instruction": "Test instruction."},
+        "metadata": {"googleDocId": None, "lastSyncedAt": None, "version": 1},
+    }
+    path = tmp_path / f"{process_name}-llm.json"
+    path.write_text(json.dumps(data))
+
+
+class TestGetModelThreeTier:
+    """get_model() should resolve models with env var > JSON config > default."""
+
+    def test_json_config_overrides_hardcoded_default(self, tmp_path: Path) -> None:
+        """Tier 2 (JSON) wins over tier 3 (hardcoded default)."""
+        from ica.llm_configs import loader
+
+        _write_json_config(tmp_path, "summarization", model="custom/json-model")
+        loader._cache.clear()
+
+        get_llm_config.cache_clear()
+        with (
+            patch.object(loader, "_CONFIGS_DIR", tmp_path),
+            patch.dict("os.environ", {}, clear=False),
+        ):
+            model = get_model(LLMPurpose.SUMMARY)
+
+        assert model == "custom/json-model"
+
+    def test_env_var_overrides_json_config(self, tmp_path: Path) -> None:
+        """Tier 1 (env var) wins over tier 2 (JSON config)."""
+        from ica.llm_configs import loader
+
+        _write_json_config(tmp_path, "summarization", model="custom/json-model")
+        loader._cache.clear()
+
+        get_llm_config.cache_clear()
+        with (
+            patch.object(loader, "_CONFIGS_DIR", tmp_path),
+            patch.dict(
+                "os.environ",
+                {"LLM_SUMMARY_MODEL": "env/override-model"},
+                clear=False,
+            ),
+        ):
+            model = get_model(LLMPurpose.SUMMARY)
+
+        assert model == "env/override-model"
+
+    def test_missing_json_falls_back_to_default(self, tmp_path: Path) -> None:
+        """When JSON file is missing, fall back to hardcoded default."""
+        from ica.llm_configs import loader
+
+        loader._cache.clear()
+
+        get_llm_config.cache_clear()
+        with (
+            patch.object(loader, "_CONFIGS_DIR", tmp_path),
+            patch.dict("os.environ", {}, clear=False),
+        ):
+            model = get_model(LLMPurpose.SUMMARY)
+
+        assert model == "anthropic/claude-sonnet-4.5"
+
+    def test_purpose_without_mapping_uses_default(self) -> None:
+        """Purposes not in _PURPOSE_TO_PROCESS fall back to env/default."""
+        get_llm_config.cache_clear()
+        with patch.dict("os.environ", {}, clear=False):
+            model = get_model(LLMPurpose.MARKDOWN_LEARNING_DATA)
+
+        assert model == "anthropic/claude-sonnet-4.5"
+
+    def test_json_config_for_non_default_model(self, tmp_path: Path) -> None:
+        """Verify JSON works for purposes with non-sonnet defaults (e.g. GPT)."""
+        from ica.llm_configs import loader
+
+        _write_json_config(
+            tmp_path,
+            "markdown-structural-validation",
+            model="custom/better-validator",
+        )
+        loader._cache.clear()
+
+        get_llm_config.cache_clear()
+        with (
+            patch.object(loader, "_CONFIGS_DIR", tmp_path),
+            patch.dict("os.environ", {}, clear=False),
+        ):
+            model = get_model(LLMPurpose.MARKDOWN_VALIDATOR)
+
+        assert model == "custom/better-validator"
+
+    def test_json_config_for_freshness_check(self, tmp_path: Path) -> None:
+        """Verify JSON works for freshness check (default is Gemini Flash)."""
+        from ica.llm_configs import loader
+
+        _write_json_config(
+            tmp_path, "freshness-check", model="custom/fast-checker"
+        )
+        loader._cache.clear()
+
+        get_llm_config.cache_clear()
+        with (
+            patch.object(loader, "_CONFIGS_DIR", tmp_path),
+            patch.dict("os.environ", {}, clear=False),
+        ):
+            model = get_model(LLMPurpose.THEME_FRESHNESS_CHECK)
+
+        assert model == "custom/fast-checker"
+
+
+# ---------------------------------------------------------------------------
+# _PURPOSE_TO_PROCESS mapping
+# ---------------------------------------------------------------------------
+
+
+class TestPurposeToProcess:
+    """Validate the _PURPOSE_TO_PROCESS mapping dict."""
+
+    def test_all_mapped_values_are_valid_process_names(self) -> None:
+        """Every mapped process name should have a corresponding JSON file."""
+        configs_dir = Path(__file__).parent.parent.parent / "ica" / "llm_configs"
+        for field_name, process_name in _PURPOSE_TO_PROCESS.items():
+            expected_file = configs_dir / f"{process_name}-llm.json"
+            assert expected_file.exists(), (
+                f"_PURPOSE_TO_PROCESS[{field_name!r}] = {process_name!r} "
+                f"but {expected_file} does not exist"
+            )
+
+    def test_all_mapped_keys_are_valid_llm_config_fields(self) -> None:
+        """Every key in the mapping should be a valid LLMConfig field."""
+        for field_name in _PURPOSE_TO_PROCESS:
+            assert field_name in LLMConfig.model_fields, (
+                f"_PURPOSE_TO_PROCESS key {field_name!r} is not an LLMConfig field"
+            )
+
+    def test_mapping_covers_18_purposes(self) -> None:
+        """18 of 21 purposes have JSON configs (3 learning-data only have defaults)."""
+        assert len(_PURPOSE_TO_PROCESS) == 18
 
 
 # ---------------------------------------------------------------------------

@@ -65,6 +65,31 @@ _GPT_4_1 = "openai/gpt-4.1"
 _GEMINI_FLASH = "google/gemini-2.5-flash"
 
 
+# Mapping from LLMPurpose field name to JSON config process name.
+# Used by get_model() for 3-tier resolution: env var > JSON config > hardcoded default.
+# Purposes without an entry fall back to env var / hardcoded default only.
+_PURPOSE_TO_PROCESS: dict[str, str] = {
+    "llm_summary_model": "summarization",
+    "llm_summary_regeneration_model": "summarization-regeneration",
+    "llm_summary_learning_data_model": "learning-data-extraction",
+    "llm_markdown_model": "markdown-generation",
+    "llm_markdown_validator_model": "markdown-structural-validation",
+    "llm_markdown_regeneration_model": "markdown-regeneration",
+    "llm_html_model": "html-generation",
+    "llm_html_regeneration_model": "html-regeneration",
+    "llm_theme_model": "theme-generation",
+    "llm_theme_freshness_check_model": "freshness-check",
+    "llm_social_media_model": "social-media-post",
+    "llm_social_post_caption_model": "social-media-caption",
+    "llm_social_media_regeneration_model": "social-media-regeneration",
+    "llm_linkedin_model": "linkedin-carousel",
+    "llm_linkedin_regeneration_model": "linkedin-regeneration",
+    "llm_email_subject_model": "email-subject",
+    "llm_email_subject_regeneration_model": "email-subject-regeneration",
+    "llm_email_preview_model": "email-preview",
+}
+
+
 class LLMConfig(BaseSettings):
     """LLM model mappings loaded from environment variables.
 
@@ -127,6 +152,13 @@ def get_llm_config() -> LLMConfig:
 def get_model(purpose: LLMPurpose) -> str:
     """Return the model identifier for a given pipeline purpose.
 
+    Resolution priority (highest to lowest):
+
+    1. **Environment variable** — e.g. ``LLM_SUMMARY_MODEL`` overrides everything.
+    2. **JSON config file** — the ``model`` field in the corresponding
+       ``ica/llm_configs/{process}-llm.json`` file.
+    3. **Hardcoded default** — the class-level default on :class:`LLMConfig`.
+
     Args:
         purpose: The LLM purpose key.
 
@@ -134,4 +166,25 @@ def get_model(purpose: LLMPurpose) -> str:
         Model identifier string (e.g. ``"anthropic/claude-sonnet-4.5"``).
     """
     config = get_llm_config()
-    return getattr(config, purpose.value)
+    field_name = purpose.value
+
+    # Check whether an env-var override is active for this purpose.
+    env_value: str = getattr(config, field_name)
+    class_default = LLMConfig.model_fields[field_name].default
+    if env_value != class_default:
+        # Env var override is active — highest priority.
+        return env_value
+
+    # Try JSON config (tier 2) if a mapping exists.
+    process_name = _PURPOSE_TO_PROCESS.get(field_name)
+    if process_name is not None:
+        try:
+            from ica.llm_configs.loader import load_process_config
+
+            json_config = load_process_config(process_name)
+            return json_config.model
+        except FileNotFoundError:
+            pass  # Fall through to hardcoded default.
+
+    # Hardcoded default (tier 3).
+    return env_value
