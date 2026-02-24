@@ -7,7 +7,7 @@ ICA discovers articles via web search, curates them through Slack-based editoria
 ## Project Status (February 2026)
 
 * **Core Development:** Complete. All 389 tracked tasks are closed with zero TODOs in the codebase.
-* **Testing:** 57 test files (~33K lines) implemented using mocks.
+* **Testing:** Comprehensive mock-based test suite covering all pipeline steps, services, prompts, and configs.
 * **Next Steps:** Transitioning from mock environments to live integration with external credentials (Slack, Google, OpenRouter, etc.).
 
 ---
@@ -46,6 +46,7 @@ The system consists of two independent processes:
 | **LLMs** | LiteLLM via OpenRouter (Claude Sonnet 4.5, GPT-4.1, Gemini 2.5 Flash) |
 | **Slack** | Slack Bolt (Socket Mode) |
 | **Google APIs** | Sheets + Docs via Service Account |
+| **Cache** | Redis 7 |
 | **Scheduler** | APScheduler |
 
 ---
@@ -66,10 +67,11 @@ The newsletter generation uses a rigorous 3-layer validation check before presen
 
 ```text
 ica/
-├── config/          Settings, LLM model mapping (21 models), startup validation
+├── config/          Settings, LLM model mapping, startup validation
 ├── pipeline/        12 pipeline steps + orchestrator + step adapter
 ├── services/        Slack, LLM, Google Sheets/Docs, SearchApi, web fetcher
-├── prompts/         LLM prompt templates (one per concern)
+├── llm_configs/     19 JSON process configs (model + prompts per LLM task)
+├── prompts/         Prompt builder functions (dynamic interpolation over JSON configs)
 ├── validators/      Character count and structural validation logic
 ├── db/              SQLAlchemy models (Articles, Themes, Notes), CRUD, Alembic
 ├── utils/           Date parsing, marker parsing, boolean normalization
@@ -130,7 +132,7 @@ make migrate                     # Run migrations within container
 ## Development & Testing
 
 ```bash
-# Run all tests (57 files, all using mocks)
+# Run all tests (mock-based)
 pytest
 
 # Linting and Type Checking
@@ -145,5 +147,4 @@ mypy ica
 ## Documentation
 
 * `docs/credentials.md` — Detailed setup for external services.
-* `docs/kevin/user-guide.md` — End-user functionality guide.
-* `docs/kevin/prd.md` — Remaining integration and deployment checklist.
+* `docs/user-guide.md` — End-user functionality guide.
