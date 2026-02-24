@@ -17,11 +17,9 @@ pytest                                    # Run all tests
 pytest tests/test_pipeline/               # Run one test directory
 pytest tests/test_services/test_llm.py    # Run one test file
 pytest -k "test_successful_step"          # Run tests matching name
-pytest --asyncio-mode=auto                # (configured in pyproject.toml)
 
 # Linting & type checking
-ruff check .                              # Lint (E, F, I, N, UP, B, SIM, RUF rules)
-ruff format --check .                     # Format check
+ruff check .                              # Lint
 ruff format .                             # Auto-format
 mypy ica                                  # Type check (strict mode, pydantic plugin)
 
@@ -56,7 +54,7 @@ bd sync               # Sync with git
 
 ## Session Completion (Mandatory)
 
-Work is NOT complete until `git push` succeeds. See `AGENTS.md` for the full mandatory workflow. The critical steps:
+Work is NOT complete until `git push` succeeds. The critical steps:
 
 ```bash
 git pull --rebase && bd sync && git push
@@ -69,12 +67,12 @@ git status  # Must show "up to date with origin"
 
 - `ica/config/` — Pydantic Settings (`settings.py`) + LLM model mapping (`llm_config.py`) + startup validation (`validation.py`). All config from env vars / `.env`.
 - `ica/pipeline/` — Pipeline step implementations + orchestrator. Each step is a standalone module (e.g., `summarization.py`, `theme_generation.py`).
-- `ica/pipeline/steps.py` — Adapter layer that wires step modules to `PipelineStep` protocol with service instantiation.
+- `ica/pipeline/steps.py` — Adapter layer that wires step modules to `PipelineStep` protocol with service instantiation via lazy factory helpers (`_make_slack()`, `_make_docs()`, etc.) using deferred imports to avoid circular deps.
 - `ica/pipeline/orchestrator.py` — Runs sequential then parallel steps, manages `PipelineContext` dataclass that accumulates state across the pipeline.
 - `ica/services/` — External service clients: `llm.py` (LiteLLM wrapper), `slack.py` (Slack Bolt), `google_sheets.py`, `google_docs.py`, `search_api.py` (SearchApi), `web_fetcher.py` (httpx).
 - `ica/prompts/` — LLM prompt templates as pure functions returning strings. One file per pipeline step.
-- `ica/validators/` — Content validation (character counts for markdown sections).
-- `ica/utils/` — Small utilities: `marker_parser.py` (`%XX_` marker parsing), `output_router.py`, `boolean_normalizer.py`, `date_parser.py`.
+- `ica/validators/` — Content validation (`character_count.py` for markdown section character counts).
+- `ica/utils/` — `marker_parser.py` (`%XX_` marker parsing), `output_router.py`, `boolean_normalizer.py`, `date_parser.py`.
 - `ica/db/` — SQLAlchemy 2.0 async models (`models.py`), CRUD functions (`crud.py`), session factory (`session.py`), Alembic migrations.
 - `ica/app.py` — FastAPI application factory with `/trigger`, `/status`, `/health`, `/scheduler` endpoints.
 - `ica/errors.py` — Exception hierarchy (`PipelineError` → `LLMError`, `FetchError`, `DatabaseError`, `ValidationError`, `PipelineStopError`) + Slack error notification + `ValidationLoopCounter`.
@@ -97,17 +95,16 @@ A **separate scheduled job** runs independently for article collection:
 
 ### Key Patterns
 
-- **`PipelineContext`** dataclass flows through all steps, accumulating state. Sequential steps mutate and return it; parallel steps share the same snapshot.
+- **`PipelineContext`** dataclass flows through all steps, accumulating state (articles, summaries, theme, markdown/html doc IDs, step results, extras). Sequential steps mutate and return it; parallel steps share the same snapshot.
 - **`PipelineStep` protocol**: `async def __call__(self, ctx: PipelineContext) -> PipelineContext`. Steps in `steps.py` adapt each pipeline module to this protocol.
-- **Service instantiation**: `steps.py` uses lazy factory helpers (`_make_slack()`, `_make_docs()`, etc.) with deferred imports to avoid circular deps.
-- **LLM calls**: All go through `ica.services.llm.completion()` which handles model routing via `LLMPurpose` enum, retry with exponential backoff, and error mapping to `LLMError`.
-- **LLM model config**: `ica/config/llm_config.py` centralizes all model identifiers (OpenRouter `provider/model` format). Each can be overridden via env var. Defaults: `anthropic/claude-sonnet-4.5` primary, `openai/gpt-4.1` for markdown validation, `google/gemini-2.5-flash` for freshness checks.
-- **`%XX_` markers** (e.g., `%FA_TITLE`, `%M1_SOURCE`): Structured content tokens in theme generation output, parsed by `utils/marker_parser.py`.
+- **LLM calls**: All go through `ica.services.llm.completion()` which takes a `LLMPurpose` enum (28 variants for different tasks), handles model routing, retry with exponential backoff, and error mapping to `LLMError`.
+- **LLM model config**: `ica/config/llm_config.py` centralizes all model identifiers (OpenRouter `provider/model` format). Each can be overridden via env var (e.g., `LLM_SUMMARY_MODEL`). Defaults: `anthropic/claude-sonnet-4.5` primary, `openai/gpt-4.1` for markdown validation, `google/gemini-2.5-flash` for freshness checks.
+- **`%XX_` markers** (e.g., `%FA_TITLE`, `%M1_SOURCE`): Structured content tokens in theme generation output, parsed by `utils/marker_parser.py`. Prefixes: FA (featured), M1/M2 (main), Q1-Q3 (quick hits), I1/I2 (industry), RV (verified).
 - **Slack `sendAndWait`**: Core human-in-the-loop primitive for approvals and feedback.
 - **Notes table**: Consolidated feedback table with type discriminator. Uses "last 40 entries" pattern for injecting learning data into LLM prompts.
 - **Markdown validation**: 3-layer approach — (1) character count code-based, (2) structural LLM, (3) voice LLM — results merged before retry. `ValidationLoopCounter` caps attempts at 3.
 - **Structured logging**: `bind_context(run_id=..., step=...)` sets async-safe context vars that appear in all log output.
-- **Tests**: Mirror source layout (`tests/test_pipeline/`, `tests/test_services/`, etc.). Use `pytest-asyncio` with `asyncio_mode = "auto"`. No conftest.py — tests use inline fixtures and mocks.
+- **Tests**: Mirror source layout (`tests/test_pipeline/`, `tests/test_services/`, etc.). Use `pytest-asyncio` with `asyncio_mode = "auto"`. No conftest.py — tests use inline fixtures and `unittest.mock` (AsyncMock, patch, MagicMock). Tests organized into class-based groups.
 
 ### Database
 
@@ -115,18 +112,15 @@ PostgreSQL `n8n_custom_data` with 3 tables: `articles` (PK: `url`), `themes` (PK
 
 ## Project Status
 
-All 388 implementation tasks are closed. The codebase is **feature-complete at the code level** — every pipeline step, service, prompt, validator, and database layer is implemented with unit tests (57 test files, 32K+ lines). Remaining work is integration testing with real services, end-to-end pipeline validation, and production deployment. See `docs/prd.md` for the full remaining-work checklist.
+All 389 implementation tasks are closed. The codebase is **feature-complete at the code level** — every pipeline step, service, prompt, validator, and database layer is implemented with unit tests (57 test files, 32K+ lines). Remaining work is integration testing with real services, end-to-end pipeline validation, and production deployment. Tracked via beads (`bd ready`).
 
 ## Key Reference Files
 
 | File | What it contains |
 |---|---|
 | `docs/user-guide.md` | User-facing guide: what the app does, pipeline steps, interaction patterns |
-| `docs/prd.md` | Remaining development work: integration testing, E2E validation, deployment |
 | `docs/credentials.md` | Credential setup for all 5 external services |
-| `_context/APPLICATION.md` | Full application reference: functional spec + technical spec + DB schema |
-| `_context/PRD.md` | Original functional spec for the Python rewrite (~1128 lines) |
-| `_context/project-details.md` | Technical analysis of all 12 n8n workflows (~1397 lines) |
+| `prompt.md` | Role context + MCP tool references for inspecting original n8n workflows |
 | `_n8n-project/workflows/` | Source n8n JSON files (the reference implementation ported from) |
 
 ## Tool Configuration
