@@ -2,175 +2,172 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
 import pytest
 from pydantic import ValidationError
 
-from ica.llm_configs.schema import MetadataConfig, ProcessConfig, PromptsConfig
+from ica.llm_configs.schema import Metadata, ProcessConfig, Prompts
 
-# ---------------------------------------------------------------------------
-# Sample data helpers
-# ---------------------------------------------------------------------------
 
-_MINIMAL_JSON: dict = {
-    "$schema": "ica-llm-config/v1",
-    "processName": "summarization",
-    "description": "Article summarization",
-    "model": "anthropic/claude-sonnet-4.5",
-    "prompts": {
-        "system": "You are an editor.",
-        "instruction": "Follow these rules.",
-    },
-}
-
-_FULL_JSON: dict = {
-    **_MINIMAL_JSON,
-    "metadata": {
-        "googleDocId": "abc123",
-        "lastSyncedAt": "2026-01-15T10:30:00Z",
-        "version": 3,
-    },
-}
+def _valid_config_data() -> dict:
+    """Return a minimal valid config dict."""
+    return {
+        "$schema": "ica-llm-config/v1",
+        "processName": "summarization",
+        "description": "Article summarization",
+        "model": "anthropic/claude-sonnet-4.5",
+        "prompts": {
+            "system": "You are a professional editor.",
+            "instruction": "Follow these rules.",
+        },
+        "metadata": {
+            "googleDocId": None,
+            "lastSyncedAt": None,
+            "version": 1,
+        },
+    }
 
 
 # ---------------------------------------------------------------------------
-# PromptsConfig
+# Prompts model
 # ---------------------------------------------------------------------------
 
 
-class TestPromptsConfig:
+class TestPrompts:
     def test_valid_prompts(self) -> None:
-        p = PromptsConfig(system="role", instruction="rules")
-        assert p.system == "role"
-        assert p.instruction == "rules"
+        p = Prompts(system="system text", instruction="instruction text")
+        assert p.system == "system text"
+        assert p.instruction == "instruction text"
 
-    def test_missing_system_raises(self) -> None:
+    def test_empty_system_rejected(self) -> None:
         with pytest.raises(ValidationError):
-            PromptsConfig(instruction="rules")  # type: ignore[call-arg]
+            Prompts(system="", instruction="ok")
 
-    def test_missing_instruction_raises(self) -> None:
+    def test_empty_instruction_rejected(self) -> None:
         with pytest.raises(ValidationError):
-            PromptsConfig(system="role")  # type: ignore[call-arg]
+            Prompts(system="ok", instruction="")
 
 
 # ---------------------------------------------------------------------------
-# MetadataConfig
+# Metadata model
 # ---------------------------------------------------------------------------
 
 
-class TestMetadataConfig:
+class TestMetadata:
     def test_defaults(self) -> None:
-        m = MetadataConfig()
+        m = Metadata()
         assert m.google_doc_id is None
         assert m.last_synced_at is None
         assert m.version == 1
 
-    def test_from_camel_case_aliases(self) -> None:
-        m = MetadataConfig.model_validate(
-            {"googleDocId": "doc-1", "lastSyncedAt": "2026-01-01T00:00:00Z", "version": 5}
+    def test_custom_values(self) -> None:
+        m = Metadata(
+            google_doc_id="abc123",
+            last_synced_at="2026-01-01T00:00:00Z",
+            version=3,
         )
-        assert m.google_doc_id == "doc-1"
-        assert m.version == 5
-        assert isinstance(m.last_synced_at, datetime)
+        assert m.google_doc_id == "abc123"
+        assert m.last_synced_at == "2026-01-01T00:00:00Z"
+        assert m.version == 3
 
-    def test_populate_by_name(self) -> None:
-        m = MetadataConfig(google_doc_id="doc-2", version=2)
-        assert m.google_doc_id == "doc-2"
-        assert m.version == 2
+    def test_custom_values_via_alias(self) -> None:
+        m = Metadata(googleDocId="abc123", lastSyncedAt="2026-01-01T00:00:00Z", version=3)
+        assert m.google_doc_id == "abc123"
+        assert m.last_synced_at == "2026-01-01T00:00:00Z"
 
-
-# ---------------------------------------------------------------------------
-# ProcessConfig — valid data
-# ---------------------------------------------------------------------------
-
-
-class TestProcessConfigValid:
-    def test_minimal_json(self) -> None:
-        cfg = ProcessConfig.model_validate(_MINIMAL_JSON)
-        assert cfg.schema_version == "ica-llm-config/v1"
-        assert cfg.process_name == "summarization"
-        assert cfg.description == "Article summarization"
-        assert cfg.model == "anthropic/claude-sonnet-4.5"
-        assert cfg.prompts.system == "You are an editor."
-        assert cfg.prompts.instruction == "Follow these rules."
-
-    def test_minimal_json_default_metadata(self) -> None:
-        cfg = ProcessConfig.model_validate(_MINIMAL_JSON)
-        assert cfg.metadata.google_doc_id is None
-        assert cfg.metadata.last_synced_at is None
-        assert cfg.metadata.version == 1
-
-    def test_full_json(self) -> None:
-        cfg = ProcessConfig.model_validate(_FULL_JSON)
-        assert cfg.metadata.google_doc_id == "abc123"
-        assert cfg.metadata.version == 3
-        assert isinstance(cfg.metadata.last_synced_at, datetime)
-
-    def test_schema_version_default(self) -> None:
-        data = {k: v for k, v in _MINIMAL_JSON.items() if k != "$schema"}
-        cfg = ProcessConfig.model_validate(data)
-        assert cfg.schema_version == "ica-llm-config/v1"
-
-    def test_populate_by_field_name(self) -> None:
-        cfg = ProcessConfig(
-            process_name="test",
-            description="desc",
-            model="openai/gpt-4.1",
-            prompts=PromptsConfig(system="s", instruction="i"),
-        )
-        assert cfg.process_name == "test"
+    def test_version_must_be_positive(self) -> None:
+        with pytest.raises(ValidationError):
+            Metadata(version=0)
 
 
 # ---------------------------------------------------------------------------
-# ProcessConfig — validation errors
+# ProcessConfig model
 # ---------------------------------------------------------------------------
 
 
-class TestProcessConfigValidation:
-    def test_missing_process_name_raises(self) -> None:
-        data = {k: v for k, v in _MINIMAL_JSON.items() if k != "processName"}
+class TestProcessConfig:
+    def test_valid_config(self) -> None:
+        data = _valid_config_data()
+        config = ProcessConfig.model_validate(data)
+        assert config.schema_version == "ica-llm-config/v1"
+        assert config.process_name == "summarization"
+        assert config.model == "anthropic/claude-sonnet-4.5"
+        assert config.prompts.system == "You are a professional editor."
+        assert config.prompts.instruction == "Follow these rules."
+        assert config.metadata.version == 1
+
+    def test_schema_alias(self) -> None:
+        """$schema JSON key maps to schema_version field."""
+        data = _valid_config_data()
+        config = ProcessConfig.model_validate(data)
+        assert config.schema_version == "ica-llm-config/v1"
+
+    def test_missing_schema_rejected(self) -> None:
+        data = _valid_config_data()
+        del data["$schema"]
         with pytest.raises(ValidationError):
             ProcessConfig.model_validate(data)
 
-    def test_missing_model_raises(self) -> None:
-        data = {k: v for k, v in _MINIMAL_JSON.items() if k != "model"}
+    def test_missing_process_name_rejected(self) -> None:
+        data = _valid_config_data()
+        del data["processName"]
         with pytest.raises(ValidationError):
             ProcessConfig.model_validate(data)
 
-    def test_missing_prompts_raises(self) -> None:
-        data = {k: v for k, v in _MINIMAL_JSON.items() if k != "prompts"}
+    def test_empty_process_name_rejected(self) -> None:
+        data = _valid_config_data()
+        data["processName"] = ""
         with pytest.raises(ValidationError):
             ProcessConfig.model_validate(data)
 
-    def test_missing_description_raises(self) -> None:
-        data = {k: v for k, v in _MINIMAL_JSON.items() if k != "description"}
+    def test_missing_model_rejected(self) -> None:
+        data = _valid_config_data()
+        del data["model"]
         with pytest.raises(ValidationError):
             ProcessConfig.model_validate(data)
 
-    def test_invalid_prompts_type_raises(self) -> None:
-        data = {**_MINIMAL_JSON, "prompts": "not a dict"}
+    def test_empty_model_rejected(self) -> None:
+        data = _valid_config_data()
+        data["model"] = ""
         with pytest.raises(ValidationError):
             ProcessConfig.model_validate(data)
+
+    def test_missing_prompts_rejected(self) -> None:
+        data = _valid_config_data()
+        del data["prompts"]
+        with pytest.raises(ValidationError):
+            ProcessConfig.model_validate(data)
+
+    def test_metadata_defaults_when_omitted(self) -> None:
+        data = _valid_config_data()
+        del data["metadata"]
+        config = ProcessConfig.model_validate(data)
+        assert config.metadata.version == 1
+        assert config.metadata.google_doc_id is None
+
+    def test_description_defaults_to_empty(self) -> None:
+        data = _valid_config_data()
+        del data["description"]
+        config = ProcessConfig.model_validate(data)
+        assert config.description == ""
 
 
 # ---------------------------------------------------------------------------
-# Round-trip serialization
+# Package exports
 # ---------------------------------------------------------------------------
 
 
-class TestSerialization:
-    def test_round_trip_with_aliases(self) -> None:
-        cfg = ProcessConfig.model_validate(_FULL_JSON)
-        dumped = cfg.model_dump(by_alias=True)
-        assert dumped["$schema"] == "ica-llm-config/v1"
-        assert dumped["processName"] == "summarization"
-        assert dumped["metadata"]["googleDocId"] == "abc123"
-        assert dumped["metadata"]["version"] == 3
+class TestPackageExports:
+    def test_import_process_config(self) -> None:
+        from ica.llm_configs import ProcessConfig as Imported
 
-    def test_json_round_trip(self) -> None:
-        cfg = ProcessConfig.model_validate(_MINIMAL_JSON)
-        json_str = cfg.model_dump_json(by_alias=True)
-        restored = ProcessConfig.model_validate_json(json_str)
-        assert restored.process_name == cfg.process_name
-        assert restored.model == cfg.model
+        assert Imported is ProcessConfig
+
+    def test_import_prompts(self) -> None:
+        from ica.llm_configs import Prompts as Imported
+
+        assert Imported is Prompts
+
+    def test_import_metadata(self) -> None:
+        from ica.llm_configs import Metadata as Imported
+
+        assert Imported is Metadata

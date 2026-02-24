@@ -1,66 +1,52 @@
-"""Pydantic models for LLM process configuration JSON files.
+"""Pydantic models for LLM process JSON configuration files.
 
-Each pipeline process that calls an LLM has a JSON config file with model
-selection and prompt content. These models validate and represent that schema.
+Matches the ``ica-llm-config/v1`` schema defined in the scope document
+(Section 5). Each JSON file in ``ica/llm_configs/`` is validated against
+:class:`ProcessConfig` at load time.
 """
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from pydantic import BaseModel, Field
 
 
-class PromptsConfig(BaseModel):
-    """System and instruction prompt pair for an LLM process."""
+class Prompts(BaseModel):
+    """System and instruction prompt content."""
 
-    system: str = Field(description="Role definition and context")
-    instruction: str = Field(description="Rules, constraints, output format")
+    system: str = Field(min_length=1)
+    instruction: str = Field(min_length=1)
 
 
-class MetadataConfig(BaseModel):
-    """Editing and sync metadata for a process config."""
+class Metadata(BaseModel):
+    """Editing metadata for Google Docs sync workflow."""
 
-    google_doc_id: str | None = Field(
-        default=None,
-        alias="googleDocId",
-        description="Associated Google Doc for editing (null until first edit)",
-    )
-    last_synced_at: datetime | None = Field(
-        default=None,
-        alias="lastSyncedAt",
-        description="Timestamp of last Google Docs → JSON sync",
-    )
-    version: int = Field(
-        default=1,
-        description="Incremented on each sync",
-    )
+    google_doc_id: str | None = Field(default=None, alias="googleDocId")
+    last_synced_at: str | None = Field(default=None, alias="lastSyncedAt")
+    version: int = Field(default=1, ge=1)
 
     model_config = {"populate_by_name": True}
 
 
 class ProcessConfig(BaseModel):
-    """Top-level model for an LLM process configuration file.
+    """Top-level schema for an LLM process configuration file.
 
-    Corresponds to the ``ica-llm-config/v1`` JSON schema.
+    Example JSON::
+
+        {
+            "$schema": "ica-llm-config/v1",
+            "processName": "summarization",
+            "description": "Article summarization ...",
+            "model": "anthropic/claude-sonnet-4.5",
+            "prompts": { "system": "...", "instruction": "..." },
+            "metadata": { "googleDocId": null, "lastSyncedAt": null, "version": 1 }
+        }
     """
 
-    schema_version: str = Field(
-        default="ica-llm-config/v1",
-        alias="$schema",
-        description="Schema version for forward compatibility",
-    )
-    process_name: str = Field(
-        alias="processName",
-        description="Unique identifier matching the JSON filename",
-    )
-    description: str = Field(
-        description="Human-readable purpose (displayed in Slack when browsing configs)",
-    )
-    model: str = Field(
-        description="LLM model ID in OpenRouter provider/model format",
-    )
-    prompts: PromptsConfig
-    metadata: MetadataConfig = Field(default_factory=MetadataConfig)
+    schema_version: str = Field(alias="$schema")
+    process_name: str = Field(min_length=1, alias="processName")
+    description: str = Field(default="")
+    model: str = Field(min_length=1)
+    prompts: Prompts
+    metadata: Metadata = Field(default_factory=Metadata)
 
     model_config = {"populate_by_name": True}
