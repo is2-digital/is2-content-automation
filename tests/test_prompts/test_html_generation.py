@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-import pytest
-
+from ica.llm_configs import get_process_prompts
 from ica.prompts.html_generation import (
-    HTML_GENERATION_SYSTEM_PROMPT,
-    HTML_GENERATION_USER_PROMPT,
-    HTML_REGENERATION_SYSTEM_PROMPT,
-    HTML_REGENERATION_USER_PROMPT,
     build_html_generation_prompt,
     build_html_regeneration_prompt,
 )
+
+# Load prompts from JSON config (same source the builder function uses).
+_GEN_SYSTEM, _GEN_INSTRUCTION = get_process_prompts("html-generation")
+_REGEN_SYSTEM, _REGEN_INSTRUCTION = get_process_prompts("html-regeneration")
 
 
 # ---------------------------------------------------------------------------
@@ -68,23 +67,23 @@ SAMPLE_PREVIOUS_HTML = """\
 
 
 class TestHtmlGenerationSystemPrompt:
-    """Tests for the HTML_GENERATION_SYSTEM_PROMPT constant."""
+    """Tests for the _GEN_SYSTEM constant."""
 
     def test_prompt_is_string(self) -> None:
-        assert isinstance(HTML_GENERATION_SYSTEM_PROMPT, str)
+        assert isinstance(_GEN_SYSTEM, str)
 
     def test_prompt_is_not_empty(self) -> None:
-        assert len(HTML_GENERATION_SYSTEM_PROMPT) > 0
+        assert len(_GEN_SYSTEM) > 0
 
     def test_contains_role(self) -> None:
-        assert "HTML rendering engine" in HTML_GENERATION_SYSTEM_PROMPT
+        assert "HTML rendering engine" in _GEN_SYSTEM
 
     def test_contains_feedback_placeholder(self) -> None:
-        assert "{feedback_section}" in HTML_GENERATION_SYSTEM_PROMPT
+        assert "{feedback_section}" in _GEN_SYSTEM
 
     def test_contains_template_preservation_rules(self) -> None:
-        assert "TEMPLATE PRESERVATION RULES" in HTML_GENERATION_SYSTEM_PROMPT
-        assert "NON-NEGOTIABLE" in HTML_GENERATION_SYSTEM_PROMPT
+        assert "TEMPLATE PRESERVATION RULES" in _GEN_SYSTEM
+        assert "NON-NEGOTIABLE" in _GEN_SYSTEM
 
     def test_contains_do_not_modify_list(self) -> None:
         rules = [
@@ -94,7 +93,7 @@ class TestHtmlGenerationSystemPrompt:
             "HTML hierarchy or nesting",
         ]
         for rule in rules:
-            assert rule in HTML_GENERATION_SYSTEM_PROMPT
+            assert rule in _GEN_SYSTEM
 
     def test_contains_all_seven_sections(self) -> None:
         sections = [
@@ -107,7 +106,7 @@ class TestHtmlGenerationSystemPrompt:
             "FOOTER",
         ]
         for section in sections:
-            assert section in HTML_GENERATION_SYSTEM_PROMPT
+            assert section in _GEN_SYSTEM
 
     def test_contains_html_class_mappings(self) -> None:
         classes = [
@@ -120,54 +119,54 @@ class TestHtmlGenerationSystemPrompt:
             "nl-footer",
         ]
         for cls in classes:
-            assert cls in HTML_GENERATION_SYSTEM_PROMPT
+            assert cls in _GEN_SYSTEM
 
     def test_contains_link_requirement(self) -> None:
-        assert 'target="_blank"' in HTML_GENERATION_SYSTEM_PROMPT
+        assert 'target="_blank"' in _GEN_SYSTEM
 
     def test_contains_title_date_insertion(self) -> None:
-        assert "Artificially Intelligent, Actually Useful" in HTML_GENERATION_SYSTEM_PROMPT
-        assert "nl-date" in HTML_GENERATION_SYSTEM_PROMPT
+        assert "Artificially Intelligent, Actually Useful" in _GEN_SYSTEM
+        assert "nl-date" in _GEN_SYSTEM
 
     def test_contains_self_check(self) -> None:
-        assert "FINAL SELF-CHECK" in HTML_GENERATION_SYSTEM_PROMPT
+        assert "FINAL SELF-CHECK" in _GEN_SYSTEM
 
     def test_contains_output_requirements(self) -> None:
-        assert "Output only valid HTML" in HTML_GENERATION_SYSTEM_PROMPT
-        assert "Do not include explanations" in HTML_GENERATION_SYSTEM_PROMPT
+        assert "Output only valid HTML" in _GEN_SYSTEM
+        assert "Do not include explanations" in _GEN_SYSTEM
 
     def test_footer_rules(self) -> None:
-        assert "Alright, that's a wrap for the week!" in HTML_GENERATION_SYSTEM_PROMPT
-        assert "Thoughts?" in HTML_GENERATION_SYSTEM_PROMPT
+        assert "Alright, that's a wrap for the week!" in _GEN_SYSTEM
+        assert "Thoughts?" in _GEN_SYSTEM
 
     def test_cta_button_rules(self) -> None:
-        assert "CTA button" in HTML_GENERATION_SYSTEM_PROMPT
+        assert "CTA button" in _GEN_SYSTEM
 
     def test_source_link_rules(self) -> None:
-        assert "nl-source-link" in HTML_GENERATION_SYSTEM_PROMPT
+        assert "nl-source-link" in _GEN_SYSTEM
 
     def test_bold_emphasis_rules(self) -> None:
-        assert "Preserve bold emphasis" in HTML_GENERATION_SYSTEM_PROMPT
+        assert "Preserve bold emphasis" in _GEN_SYSTEM
 
     def test_no_n8n_expression_syntax(self) -> None:
-        assert "$json" not in HTML_GENERATION_SYSTEM_PROMPT
-        assert "$(" not in HTML_GENERATION_SYSTEM_PROMPT
+        assert "$json" not in _GEN_SYSTEM
+        assert "$(" not in _GEN_SYSTEM
 
 
 class TestHtmlGenerationUserPrompt:
-    """Tests for the HTML_GENERATION_USER_PROMPT constant."""
+    """Tests for the _GEN_INSTRUCTION constant."""
 
     def test_prompt_is_string(self) -> None:
-        assert isinstance(HTML_GENERATION_USER_PROMPT, str)
+        assert isinstance(_GEN_INSTRUCTION, str)
 
     def test_contains_markdown_placeholder(self) -> None:
-        assert "{markdown_content}" in HTML_GENERATION_USER_PROMPT
+        assert "{markdown_content}" in _GEN_INSTRUCTION
 
     def test_contains_template_placeholder(self) -> None:
-        assert "{html_template}" in HTML_GENERATION_USER_PROMPT
+        assert "{html_template}" in _GEN_INSTRUCTION
 
     def test_contains_date_placeholder(self) -> None:
-        assert "{newsletter_date}" in HTML_GENERATION_USER_PROMPT
+        assert "{newsletter_date}" in _GEN_INSTRUCTION
 
 
 # ---------------------------------------------------------------------------
@@ -176,68 +175,68 @@ class TestHtmlGenerationUserPrompt:
 
 
 class TestHtmlRegenerationSystemPrompt:
-    """Tests for the HTML_REGENERATION_SYSTEM_PROMPT constant."""
+    """Tests for the _REGEN_SYSTEM constant."""
 
     def test_prompt_is_string(self) -> None:
-        assert isinstance(HTML_REGENERATION_SYSTEM_PROMPT, str)
+        assert isinstance(_REGEN_SYSTEM, str)
 
     def test_contains_scoped_update_role(self) -> None:
-        assert "scoped update mode" in HTML_REGENERATION_SYSTEM_PROMPT
+        assert "scoped update mode" in _REGEN_SYSTEM
 
     def test_contains_not_full_regeneration(self) -> None:
-        assert "not a full regeneration" in HTML_REGENERATION_SYSTEM_PROMPT
+        assert "not a full regeneration" in _REGEN_SYSTEM
 
     def test_contains_five_inputs(self) -> None:
-        assert "Previously Generated HTML" in HTML_REGENERATION_SYSTEM_PROMPT
-        assert "Final Generated Markdown Content" in HTML_REGENERATION_SYSTEM_PROMPT
-        assert "HTML Template" in HTML_REGENERATION_SYSTEM_PROMPT
-        assert "User Feedback" in HTML_REGENERATION_SYSTEM_PROMPT
-        assert "Newsletter Date" in HTML_REGENERATION_SYSTEM_PROMPT
+        assert "Previously Generated HTML" in _REGEN_SYSTEM
+        assert "Final Generated Markdown Content" in _REGEN_SYSTEM
+        assert "HTML Template" in _REGEN_SYSTEM
+        assert "User Feedback" in _REGEN_SYSTEM
+        assert "Newsletter Date" in _REGEN_SYSTEM
 
     def test_contains_scope_enforcement(self) -> None:
-        assert "SCOPE ENFORCEMENT" in HTML_REGENERATION_SYSTEM_PROMPT
+        assert "SCOPE ENFORCEMENT" in _REGEN_SYSTEM
 
     def test_contains_must_rules(self) -> None:
-        assert "Identify which section(s) the feedback refers to" in HTML_REGENERATION_SYSTEM_PROMPT
-        assert "Modify only those sections" in HTML_REGENERATION_SYSTEM_PROMPT
+        assert "Identify which section(s) the feedback refers to" in _REGEN_SYSTEM
+        assert "Modify only those sections" in _REGEN_SYSTEM
 
     def test_contains_must_not_rules(self) -> None:
-        assert "Re-render the entire newsletter" in HTML_REGENERATION_SYSTEM_PROMPT
-        assert "Touch sections not mentioned in feedback" in HTML_REGENERATION_SYSTEM_PROMPT
+        assert "Re-render the entire newsletter" in _REGEN_SYSTEM
+        assert "Touch sections not mentioned in feedback" in _REGEN_SYSTEM
 
     def test_contains_allowed_modifications(self) -> None:
-        assert "Text changes" in HTML_REGENERATION_SYSTEM_PROMPT
-        assert "Link updates" in HTML_REGENERATION_SYSTEM_PROMPT
-        assert "Emphasis changes" in HTML_REGENERATION_SYSTEM_PROMPT
+        assert "Text changes" in _REGEN_SYSTEM
+        assert "Link updates" in _REGEN_SYSTEM
+        assert "Emphasis changes" in _REGEN_SYSTEM
 
     def test_contains_guarantee_clause(self) -> None:
-        assert "GUARANTEE CLAUSE" in HTML_REGENERATION_SYSTEM_PROMPT
-        assert "make no modification" in HTML_REGENERATION_SYSTEM_PROMPT
+        assert "GUARANTEE CLAUSE" in _REGEN_SYSTEM
+        assert "make no modification" in _REGEN_SYSTEM
 
     def test_contains_output_requirements(self) -> None:
-        assert "Output only valid HTML" in HTML_REGENERATION_SYSTEM_PROMPT
-        assert "Return the entire HTML document" in HTML_REGENERATION_SYSTEM_PROMPT
+        assert "Output only valid HTML" in _REGEN_SYSTEM
+        assert "Return the entire HTML document" in _REGEN_SYSTEM
 
     def test_contains_self_check(self) -> None:
-        assert "FINAL SELF-CHECK" in HTML_REGENERATION_SYSTEM_PROMPT
+        assert "FINAL SELF-CHECK" in _REGEN_SYSTEM
 
     def test_no_n8n_expression_syntax(self) -> None:
-        assert "$json" not in HTML_REGENERATION_SYSTEM_PROMPT
-        assert "$(" not in HTML_REGENERATION_SYSTEM_PROMPT
+        assert "$json" not in _REGEN_SYSTEM
+        assert "$(" not in _REGEN_SYSTEM
 
 
 class TestHtmlRegenerationUserPrompt:
-    """Tests for the HTML_REGENERATION_USER_PROMPT constant."""
+    """Tests for the _REGEN_INSTRUCTION constant."""
 
     def test_prompt_is_string(self) -> None:
-        assert isinstance(HTML_REGENERATION_USER_PROMPT, str)
+        assert isinstance(_REGEN_INSTRUCTION, str)
 
     def test_contains_all_placeholders(self) -> None:
-        assert "{previous_html}" in HTML_REGENERATION_USER_PROMPT
-        assert "{markdown_content}" in HTML_REGENERATION_USER_PROMPT
-        assert "{html_template}" in HTML_REGENERATION_USER_PROMPT
-        assert "{user_feedback}" in HTML_REGENERATION_USER_PROMPT
-        assert "{newsletter_date}" in HTML_REGENERATION_USER_PROMPT
+        assert "{previous_html}" in _REGEN_INSTRUCTION
+        assert "{markdown_content}" in _REGEN_INSTRUCTION
+        assert "{html_template}" in _REGEN_INSTRUCTION
+        assert "{user_feedback}" in _REGEN_INSTRUCTION
+        assert "{newsletter_date}" in _REGEN_INSTRUCTION
 
 
 # ---------------------------------------------------------------------------
@@ -362,7 +361,7 @@ class TestBuildHtmlRegenerationPrompt:
             SAMPLE_PREVIOUS_HTML, SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE,
             SAMPLE_FEEDBACK, SAMPLE_DATE,
         )
-        assert system == HTML_REGENERATION_SYSTEM_PROMPT
+        assert system == _REGEN_SYSTEM
 
     def test_user_prompt_contains_previous_html(self) -> None:
         _, user = build_html_regeneration_prompt(

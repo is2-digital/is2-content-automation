@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-import pytest
-
+from ica.llm_configs import get_process_prompts
 from ica.prompts.freshness_check import (
-    FRESHNESS_CHECK_PROMPT,
     build_freshness_check_prompt,
 )
+
+# Load prompts from JSON config (same source the builder function uses).
+_SYSTEM, _INSTRUCTION = get_process_prompts("freshness-check")
+_COMBINED = _SYSTEM + "\n" + _INSTRUCTION
 
 
 # ---------------------------------------------------------------------------
@@ -44,36 +46,36 @@ class TestFreshnessCheckPromptConstant:
     """Tests for the FRESHNESS_CHECK_PROMPT constant."""
 
     def test_prompt_is_string(self) -> None:
-        assert isinstance(FRESHNESS_CHECK_PROMPT, str)
+        assert isinstance(_COMBINED, str)
 
     def test_prompt_is_not_empty(self) -> None:
-        assert len(FRESHNESS_CHECK_PROMPT) > 0
+        assert len(_COMBINED) > 0
 
     def test_contains_theme_placeholder(self) -> None:
-        assert "{theme_body}" in FRESHNESS_CHECK_PROMPT
+        assert "{theme_body}" in _INSTRUCTION
 
     def test_contains_newsletter_site_url(self) -> None:
-        assert "https://www.is2digital.com/newsletters" in FRESHNESS_CHECK_PROMPT
+        assert "https://www.is2digital.com/newsletters" in _COMBINED
 
     def test_contains_freshness_check_context(self) -> None:
-        assert "editorial freshness" in FRESHNESS_CHECK_PROMPT
+        assert "editorial freshness" in _COMBINED
 
     def test_contains_repetitiveness_check(self) -> None:
-        assert "not repetitive" in FRESHNESS_CHECK_PROMPT
+        assert "not repetitive" in _COMBINED
 
     def test_contains_recent_newsletters_reference(self) -> None:
-        assert "3 most recent" in FRESHNESS_CHECK_PROMPT
+        assert "3 most recent" in _COMBINED
 
     def test_contains_structured_output_request(self) -> None:
-        assert "structured output" in FRESHNESS_CHECK_PROMPT
+        assert "structured output" in _COMBINED
 
     def test_contains_change_explanation_request(self) -> None:
-        assert "what to change" in FRESHNESS_CHECK_PROMPT
-        assert "explain why" in FRESHNESS_CHECK_PROMPT
+        assert "what to change" in _COMBINED
+        assert "explain why" in _COMBINED
 
     def test_no_n8n_expression_syntax(self) -> None:
-        assert "$json" not in FRESHNESS_CHECK_PROMPT
-        assert "$(" not in FRESHNESS_CHECK_PROMPT
+        assert "$json" not in _COMBINED
+        assert "$(" not in _COMBINED
 
 
 # ---------------------------------------------------------------------------

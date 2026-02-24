@@ -19,45 +19,7 @@ Model: varies per step — ``LLM_SUMMARY_LEARNING_DATA_MODEL``,
 
 from __future__ import annotations
 
-LEARNING_DATA_EXTRACTION_PROMPT = """\
-You are an AI assistant that converts raw user feedback into a short, \
-structured summary that can be stored as learning data for future \
-content improvement.
-
-You will be given:
-- The original *input text* (the content or article summary prompt),
-- The *model output* that was generated,
-- The *user's feedback*.
-
-Your goal:
-1. Summarize the key points of the user's feedback into clear, \
-actionable insights.
-2. Keep the summary short (2-3 sentences max).
-3. Focus on what should be improved next time (e.g., tone, accuracy, \
-length, structure, detail).
-4. If feedback is unclear or generic (like "good" or "bad"), infer \
-the likely intent from the input and output context.
-
----
-
-### Feedback Data
-**User Feedback:**
-{feedback}
-
-**Input Provided:**
-{input_text}
-
-**Model Output:**
-{model_output}
-
----
-
-### Expected Output
-Return only a concise structured learning note in JSON format like this:
-
-{{ "learning_feedback": "Future responses should provide shorter, more \
-focused summaries emphasizing factual accuracy and concise language." }}\
-"""
+from ica.llm_configs import get_process_prompts
 
 
 def build_learning_data_extraction_prompt(
@@ -67,8 +29,9 @@ def build_learning_data_extraction_prompt(
 ) -> tuple[str, str]:
     """Build the system and user messages for learning data extraction.
 
-    This prompt converts raw user feedback into a concise learning note
-    that gets stored in a feedback table for future LLM prompt injection.
+    Loads the system and instruction prompts from the
+    ``learning-data-extraction`` JSON config via
+    :func:`~ica.llm_configs.get_process_prompts`.
 
     Args:
         feedback: The user's free-text feedback from the Slack form.
@@ -79,16 +42,10 @@ def build_learning_data_extraction_prompt(
 
     Returns:
         A ``(system_prompt, user_prompt)`` tuple ready to pass to the LLM.
-        The system prompt is a brief role description; the user prompt
-        contains the full extraction instructions with interpolated data.
     """
-    system_prompt = (
-        "You are an AI assistant that converts raw user feedback into "
-        "a short, structured summary that can be stored as learning "
-        "data for future content improvement."
-    )
+    system_prompt, instruction = get_process_prompts("learning-data-extraction")
 
-    user_prompt = LEARNING_DATA_EXTRACTION_PROMPT.format(
+    user_prompt = instruction.format(
         feedback=feedback,
         input_text=input_text,
         model_output=model_output,

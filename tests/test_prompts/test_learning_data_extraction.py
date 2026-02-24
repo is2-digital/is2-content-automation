@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-import pytest
-
+from ica.llm_configs import get_process_prompts
 from ica.prompts.learning_data_extraction import (
-    LEARNING_DATA_EXTRACTION_PROMPT,
     build_learning_data_extraction_prompt,
 )
+
+# Load prompts from JSON config (same source the builder function uses).
+_SYSTEM, _INSTRUCTION = get_process_prompts("learning-data-extraction")
+_COMBINED = _SYSTEM + "\n" + _INSTRUCTION
 
 
 # ---------------------------------------------------------------------------
@@ -28,51 +30,51 @@ class TestLearningDataExtractionPromptConstant:
     """Tests for the LEARNING_DATA_EXTRACTION_PROMPT constant."""
 
     def test_prompt_is_string(self) -> None:
-        assert isinstance(LEARNING_DATA_EXTRACTION_PROMPT, str)
+        assert isinstance(_COMBINED, str)
 
     def test_prompt_is_not_empty(self) -> None:
-        assert len(LEARNING_DATA_EXTRACTION_PROMPT) > 0
+        assert len(_COMBINED) > 0
 
     def test_contains_role_description(self) -> None:
-        assert "AI assistant" in LEARNING_DATA_EXTRACTION_PROMPT
-        assert "user feedback" in LEARNING_DATA_EXTRACTION_PROMPT
-        assert "learning data" in LEARNING_DATA_EXTRACTION_PROMPT
+        assert "AI assistant" in _COMBINED
+        assert "user feedback" in _COMBINED
+        assert "learning data" in _COMBINED
 
     def test_contains_three_inputs(self) -> None:
-        assert "original *input text*" in LEARNING_DATA_EXTRACTION_PROMPT
-        assert "*model output*" in LEARNING_DATA_EXTRACTION_PROMPT
-        assert "*user's feedback*" in LEARNING_DATA_EXTRACTION_PROMPT
+        assert "original *input text*" in _COMBINED
+        assert "*model output*" in _COMBINED
+        assert "*user's feedback*" in _COMBINED
 
     def test_contains_goal_steps(self) -> None:
-        assert "clear, actionable insights" in LEARNING_DATA_EXTRACTION_PROMPT
-        assert "2-3 sentences max" in LEARNING_DATA_EXTRACTION_PROMPT
+        assert "clear, actionable insights" in _COMBINED
+        assert "2-3 sentences max" in _COMBINED
 
     def test_contains_focus_areas(self) -> None:
-        assert "tone" in LEARNING_DATA_EXTRACTION_PROMPT
-        assert "accuracy" in LEARNING_DATA_EXTRACTION_PROMPT
-        assert "length" in LEARNING_DATA_EXTRACTION_PROMPT
-        assert "structure" in LEARNING_DATA_EXTRACTION_PROMPT
+        assert "tone" in _COMBINED
+        assert "accuracy" in _COMBINED
+        assert "length" in _COMBINED
+        assert "structure" in _COMBINED
 
     def test_contains_unclear_feedback_handling(self) -> None:
-        assert "unclear or generic" in LEARNING_DATA_EXTRACTION_PROMPT
-        assert "infer the likely intent" in LEARNING_DATA_EXTRACTION_PROMPT
+        assert "unclear or generic" in _COMBINED
+        assert "infer the likely intent" in _COMBINED
 
     def test_contains_feedback_placeholder(self) -> None:
-        assert "{feedback}" in LEARNING_DATA_EXTRACTION_PROMPT
+        assert "{feedback}" in _INSTRUCTION
 
     def test_contains_input_placeholder(self) -> None:
-        assert "{input_text}" in LEARNING_DATA_EXTRACTION_PROMPT
+        assert "{input_text}" in _INSTRUCTION
 
     def test_contains_output_placeholder(self) -> None:
-        assert "{model_output}" in LEARNING_DATA_EXTRACTION_PROMPT
+        assert "{model_output}" in _INSTRUCTION
 
     def test_contains_expected_output_format(self) -> None:
-        assert "learning_feedback" in LEARNING_DATA_EXTRACTION_PROMPT
-        assert "Future responses should" in LEARNING_DATA_EXTRACTION_PROMPT
+        assert "learning_feedback" in _COMBINED
+        assert "Future responses should" in _COMBINED
 
     def test_no_n8n_expression_syntax(self) -> None:
-        assert "$json" not in LEARNING_DATA_EXTRACTION_PROMPT
-        assert "$(" not in LEARNING_DATA_EXTRACTION_PROMPT
+        assert "$json" not in _COMBINED
+        assert "$(" not in _COMBINED
 
 
 # ---------------------------------------------------------------------------
@@ -180,14 +182,14 @@ class TestCrossSubworkflowConsistency:
     """
 
     def test_prompt_mentions_json_output(self) -> None:
-        assert "JSON format" in LEARNING_DATA_EXTRACTION_PROMPT
+        assert "JSON format" in _COMBINED
 
     def test_prompt_has_concise_constraint(self) -> None:
-        assert "2-3 sentences" in LEARNING_DATA_EXTRACTION_PROMPT
+        assert "2-3 sentences" in _COMBINED
 
     def test_prompt_focuses_on_improvement(self) -> None:
-        assert "improved next time" in LEARNING_DATA_EXTRACTION_PROMPT
+        assert "improved next time" in _COMBINED
 
     def test_generic_feedback_examples(self) -> None:
-        assert '"good"' in LEARNING_DATA_EXTRACTION_PROMPT
-        assert '"bad"' in LEARNING_DATA_EXTRACTION_PROMPT
+        assert '"good"' in _COMBINED
+        assert '"bad"' in _COMBINED

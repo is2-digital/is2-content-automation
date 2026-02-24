@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import json
 
-import pytest
-
+from ica.llm_configs import get_process_prompts
 from ica.prompts.theme_generation import (
-    THEME_GENERATION_SYSTEM_PROMPT,
-    THEME_GENERATION_USER_PROMPT,
     _FEEDBACK_SECTION_TEMPLATE,
     build_theme_generation_prompt,
 )
+
+# Load prompts from JSON config (same source the builder function uses).
+_SYSTEM, _INSTRUCTION = get_process_prompts("theme-generation")
 
 
 # ---------------------------------------------------------------------------
@@ -23,45 +23,45 @@ class TestSystemPrompt:
     """Verify the system prompt contains all required protocol sections."""
 
     def test_contains_role_description(self):
-        assert "professional AI research editor" in THEME_GENERATION_SYSTEM_PROMPT
+        assert "professional AI research editor" in _SYSTEM
 
     def test_contains_json_format_mention(self):
-        assert "JSON" in THEME_GENERATION_SYSTEM_PROMPT
+        assert "JSON" in _SYSTEM
 
     def test_contains_accuracy_control_protocol(self):
-        assert "Accuracy Control Protocol (MANDATORY)" in THEME_GENERATION_SYSTEM_PROMPT
+        assert "Accuracy Control Protocol (MANDATORY)" in _SYSTEM
 
     def test_contains_do_not_search(self):
-        assert "Do NOT search for alternative sources" in THEME_GENERATION_SYSTEM_PROMPT
+        assert "Do NOT search for alternative sources" in _SYSTEM
 
     def test_contains_do_not_infer(self):
-        assert "Do NOT generate or infer missing details" in THEME_GENERATION_SYSTEM_PROMPT
+        assert "Do NOT generate or infer missing details" in _SYSTEM
 
     def test_contains_use_only_provided_data(self):
-        assert "Use ONLY provided data" in THEME_GENERATION_SYSTEM_PROMPT
+        assert "Use ONLY provided data" in _SYSTEM
 
     def test_contains_industry_news_rule(self):
-        assert "industry_news" in THEME_GENERATION_SYSTEM_PROMPT
-        assert "%I1_" in THEME_GENERATION_SYSTEM_PROMPT
-        assert "%I2_" in THEME_GENERATION_SYSTEM_PROMPT
+        assert "industry_news" in _SYSTEM
+        assert "%I1_" in _SYSTEM
+        assert "%I2_" in _SYSTEM
 
     def test_mentions_two_themes(self):
-        assert "two themes" in THEME_GENERATION_SYSTEM_PROMPT
+        assert "two themes" in _SYSTEM
 
     def test_mentions_content_distribution(self):
-        assert "content distribution" in THEME_GENERATION_SYSTEM_PROMPT
+        assert "content distribution" in _SYSTEM
 
     def test_mentions_source_mix(self):
-        assert "source mix" in THEME_GENERATION_SYSTEM_PROMPT
+        assert "source mix" in _SYSTEM
 
     def test_no_feedback_in_system_prompt(self):
         """Feedback is injected into the user prompt, not the system prompt."""
-        assert "Editorial Improvement Context" not in THEME_GENERATION_SYSTEM_PROMPT
+        assert "Editorial Improvement Context" not in _SYSTEM
 
     def test_no_placeholders_in_system_prompt(self):
         """System prompt should have no format placeholders."""
-        assert "{" not in THEME_GENERATION_SYSTEM_PROMPT
-        assert "}" not in THEME_GENERATION_SYSTEM_PROMPT
+        assert "{" not in _SYSTEM
+        assert "}" not in _SYSTEM
 
 
 # ---------------------------------------------------------------------------
@@ -73,140 +73,140 @@ class TestUserPromptTemplate:
     """Verify the user prompt template contains required placeholders and markers."""
 
     def test_has_feedback_section_placeholder(self):
-        assert "{feedback_section}" in THEME_GENERATION_USER_PROMPT
+        assert "{feedback_section}" in _INSTRUCTION
 
     def test_has_summaries_json_placeholder(self):
-        assert "{summaries_json}" in THEME_GENERATION_USER_PROMPT
+        assert "{summaries_json}" in _INSTRUCTION
 
     def test_contains_output_format_heading(self):
-        assert "Output Format (MANDATORY)" in THEME_GENERATION_USER_PROMPT
+        assert "Output Format (MANDATORY)" in _INSTRUCTION
 
     # --- Featured Article markers ---
     def test_contains_fa_title_marker(self):
-        assert "%FA_TITLE:" in THEME_GENERATION_USER_PROMPT
+        assert "%FA_TITLE:" in _INSTRUCTION
 
     def test_contains_fa_source_marker(self):
-        assert "%FA_SOURCE:" in THEME_GENERATION_USER_PROMPT
+        assert "%FA_SOURCE:" in _INSTRUCTION
 
     def test_contains_fa_origin_marker(self):
-        assert "%FA_ORIGIN:" in THEME_GENERATION_USER_PROMPT
+        assert "%FA_ORIGIN:" in _INSTRUCTION
 
     def test_contains_fa_url_marker(self):
-        assert "%FA_URL:" in THEME_GENERATION_USER_PROMPT
+        assert "%FA_URL:" in _INSTRUCTION
 
     def test_contains_fa_category_marker(self):
-        assert "%FA_CATEGORY:" in THEME_GENERATION_USER_PROMPT
+        assert "%FA_CATEGORY:" in _INSTRUCTION
 
     def test_contains_fa_why_featured_marker(self):
-        assert "%FA_WHY FEATURED:" in THEME_GENERATION_USER_PROMPT
+        assert "%FA_WHY FEATURED:" in _INSTRUCTION
 
     # --- Main Article markers ---
     def test_contains_m1_markers(self):
-        assert "%M1_TITLE:" in THEME_GENERATION_USER_PROMPT
-        assert "%M1_SOURCE:" in THEME_GENERATION_USER_PROMPT
-        assert "%M1_URL:" in THEME_GENERATION_USER_PROMPT
-        assert "%M1_CATEGORY:" in THEME_GENERATION_USER_PROMPT
-        assert "%M1_RATIONALE:" in THEME_GENERATION_USER_PROMPT
+        assert "%M1_TITLE:" in _INSTRUCTION
+        assert "%M1_SOURCE:" in _INSTRUCTION
+        assert "%M1_URL:" in _INSTRUCTION
+        assert "%M1_CATEGORY:" in _INSTRUCTION
+        assert "%M1_RATIONALE:" in _INSTRUCTION
 
     def test_contains_m2_markers(self):
-        assert "%M2_TITLE:" in THEME_GENERATION_USER_PROMPT
-        assert "%M2_SOURCE:" in THEME_GENERATION_USER_PROMPT
-        assert "%M2_URL:" in THEME_GENERATION_USER_PROMPT
-        assert "%M2_CATEGORY:" in THEME_GENERATION_USER_PROMPT
-        assert "%M2_RATIONALE:" in THEME_GENERATION_USER_PROMPT
+        assert "%M2_TITLE:" in _INSTRUCTION
+        assert "%M2_SOURCE:" in _INSTRUCTION
+        assert "%M2_URL:" in _INSTRUCTION
+        assert "%M2_CATEGORY:" in _INSTRUCTION
+        assert "%M2_RATIONALE:" in _INSTRUCTION
 
     # --- Quick Hit markers ---
     def test_contains_q1_markers(self):
-        assert "%Q1_TITLE:" in THEME_GENERATION_USER_PROMPT
-        assert "%Q1_SOURCE:" in THEME_GENERATION_USER_PROMPT
-        assert "%Q1_URL:" in THEME_GENERATION_USER_PROMPT
-        assert "%Q1_CATEGORY:" in THEME_GENERATION_USER_PROMPT
+        assert "%Q1_TITLE:" in _INSTRUCTION
+        assert "%Q1_SOURCE:" in _INSTRUCTION
+        assert "%Q1_URL:" in _INSTRUCTION
+        assert "%Q1_CATEGORY:" in _INSTRUCTION
 
     def test_contains_q2_markers(self):
-        assert "%Q2_TITLE:" in THEME_GENERATION_USER_PROMPT
-        assert "%Q2_SOURCE:" in THEME_GENERATION_USER_PROMPT
-        assert "%Q2_URL:" in THEME_GENERATION_USER_PROMPT
-        assert "%Q2_CATEGORY:" in THEME_GENERATION_USER_PROMPT
+        assert "%Q2_TITLE:" in _INSTRUCTION
+        assert "%Q2_SOURCE:" in _INSTRUCTION
+        assert "%Q2_URL:" in _INSTRUCTION
+        assert "%Q2_CATEGORY:" in _INSTRUCTION
 
     def test_contains_q3_markers(self):
-        assert "%Q3_TITLE:" in THEME_GENERATION_USER_PROMPT
-        assert "%Q3_SOURCE:" in THEME_GENERATION_USER_PROMPT
-        assert "%Q3_URL:" in THEME_GENERATION_USER_PROMPT
-        assert "%Q3_CATEGORY:" in THEME_GENERATION_USER_PROMPT
+        assert "%Q3_TITLE:" in _INSTRUCTION
+        assert "%Q3_SOURCE:" in _INSTRUCTION
+        assert "%Q3_URL:" in _INSTRUCTION
+        assert "%Q3_CATEGORY:" in _INSTRUCTION
 
     # --- Industry Development markers ---
     def test_contains_i1_markers(self):
-        assert "%I1_TITLE:" in THEME_GENERATION_USER_PROMPT
-        assert "%I1_SOURCE:" in THEME_GENERATION_USER_PROMPT
-        assert "%I1_URL:" in THEME_GENERATION_USER_PROMPT
-        assert "%I1_Major AI Player:" in THEME_GENERATION_USER_PROMPT
+        assert "%I1_TITLE:" in _INSTRUCTION
+        assert "%I1_SOURCE:" in _INSTRUCTION
+        assert "%I1_URL:" in _INSTRUCTION
+        assert "%I1_Major AI Player:" in _INSTRUCTION
 
     def test_contains_i2_markers(self):
-        assert "%I2_TITLE:" in THEME_GENERATION_USER_PROMPT
-        assert "%I2_SOURCE:" in THEME_GENERATION_USER_PROMPT
-        assert "%I2_URL:" in THEME_GENERATION_USER_PROMPT
-        assert "%I2_Major AI Player:" in THEME_GENERATION_USER_PROMPT
+        assert "%I2_TITLE:" in _INSTRUCTION
+        assert "%I2_SOURCE:" in _INSTRUCTION
+        assert "%I2_URL:" in _INSTRUCTION
+        assert "%I2_Major AI Player:" in _INSTRUCTION
 
     # --- 2-2-2 Distribution markers ---
     def test_contains_222_distribution_section(self):
-        assert "2-2-2 Distribution:" in THEME_GENERATION_USER_PROMPT
+        assert "2-2-2 Distribution:" in _INSTRUCTION
 
     def test_contains_222_tactical(self):
-        assert "%222_tactical:%" in THEME_GENERATION_USER_PROMPT
+        assert "%222_tactical:%" in _INSTRUCTION
 
     def test_contains_222_educational(self):
-        assert "%222_educational:%" in THEME_GENERATION_USER_PROMPT
+        assert "%222_educational:%" in _INSTRUCTION
 
     def test_contains_222_forward_thinking(self):
-        assert "%222_forward-thinking:%" in THEME_GENERATION_USER_PROMPT
+        assert "%222_forward-thinking:%" in _INSTRUCTION
 
     # --- Source mix markers ---
     def test_contains_source_mix_section(self):
-        assert "Source mix:" in THEME_GENERATION_USER_PROMPT
+        assert "Source mix:" in _INSTRUCTION
 
     def test_contains_sm_smaller_publisher(self):
-        assert "%SM_smaller_publisher:%" in THEME_GENERATION_USER_PROMPT
+        assert "%SM_smaller_publisher:%" in _INSTRUCTION
 
     def test_contains_sm_major_ai_player(self):
-        assert "%SM_major_ai_player_coverage:%" in THEME_GENERATION_USER_PROMPT
+        assert "%SM_major_ai_player_coverage:%" in _INSTRUCTION
 
     # --- Requirements Verified markers ---
     def test_contains_requirements_verified_section(self):
-        assert "REQUIREMENTS VERIFIED" in THEME_GENERATION_USER_PROMPT
+        assert "REQUIREMENTS VERIFIED" in _INSTRUCTION
 
     def test_contains_rv_222_distribution(self):
-        assert "%RV_2-2-2 Distribution Achieved:%" in THEME_GENERATION_USER_PROMPT
+        assert "%RV_2-2-2 Distribution Achieved:%" in _INSTRUCTION
 
     def test_contains_rv_source_mix(self):
-        assert "%RV_Source mix:%" in THEME_GENERATION_USER_PROMPT
+        assert "%RV_Source mix:%" in _INSTRUCTION
 
     def test_contains_rv_technical_complexity(self):
-        assert "%RV_Technical complexity:%" in THEME_GENERATION_USER_PROMPT
+        assert "%RV_Technical complexity:%" in _INSTRUCTION
 
     def test_contains_rv_major_ai_player(self):
-        assert "%RV_Major AI player coverage:%" in THEME_GENERATION_USER_PROMPT
+        assert "%RV_Major AI player coverage:%" in _INSTRUCTION
 
     # --- Theme separator and recommendation ---
     def test_contains_theme_separator_instruction(self):
-        assert '"-----"' in THEME_GENERATION_USER_PROMPT
+        assert '"-----"' in _INSTRUCTION
 
     def test_contains_recommendation_section(self):
-        assert "RECOMMENDATION:" in THEME_GENERATION_USER_PROMPT
+        assert "RECOMMENDATION:" in _INSTRUCTION
 
     def test_contains_rationale_section(self):
-        assert "Rationale:" in THEME_GENERATION_USER_PROMPT
+        assert "Rationale:" in _INSTRUCTION
 
     def test_contains_theme_heading(self):
-        assert "THEME:" in THEME_GENERATION_USER_PROMPT
+        assert "THEME:" in _INSTRUCTION
 
     def test_contains_theme_description(self):
-        assert "Theme Description:" in THEME_GENERATION_USER_PROMPT
+        assert "Theme Description:" in _INSTRUCTION
 
     def test_contains_featured_article_heading(self):
-        assert "FEATURED ARTICLE:" in THEME_GENERATION_USER_PROMPT
+        assert "FEATURED ARTICLE:" in _INSTRUCTION
 
     def test_contains_input_label(self):
-        assert "Input:" in THEME_GENERATION_USER_PROMPT
+        assert "Input:" in _INSTRUCTION
 
 
 # ---------------------------------------------------------------------------
@@ -272,7 +272,7 @@ class TestBuildThemeGenerationPromptNoFeedback:
 
     def test_system_prompt_is_constant(self):
         system, _ = build_theme_generation_prompt(self.SAMPLE_SUMMARIES)
-        assert system is THEME_GENERATION_SYSTEM_PROMPT
+        assert system == _SYSTEM
 
     def test_user_prompt_contains_summaries(self):
         _, user = build_theme_generation_prompt(self.SAMPLE_SUMMARIES)
@@ -369,7 +369,7 @@ class TestBuildThemeGenerationPromptWithFeedback:
         system, _ = build_theme_generation_prompt(
             self.SAMPLE_SUMMARIES, self.SAMPLE_FEEDBACK,
         )
-        assert system is THEME_GENERATION_SYSTEM_PROMPT
+        assert system == _SYSTEM
 
     def test_summaries_still_present_with_feedback(self):
         _, user = build_theme_generation_prompt(
@@ -397,34 +397,34 @@ class TestContentDistributionSlots:
     """
 
     def test_one_featured_article(self):
-        assert "FEATURED ARTICLE:" in THEME_GENERATION_USER_PROMPT
+        assert "FEATURED ARTICLE:" in _INSTRUCTION
         # Only one FA prefix set
-        assert "%FA_TITLE:" in THEME_GENERATION_USER_PROMPT
+        assert "%FA_TITLE:" in _INSTRUCTION
 
     def test_two_main_articles(self):
-        assert "%M1_TITLE:" in THEME_GENERATION_USER_PROMPT
-        assert "%M2_TITLE:" in THEME_GENERATION_USER_PROMPT
+        assert "%M1_TITLE:" in _INSTRUCTION
+        assert "%M2_TITLE:" in _INSTRUCTION
 
     def test_three_quick_hits(self):
-        assert "%Q1_TITLE:" in THEME_GENERATION_USER_PROMPT
-        assert "%Q2_TITLE:" in THEME_GENERATION_USER_PROMPT
-        assert "%Q3_TITLE:" in THEME_GENERATION_USER_PROMPT
+        assert "%Q1_TITLE:" in _INSTRUCTION
+        assert "%Q2_TITLE:" in _INSTRUCTION
+        assert "%Q3_TITLE:" in _INSTRUCTION
 
     def test_two_industry_developments(self):
-        assert "%I1_TITLE:" in THEME_GENERATION_USER_PROMPT
-        assert "%I2_TITLE:" in THEME_GENERATION_USER_PROMPT
+        assert "%I1_TITLE:" in _INSTRUCTION
+        assert "%I2_TITLE:" in _INSTRUCTION
 
     def test_no_extra_main_article_slots(self):
         """Should not have M3 or higher."""
-        assert "%M3_" not in THEME_GENERATION_USER_PROMPT
+        assert "%M3_" not in _INSTRUCTION
 
     def test_no_extra_quick_hit_slots(self):
         """Should not have Q4 or higher."""
-        assert "%Q4_" not in THEME_GENERATION_USER_PROMPT
+        assert "%Q4_" not in _INSTRUCTION
 
     def test_no_extra_industry_dev_slots(self):
         """Should not have I3 or higher."""
-        assert "%I3_" not in THEME_GENERATION_USER_PROMPT
+        assert "%I3_" not in _INSTRUCTION
 
 
 # ---------------------------------------------------------------------------
@@ -437,7 +437,7 @@ class TestEdgeCases:
 
     def test_empty_json_array(self):
         system, user = build_theme_generation_prompt("[]")
-        assert system is THEME_GENERATION_SYSTEM_PROMPT
+        assert system == _SYSTEM
         assert "[]" in user
 
     def test_large_summaries_json(self):

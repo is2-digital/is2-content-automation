@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from ica.llm_configs import get_process_prompts
 from ica.prompts.email_review import (
-    EMAIL_REVIEW_SYSTEM_PROMPT,
-    EMAIL_REVIEW_USER_PROMPT,
     _FEEDBACK_SECTION_TEMPLATE,
     build_email_review_prompt,
 )
+
+# Load prompts from JSON config (same source the builder function uses).
+_SYSTEM, _INSTRUCTION = get_process_prompts("email-preview")
 
 
 # ---------------------------------------------------------------------------
@@ -19,132 +21,132 @@ class TestEmailReviewSystemPrompt:
     """Verify the system prompt contains all required strategic sections."""
 
     def test_contains_role_preamble(self):
-        assert "professional AI research editor" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "professional AI research editor" in _SYSTEM
 
     def test_contains_definitive_review_instruction(self):
-        assert "definitive review" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "definitive review" in _SYSTEM
 
     # --- Strategic Purpose ---
 
     def test_contains_strategic_purpose(self):
-        assert "Strategic Purpose and Function" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Strategic Purpose and Function" in _SYSTEM
 
     def test_contains_primary_function(self):
-        assert "subscriber relationship messages" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "subscriber relationship messages" in _SYSTEM
 
     def test_contains_critical_distinction(self):
-        assert "Critical Distinction from Newsletter Content" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Critical Distinction from Newsletter Content" in _SYSTEM
 
     def test_contains_essential_rule(self):
         assert (
             "Email and newsletter introductions must serve distinct functions"
-            in EMAIL_REVIEW_SYSTEM_PROMPT
+            in _SYSTEM
         )
 
     # --- Pre-Draft Analysis ---
 
     def test_contains_pre_draft_analysis(self):
-        assert "Pre-Draft Analysis Process" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Pre-Draft Analysis Process" in _SYSTEM
 
     def test_contains_content_relationship_assessment(self):
-        assert "Content Relationship Assessment" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Content Relationship Assessment" in _SYSTEM
 
     def test_contains_narrative_thread_evaluation(self):
-        assert "Narrative Thread Evaluation" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Narrative Thread Evaluation" in _SYSTEM
 
     def test_contains_redundancy_prevention(self):
-        assert "Redundancy Prevention Check" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Redundancy Prevention Check" in _SYSTEM
 
     # --- Structure Framework ---
 
     def test_contains_proven_structure_framework(self):
-        assert "Proven Structure Framework" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Proven Structure Framework" in _SYSTEM
 
     def test_contains_hi_friend_opening(self):
-        assert '"Hi Friend,"' in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert '"Hi Friend,"' in _SYSTEM
 
     def test_contains_option_1_natural_narrative(self):
-        assert "Natural Narrative Connection" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Natural Narrative Connection" in _SYSTEM
 
     def test_contains_option_2_responsive(self):
-        assert "Responsive Approach" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Responsive Approach" in _SYSTEM
 
     def test_contains_option_3_direct_subscriber(self):
-        assert "Direct Subscriber Request" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Direct Subscriber Request" in _SYSTEM
 
     def test_contains_methodology_statement_variations(self):
-        assert "Methodology Statement Variations" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Methodology Statement Variations" in _SYSTEM
 
     def test_contains_ps_element(self):
-        assert "P.S. Element" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "P.S. Element" in _SYSTEM
 
     # --- Voice and Tone ---
 
     def test_contains_voice_and_tone_guidelines(self):
-        assert "Voice and Tone Guidelines" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Voice and Tone Guidelines" in _SYSTEM
 
     def test_contains_reader_as_hero(self):
-        assert "Reader-as-Hero Positioning" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Reader-as-Hero Positioning" in _SYSTEM
 
     def test_contains_conversational_warmth(self):
-        assert "Conversational Warmth with Professional Authority" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Conversational Warmth with Professional Authority" in _SYSTEM
 
     def test_contains_authentic_responsiveness(self):
-        assert "Authentic Responsiveness" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Authentic Responsiveness" in _SYSTEM
 
     def test_contains_never_fabricate(self):
-        assert "Never fabricate subscriber quotes" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Never fabricate subscriber quotes" in _SYSTEM
 
     # --- Content Adaptation ---
 
     def test_contains_length_standard(self):
-        assert "100-120 words maximum" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "100-120 words maximum" in _SYSTEM
 
     def test_contains_technical_strategic_content(self):
-        assert "Technical/Strategic Content" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Technical/Strategic Content" in _SYSTEM
 
     def test_contains_practical_implementation_content(self):
-        assert "Practical/Implementation Content" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Practical/Implementation Content" in _SYSTEM
 
     # --- Quality Control ---
 
     def test_contains_quality_control_framework(self):
-        assert "Quality Control Framework" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Quality Control Framework" in _SYSTEM
 
     def test_contains_unique_value_question(self):
-        assert "Unique Value" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Unique Value" in _SYSTEM
 
     def test_contains_redundancy_check_question(self):
-        assert "Redundancy Check" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Redundancy Check" in _SYSTEM
 
     def test_contains_authentic_connection_question(self):
-        assert "Authentic Connection" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Authentic Connection" in _SYSTEM
 
     def test_contains_fresh_positioning_question(self):
-        assert "Fresh Positioning" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Fresh Positioning" in _SYSTEM
 
     def test_contains_avoid_em_dashes(self):
-        assert "Avoids em-dashes" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Avoids em-dashes" in _SYSTEM
 
     # --- Success Indicators ---
 
     def test_contains_success_indicators(self):
-        assert "Success Indicators" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Success Indicators" in _SYSTEM
 
     def test_contains_common_issues_to_avoid(self):
-        assert "Common Issues to Avoid" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Common Issues to Avoid" in _SYSTEM
 
     # --- Continuous Improvement ---
 
     def test_contains_continuous_improvement(self):
-        assert "Continuous Improvement" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Continuous Improvement" in _SYSTEM
 
     def test_contains_voice_evolution(self):
-        assert "Voice Evolution" in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Voice Evolution" in _SYSTEM
 
     def test_no_feedback_section_in_system_prompt(self):
         """Feedback is injected in the user prompt, not the system prompt."""
-        assert "Editorial Improvement Context" not in EMAIL_REVIEW_SYSTEM_PROMPT
+        assert "Editorial Improvement Context" not in _SYSTEM
 
 
 # ---------------------------------------------------------------------------
@@ -156,19 +158,19 @@ class TestEmailReviewUserPromptTemplate:
     """Verify the user prompt template has the right structure."""
 
     def test_has_feedback_section_placeholder(self):
-        assert "{feedback_section}" in EMAIL_REVIEW_USER_PROMPT
+        assert "{feedback_section}" in _INSTRUCTION
 
     def test_has_newsletter_text_placeholder(self):
-        assert "{newsletter_text}" in EMAIL_REVIEW_USER_PROMPT
+        assert "{newsletter_text}" in _INSTRUCTION
 
     def test_contains_compose_instruction(self):
-        assert "Compose a full review" in EMAIL_REVIEW_USER_PROMPT
+        assert "Compose a full review" in _INSTRUCTION
 
     def test_contains_plain_text_instruction(self):
-        assert "no special characters or emojis" in EMAIL_REVIEW_USER_PROMPT
+        assert "no special characters or emojis" in _INSTRUCTION
 
     def test_contains_input_label(self):
-        assert "Input text data as a source for the review" in EMAIL_REVIEW_USER_PROMPT
+        assert "Input text data as a source for the review" in _INSTRUCTION
 
 
 # ---------------------------------------------------------------------------
@@ -213,7 +215,7 @@ class TestBuildEmailReviewPrompt:
 
     def test_system_prompt_is_constant(self):
         system, _ = build_email_review_prompt(self.SAMPLE_NEWSLETTER)
-        assert system is EMAIL_REVIEW_SYSTEM_PROMPT
+        assert system == _SYSTEM
 
     def test_newsletter_text_in_user_prompt(self):
         _, user = build_email_review_prompt(self.SAMPLE_NEWSLETTER)
@@ -280,7 +282,7 @@ class TestBuildEmailReviewPrompt:
     def test_empty_newsletter_text(self):
         """An empty newsletter should still produce valid prompts."""
         system, user = build_email_review_prompt("")
-        assert system is EMAIL_REVIEW_SYSTEM_PROMPT
+        assert system == _SYSTEM
         assert "Compose a full review" in user
 
     def test_newsletter_with_curly_braces(self):

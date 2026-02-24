@@ -4,17 +4,17 @@ from __future__ import annotations
 
 import json
 
-import pytest
-
+from ica.llm_configs import get_process_prompts
 from ica.prompts.markdown_generation import (
-    MARKDOWN_GENERATION_SYSTEM_PROMPT,
-    MARKDOWN_GENERATION_USER_PROMPT,
-    REGENERATION_SYSTEM_PROMPT,
     _FEEDBACK_SECTION_TEMPLATE,
     _VALIDATOR_ERRORS_SECTION_TEMPLATE,
     build_markdown_generation_prompt,
     build_markdown_regeneration_prompt,
 )
+
+# Load prompts from JSON config (same source the builder functions use).
+_GENERATION_SYSTEM, _GENERATION_INSTRUCTION = get_process_prompts("markdown-generation")
+_REGEN_SYSTEM, _REGEN_INSTRUCTION = get_process_prompts("markdown-regeneration")
 
 
 # ---------------------------------------------------------------------------
@@ -98,33 +98,33 @@ class TestSystemPrompt:
     """Verify the system prompt contains all required protocol sections."""
 
     def test_contains_role_description(self):
-        assert "expert editorial AI" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "expert editorial AI" in _GENERATION_SYSTEM
 
     def test_contains_b2b_newsletter_mention(self):
-        assert "B2B newsletters" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "B2B newsletters" in _GENERATION_SYSTEM
 
     def test_contains_json_input_constraint(self):
         assert "ONLY the content and URLs explicitly present in the JSON input" in (
-            MARKDOWN_GENERATION_SYSTEM_PROMPT
+            _GENERATION_SYSTEM
         )
 
     def test_contains_previous_markdown_placeholder(self):
-        assert "{previous_markdown}" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "{previous_markdown}" in _GENERATION_SYSTEM
 
     def test_contains_validator_error_handling(self):
-        assert "validator errors" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "validator errors" in _GENERATION_SYSTEM
 
     def test_contains_delta_instructions(self):
-        assert "delta" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "delta" in _GENERATION_SYSTEM
         assert "EXACTLY the specified number of characters" in (
-            MARKDOWN_GENERATION_SYSTEM_PROMPT
+            _GENERATION_SYSTEM
         )
 
     def test_contains_fix_order(self):
-        assert "FIX ORDER (MANDATORY)" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "FIX ORDER (MANDATORY)" in _GENERATION_SYSTEM
 
     def test_fix_order_sequence(self):
-        prompt = MARKDOWN_GENERATION_SYSTEM_PROMPT
+        prompt = _GENERATION_SYSTEM
         p1_pos = prompt.index("Featured Article – Paragraph 1")
         p2_pos = prompt.index("Featured Article – Paragraph 2")
         ki_pos = prompt.index("Featured Article – Key Insight")
@@ -134,77 +134,77 @@ class TestSystemPrompt:
         assert p1_pos < p2_pos < ki_pos < ma_pos < id_pos < ft_pos
 
     def test_contains_output_rules(self):
-        assert "OUTPUT RULES" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "OUTPUT RULES" in _GENERATION_SYSTEM
 
     def test_contains_exact_headings_rule(self):
-        assert "EXACT section headings" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "EXACT section headings" in _GENERATION_SYSTEM
 
     def test_contains_hard_constraints(self):
-        assert "HARD CONSTRAINTS (NON-NEGOTIABLE)" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "HARD CONSTRAINTS (NON-NEGOTIABLE)" in _GENERATION_SYSTEM
 
     def test_contains_url_invention_ban(self):
         assert "MAY NOT invent, infer, autocomplete, or substitute URLs" in (
-            MARKDOWN_GENERATION_SYSTEM_PROMPT
+            _GENERATION_SYSTEM
         )
 
     # --- Voice calibration ---
 
     def test_contains_voice_calibration_header(self):
-        assert "VOICE CALIBRATION" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "VOICE CALIBRATION" in _GENERATION_SYSTEM
 
     def test_contains_precision_as_principle(self):
-        assert "PRECISION AS PRINCIPLE" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "PRECISION AS PRINCIPLE" in _GENERATION_SYSTEM
 
     def test_contains_direct_authority(self):
-        assert "DIRECT AUTHORITY WITHOUT ARROGANCE" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "DIRECT AUTHORITY WITHOUT ARROGANCE" in _GENERATION_SYSTEM
 
     def test_contains_conversational_but_not_casual(self):
-        assert "CONVERSATIONAL BUT NOT CASUAL" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "CONVERSATIONAL BUT NOT CASUAL" in _GENERATION_SYSTEM
 
     def test_contains_intellectual_honesty(self):
-        assert "INTELLECTUAL HONESTY" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "INTELLECTUAL HONESTY" in _GENERATION_SYSTEM
 
     def test_contains_practical_grounding(self):
-        assert "PRACTICAL GROUNDING" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "PRACTICAL GROUNDING" in _GENERATION_SYSTEM
 
     def test_contains_dry_humor(self):
-        assert "DRY HUMOR" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "DRY HUMOR" in _GENERATION_SYSTEM
 
     def test_contains_strategic_synthesis(self):
-        assert "STRATEGIC SYNTHESIS" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "STRATEGIC SYNTHESIS" in _GENERATION_SYSTEM
 
     def test_contains_bold_formatting(self):
-        assert "BOLD FORMATTING FOR EMPHASIS" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "BOLD FORMATTING FOR EMPHASIS" in _GENERATION_SYSTEM
 
     def test_contains_directive_language(self):
-        assert "DIRECTIVE LANGUAGE" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "DIRECTIVE LANGUAGE" in _GENERATION_SYSTEM
 
     def test_contains_three_acceptable_patterns(self):
-        assert "Pattern A" in MARKDOWN_GENERATION_SYSTEM_PROMPT
-        assert "Pattern B" in MARKDOWN_GENERATION_SYSTEM_PROMPT
-        assert "Pattern C" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "Pattern A" in _GENERATION_SYSTEM
+        assert "Pattern B" in _GENERATION_SYSTEM
+        assert "Pattern C" in _GENERATION_SYSTEM
 
     def test_pattern_a_is_primary(self):
-        assert "PRIMARY PATTERN" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "PRIMARY PATTERN" in _GENERATION_SYSTEM
 
     def test_pattern_c_callout_only(self):
-        assert "CALLOUT BOXES ONLY" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "CALLOUT BOXES ONLY" in _GENERATION_SYSTEM
 
     def test_contains_language_to_avoid(self):
-        assert "LANGUAGE TO AVOID" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "LANGUAGE TO AVOID" in _GENERATION_SYSTEM
 
     def test_contains_application_by_section(self):
-        assert "APPLICATION BY SECTION" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "APPLICATION BY SECTION" in _GENERATION_SYSTEM
 
     def test_contains_kevin_voice_examples(self):
         """Check that representative voice examples from the n8n prompt are present."""
-        assert "strongly caution" in MARKDOWN_GENERATION_SYSTEM_PROMPT
-        assert "garbage in, garbage out" in MARKDOWN_GENERATION_SYSTEM_PROMPT
+        assert "strongly caution" in _GENERATION_SYSTEM
+        assert "garbage in, garbage out" in _GENERATION_SYSTEM
 
     def test_system_prompt_has_only_previous_markdown_placeholder(self):
         """System prompt should only have {previous_markdown} as placeholder."""
         # Replace the known placeholder to check there are no unexpected ones
-        cleaned = MARKDOWN_GENERATION_SYSTEM_PROMPT.replace("{previous_markdown}", "")
+        cleaned = _GENERATION_SYSTEM.replace("{previous_markdown}", "")
         # Bold markdown like **term** contains no braces; check no stray {
         assert "{" not in cleaned
         assert "}" not in cleaned
@@ -219,39 +219,39 @@ class TestUserPromptTemplate:
     """Verify the user prompt template contains required placeholders and sections."""
 
     def test_has_feedback_section_placeholder(self):
-        assert "{feedback_section}" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "{feedback_section}" in _GENERATION_INSTRUCTION
 
     def test_has_validator_errors_section_placeholder(self):
-        assert "{validator_errors_section}" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "{validator_errors_section}" in _GENERATION_INSTRUCTION
 
     def test_has_formatted_theme_placeholder(self):
-        assert "{formatted_theme}" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "{formatted_theme}" in _GENERATION_INSTRUCTION
 
     # --- Required section headings ---
 
     def test_contains_introduction_heading(self):
-        assert "# *INTRODUCTION*" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "# *INTRODUCTION*" in _GENERATION_INSTRUCTION
 
     def test_contains_quick_highlights_heading(self):
-        assert "# *QUICK HIGHLIGHTS*" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "# *QUICK HIGHLIGHTS*" in _GENERATION_INSTRUCTION
 
     def test_contains_featured_article_heading(self):
-        assert "# *FEATURED ARTICLE*" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "# *FEATURED ARTICLE*" in _GENERATION_INSTRUCTION
 
     def test_contains_main_article_1_heading(self):
-        assert "# *MAIN ARTICLE 1*" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "# *MAIN ARTICLE 1*" in _GENERATION_INSTRUCTION
 
     def test_contains_main_article_2_heading(self):
-        assert "# *MAIN ARTICLE 2*" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "# *MAIN ARTICLE 2*" in _GENERATION_INSTRUCTION
 
     def test_contains_quick_hits_heading(self):
-        assert "# *QUICK HITS*" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "# *QUICK HITS*" in _GENERATION_INSTRUCTION
 
     def test_contains_industry_developments_heading(self):
-        assert "# *INDUSTRY DEVELOPMENTS*" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "# *INDUSTRY DEVELOPMENTS*" in _GENERATION_INSTRUCTION
 
     def test_contains_footer_heading(self):
-        assert "# *FOOTER*" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "# *FOOTER*" in _GENERATION_INSTRUCTION
 
     def test_all_eight_sections_present(self):
         headings = [
@@ -265,60 +265,60 @@ class TestUserPromptTemplate:
             "# *FOOTER*",
         ]
         for h in headings:
-            assert h in MARKDOWN_GENERATION_USER_PROMPT, f"Missing heading: {h}"
+            assert h in _GENERATION_INSTRUCTION, f"Missing heading: {h}"
 
     # --- Section content rules ---
 
     def test_introduction_rules(self):
-        assert "Conversational opening paragraph" in MARKDOWN_GENERATION_USER_PROMPT
-        assert "Italic theme summary" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "Conversational opening paragraph" in _GENERATION_INSTRUCTION
+        assert "Italic theme summary" in _GENERATION_INSTRUCTION
 
     def test_quick_highlights_rules(self):
-        assert "3 bullet points" in MARKDOWN_GENERATION_USER_PROMPT
-        assert "150-190 characters" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "3 bullet points" in _GENERATION_INSTRUCTION
+        assert "150-190 characters" in _GENERATION_INSTRUCTION
 
     def test_featured_article_rules(self):
-        assert "300-400 characters" in MARKDOWN_GENERATION_USER_PROMPT
-        assert "Key Insight Paragraph" in MARKDOWN_GENERATION_USER_PROMPT
-        assert "300-370 characters" in MARKDOWN_GENERATION_USER_PROMPT
-        assert "CTA Link" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "300-400 characters" in _GENERATION_INSTRUCTION
+        assert "Key Insight Paragraph" in _GENERATION_INSTRUCTION
+        assert "300-370 characters" in _GENERATION_INSTRUCTION
+        assert "CTA Link" in _GENERATION_INSTRUCTION
 
     def test_featured_article_cta_rules(self):
-        prompt = MARKDOWN_GENERATION_USER_PROMPT
+        prompt = _GENERATION_INSTRUCTION
         assert '2-4 words' in prompt
         assert 'end with' in prompt
 
     def test_main_article_rules(self):
-        assert "max 750 chars" in MARKDOWN_GENERATION_USER_PROMPT
-        assert "180-250 chars" in MARKDOWN_GENERATION_USER_PROMPT
-        assert "Strategic Take-away" in MARKDOWN_GENERATION_USER_PROMPT
-        assert "Actionable Steps" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "max 750 chars" in _GENERATION_INSTRUCTION
+        assert "180-250 chars" in _GENERATION_INSTRUCTION
+        assert "Strategic Take-away" in _GENERATION_INSTRUCTION
+        assert "Actionable Steps" in _GENERATION_INSTRUCTION
 
     def test_quick_hits_rules(self):
-        assert "3 items" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "3 items" in _GENERATION_INSTRUCTION
 
     def test_industry_developments_rules(self):
-        assert "2 items" in MARKDOWN_GENERATION_USER_PROMPT
-        assert "major AI company" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "2 items" in _GENERATION_INSTRUCTION
+        assert "major AI company" in _GENERATION_INSTRUCTION
 
     def test_footer_rules(self):
-        assert "Reflective paragraph" in MARKDOWN_GENERATION_USER_PROMPT
-        assert "tie back to the theme" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "Reflective paragraph" in _GENERATION_INSTRUCTION
+        assert "tie back to the theme" in _GENERATION_INSTRUCTION
 
     def test_link_rules(self):
-        assert "LINK RULES" in MARKDOWN_GENERATION_USER_PROMPT
-        assert "ONLY URLs found" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "LINK RULES" in _GENERATION_INSTRUCTION
+        assert "ONLY URLs found" in _GENERATION_INSTRUCTION
 
     def test_final_instructions(self):
-        assert "FINAL INSTRUCTIONS" in MARKDOWN_GENERATION_USER_PROMPT
+        assert "FINAL INSTRUCTIONS" in _GENERATION_INSTRUCTION
         assert "only the final newsletter in valid Markdown" in (
-            MARKDOWN_GENERATION_USER_PROMPT
+            _GENERATION_INSTRUCTION
         )
 
     def test_no_stray_placeholders(self):
         """Only the three expected placeholders should appear."""
         known = ["{feedback_section}", "{validator_errors_section}", "{formatted_theme}"]
-        cleaned = MARKDOWN_GENERATION_USER_PROMPT
+        cleaned = _GENERATION_INSTRUCTION
         for p in known:
             cleaned = cleaned.replace(p, "")
         assert "{" not in cleaned, f"Stray placeholder in user prompt: {cleaned[cleaned.index('{'):cleaned.index('{')+30]}"
@@ -550,27 +550,27 @@ class TestRegenerationSystemPrompt:
     """Verify the regeneration prompt template."""
 
     def test_contains_role(self):
-        assert "professional content editor" in REGENERATION_SYSTEM_PROMPT
+        assert "professional content editor" in _REGEN_SYSTEM
 
     def test_contains_original_markdown_placeholder(self):
-        assert "{original_markdown}" in REGENERATION_SYSTEM_PROMPT
+        assert "{original_markdown}" in _REGEN_SYSTEM
 
     def test_contains_user_feedback_placeholder(self):
-        assert "{user_feedback}" in REGENERATION_SYSTEM_PROMPT
+        assert "{user_feedback}" in _REGEN_SYSTEM
 
     def test_contains_revision_rules(self):
-        assert "REVISION RULES" in REGENERATION_SYSTEM_PROMPT
+        assert "REVISION RULES" in _REGEN_SYSTEM
 
     def test_contains_preserve_rules(self):
-        assert "Preserve exactly" in REGENERATION_SYSTEM_PROMPT
-        assert "section headings" in REGENERATION_SYSTEM_PROMPT
-        assert "URLs exactly" in REGENERATION_SYSTEM_PROMPT
+        assert "Preserve exactly" in _REGEN_SYSTEM
+        assert "section headings" in _REGEN_SYSTEM
+        assert "URLs exactly" in _REGEN_SYSTEM
 
     def test_contains_output_rules(self):
-        assert "only the fully revised newsletter" in REGENERATION_SYSTEM_PROMPT
+        assert "only the fully revised newsletter" in _REGEN_SYSTEM
 
     def test_only_expected_placeholders(self):
-        cleaned = REGENERATION_SYSTEM_PROMPT
+        cleaned = _REGEN_SYSTEM
         cleaned = cleaned.replace("{original_markdown}", "")
         cleaned = cleaned.replace("{user_feedback}", "")
         assert "{" not in cleaned

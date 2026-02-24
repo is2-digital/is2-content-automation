@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-import pytest
-
+from ica.llm_configs import get_process_prompts
 from ica.prompts.markdown_voice_validation import (
-    VOICE_VALIDATION_PROMPT,
     build_voice_validation_prompt,
 )
+
+# Load prompts from JSON config (same source the builder function uses).
+_SYSTEM, _INSTRUCTION = get_process_prompts("markdown-voice-validation")
+_COMBINED = _SYSTEM + "\n" + _INSTRUCTION
 
 
 # ---------------------------------------------------------------------------
@@ -43,82 +45,82 @@ class TestVoiceValidationPromptConstant:
     """Tests for the VOICE_VALIDATION_PROMPT constant."""
 
     def test_prompt_is_string(self) -> None:
-        assert isinstance(VOICE_VALIDATION_PROMPT, str)
+        assert isinstance(_COMBINED, str)
 
     def test_prompt_is_not_empty(self) -> None:
-        assert len(VOICE_VALIDATION_PROMPT) > 0
+        assert len(_COMBINED) > 0
 
     def test_contains_voice_validator_role(self) -> None:
-        assert "strict newsletter voice validator" in VOICE_VALIDATION_PROMPT
+        assert "strict newsletter voice validator" in _COMBINED
 
     def test_contains_voice_tone_editorial(self) -> None:
-        assert "voice, tone, and editorial integrity" in VOICE_VALIDATION_PROMPT
+        assert "voice, tone, and editorial integrity" in _COMBINED
 
     def test_contains_no_rewrite_directive(self) -> None:
-        assert "Do NOT re-write content" in VOICE_VALIDATION_PROMPT
+        assert "Do NOT re-write content" in _COMBINED
 
     def test_contains_introduction_check(self) -> None:
-        assert "Introduction Check" in VOICE_VALIDATION_PROMPT
+        assert "Introduction Check" in _COMBINED
 
     def test_contains_featured_article_check(self) -> None:
-        assert "Featured Article Check" in VOICE_VALIDATION_PROMPT
+        assert "Featured Article Check" in _COMBINED
 
     def test_contains_main_articles_check(self) -> None:
-        assert "Main Articles Check" in VOICE_VALIDATION_PROMPT
+        assert "Main Articles Check" in _COMBINED
 
     def test_contains_overall_voice_check(self) -> None:
-        assert "Overall Voice Check" in VOICE_VALIDATION_PROMPT
+        assert "Overall Voice Check" in _COMBINED
 
     def test_introduction_check_rules(self) -> None:
-        assert "striking observation or bold statement" in VOICE_VALIDATION_PROMPT
-        assert "declarative language without hedging" in VOICE_VALIDATION_PROMPT
-        assert "2-3 strategic bold terms" in VOICE_VALIDATION_PROMPT
+        assert "striking observation or bold statement" in _COMBINED
+        assert "declarative language without hedging" in _COMBINED
+        assert "2-3 strategic bold terms" in _COMBINED
 
     def test_featured_article_check_rules(self) -> None:
-        assert "active voice, no hedging" in VOICE_VALIDATION_PROMPT
-        assert "specific data, numbers, or concrete examples" in VOICE_VALIDATION_PROMPT
+        assert "active voice, no hedging" in _COMBINED
+        assert "specific data, numbers, or concrete examples" in _COMBINED
 
     def test_main_articles_check_rules(self) -> None:
-        assert "single focused point" in VOICE_VALIDATION_PROMPT
-        assert "Callouts translate to strategic action" in VOICE_VALIDATION_PROMPT
+        assert "single focused point" in _COMBINED
+        assert "Callouts translate to strategic action" in _COMBINED
 
     def test_overall_voice_rules(self) -> None:
-        assert "Contractions used consistently" in VOICE_VALIDATION_PROMPT
-        assert "Direct address to reader" in VOICE_VALIDATION_PROMPT
-        assert "Professional authority without arrogance" in VOICE_VALIDATION_PROMPT
-        assert "concrete business outcome" in VOICE_VALIDATION_PROMPT
+        assert "Contractions used consistently" in _COMBINED
+        assert "Direct address to reader" in _COMBINED
+        assert "Professional authority without arrogance" in _COMBINED
+        assert "concrete business outcome" in _COMBINED
 
     def test_contains_voice_prefix_rule(self) -> None:
-        assert "VOICE:" in VOICE_VALIDATION_PROMPT
+        assert "VOICE:" in _COMBINED
 
     def test_contains_prior_error_handling(self) -> None:
-        assert "PRIOR ERROR HANDLING" in VOICE_VALIDATION_PROMPT
-        assert "copied verbatim" in VOICE_VALIDATION_PROMPT
+        assert "PRIOR ERROR HANDLING" in _COMBINED
+        assert "copied verbatim" in _COMBINED
 
     def test_contains_do_not_modify_prior_errors(self) -> None:
-        assert "Do NOT rewrite, summarize, deduplicate" in VOICE_VALIDATION_PROMPT
+        assert "Do NOT rewrite, summarize, deduplicate" in _COMBINED
 
     def test_contains_output_format(self) -> None:
-        assert '"isValid"' in VOICE_VALIDATION_PROMPT
-        assert '"errors"' in VOICE_VALIDATION_PROMPT
+        assert '"isValid"' in _COMBINED
+        assert '"errors"' in _COMBINED
 
     def test_contains_one_violation_one_error(self) -> None:
-        assert "ONE violation = ONE error string" in VOICE_VALIDATION_PROMPT
+        assert "ONE violation = ONE error string" in _COMBINED
 
     def test_no_n8n_expression_syntax(self) -> None:
-        assert "$json" not in VOICE_VALIDATION_PROMPT
-        assert "$(" not in VOICE_VALIDATION_PROMPT
+        assert "$json" not in _COMBINED
+        assert "$(" not in _COMBINED
 
     def test_hedging_examples(self) -> None:
-        assert '"might be"' in VOICE_VALIDATION_PROMPT
-        assert '"could potentially"' in VOICE_VALIDATION_PROMPT
+        assert '"might be"' in _COMBINED
+        assert '"could potentially"' in _COMBINED
 
     def test_contraction_examples(self) -> None:
-        assert '"we\'re"' in VOICE_VALIDATION_PROMPT
-        assert '"isn\'t"' in VOICE_VALIDATION_PROMPT
+        assert '"we\'re"' in _COMBINED
+        assert '"isn\'t"' in _COMBINED
 
     def test_no_should_must_rule(self) -> None:
-        assert '"should" or "must" statements are avoided' in VOICE_VALIDATION_PROMPT
+        assert '"should" or "must" statements are avoided' in _COMBINED
 
 
 # ---------------------------------------------------------------------------
@@ -141,7 +143,7 @@ class TestBuildVoiceValidationPrompt:
 
     def test_system_prompt_is_voice_prompt(self) -> None:
         system, _ = build_voice_validation_prompt(SAMPLE_MARKDOWN, EMPTY_PRIOR_ERRORS)
-        assert system == VOICE_VALIDATION_PROMPT
+        assert system == _SYSTEM
 
     def test_user_prompt_contains_markdown(self) -> None:
         _, user = build_voice_validation_prompt(SAMPLE_MARKDOWN, EMPTY_PRIOR_ERRORS)
@@ -162,7 +164,7 @@ class TestBuildVoiceValidationPrompt:
 
     def test_empty_markdown(self) -> None:
         system, user = build_voice_validation_prompt("", EMPTY_PRIOR_ERRORS)
-        assert system == VOICE_VALIDATION_PROMPT
+        assert system == _SYSTEM
         assert "### INPUT" in user
 
     def test_empty_prior_errors(self) -> None:
@@ -202,18 +204,18 @@ class TestVoiceRuleSections:
             "Overall Voice Check",
         ]
         for section in sections:
-            assert section in VOICE_VALIDATION_PROMPT
+            assert section in _COMBINED
 
     def test_evaluation_rules_section(self) -> None:
-        assert "Evaluation rules" in VOICE_VALIDATION_PROMPT
-        assert "evaluate mechanically" in VOICE_VALIDATION_PROMPT
+        assert "Evaluation rules" in _COMBINED
+        assert "evaluate mechanically" in _COMBINED
 
     def test_merge_previous_errors_section(self) -> None:
-        assert "Merge previous errors" in VOICE_VALIDATION_PROMPT
+        assert "Merge previous errors" in _COMBINED
 
     def test_json_only_output_directive(self) -> None:
-        assert "Do NOT include markdown, commentary" in VOICE_VALIDATION_PROMPT
+        assert "Do NOT include markdown, commentary" in _COMBINED
 
     def test_callout_boxes_evidence_rule(self) -> None:
-        assert "Recommendations appear only in callout boxes" in VOICE_VALIDATION_PROMPT
-        assert "grounded in evidence" in VOICE_VALIDATION_PROMPT
+        assert "Recommendations appear only in callout boxes" in _COMBINED
+        assert "grounded in evidence" in _COMBINED

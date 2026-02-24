@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-import pytest
-
+from ica.llm_configs import get_process_prompts
 from ica.prompts.markdown_structural_validation import (
-    STRUCTURAL_VALIDATION_PROMPT,
     build_structural_validation_prompt,
 )
+
+# Load prompts from JSON config (same source the builder function uses).
+_SYSTEM, _INSTRUCTION = get_process_prompts("markdown-structural-validation")
+_COMBINED = _SYSTEM + "\n" + _INSTRUCTION
 
 
 # ---------------------------------------------------------------------------
@@ -103,64 +105,64 @@ class TestStructuralValidationPromptConstant:
     """Tests for the STRUCTURAL_VALIDATION_PROMPT constant."""
 
     def test_prompt_is_string(self) -> None:
-        assert isinstance(STRUCTURAL_VALIDATION_PROMPT, str)
+        assert isinstance(_COMBINED, str)
 
     def test_prompt_is_not_empty(self) -> None:
-        assert len(STRUCTURAL_VALIDATION_PROMPT) > 0
+        assert len(_COMBINED) > 0
 
     def test_contains_char_errors_placeholder(self) -> None:
-        assert "{char_errors}" in STRUCTURAL_VALIDATION_PROMPT
+        assert "{char_errors}" in _SYSTEM
 
     def test_contains_validator_role(self) -> None:
-        assert "strict newsletter validator" in STRUCTURAL_VALIDATION_PROMPT
+        assert "strict newsletter validator" in _COMBINED
 
     def test_contains_non_negotiable_directive(self) -> None:
-        assert "NON-NEGOTIABLE" in STRUCTURAL_VALIDATION_PROMPT
+        assert "NON-NEGOTIABLE" in _COMBINED
 
     def test_contains_no_recount_directive(self) -> None:
-        assert "MUST NOT re-count characters" in STRUCTURAL_VALIDATION_PROMPT
+        assert "MUST NOT re-count characters" in _COMBINED
 
     def test_contains_quick_highlights_rules(self) -> None:
-        assert "Exactly 3 bullets" in STRUCTURAL_VALIDATION_PROMPT
+        assert "Exactly 3 bullets" in _COMBINED
 
     def test_contains_featured_article_rules(self) -> None:
-        assert "clickable Markdown link" in STRUCTURAL_VALIDATION_PROMPT
+        assert "clickable Markdown link" in _COMBINED
 
     def test_contains_main_articles_rules(self) -> None:
-        assert "Strategic Take-away" in STRUCTURAL_VALIDATION_PROMPT
-        assert "Actionable Steps" in STRUCTURAL_VALIDATION_PROMPT
+        assert "Strategic Take-away" in _COMBINED
+        assert "Actionable Steps" in _COMBINED
 
     def test_contains_industry_developments_rules(self) -> None:
-        assert "Exactly 2 items" in STRUCTURAL_VALIDATION_PROMPT
+        assert "Exactly 2 items" in _COMBINED
 
     def test_contains_major_ai_players(self) -> None:
         for player in ("OpenAI", "Google", "Microsoft", "Meta", "Anthropic", "Amazon"):
-            assert player in STRUCTURAL_VALIDATION_PROMPT
+            assert player in _COMBINED
 
     def test_contains_footer_rules(self) -> None:
-        assert "Alright, that's a wrap for the week!" in STRUCTURAL_VALIDATION_PROMPT
-        assert "Thoughts?" in STRUCTURAL_VALIDATION_PROMPT
+        assert "Alright, that's a wrap for the week!" in _COMBINED
+        assert "Thoughts?" in _COMBINED
 
     def test_contains_output_format(self) -> None:
-        assert '"isValid"' in STRUCTURAL_VALIDATION_PROMPT
-        assert '"errors"' in STRUCTURAL_VALIDATION_PROMPT
+        assert '"isValid"' in _COMBINED
+        assert '"errors"' in _COMBINED
 
     def test_contains_cta_rules(self) -> None:
-        assert "CTA on own line" in STRUCTURAL_VALIDATION_PROMPT
-        assert "ends with arrow" in STRUCTURAL_VALIDATION_PROMPT
+        assert "CTA on own line" in _COMBINED
+        assert "ends with arrow" in _COMBINED
 
     def test_contains_key_insight_rule(self) -> None:
-        assert "Key Insight starts with bolded two-word label" in STRUCTURAL_VALIDATION_PROMPT
+        assert "Key Insight starts with bolded two-word label" in _COMBINED
 
     def test_contains_bullet_order_rule(self) -> None:
-        assert "Featured -> Main 1 -> Main 2" in STRUCTURAL_VALIDATION_PROMPT
+        assert "Featured -> Main 1 -> Main 2" in _COMBINED
 
     def test_no_n8n_expression_syntax(self) -> None:
-        assert "{{" not in STRUCTURAL_VALIDATION_PROMPT or \
-            STRUCTURAL_VALIDATION_PROMPT.count("{{") == STRUCTURAL_VALIDATION_PROMPT.count("}}")
+        assert "{{" not in _COMBINED or \
+            _COMBINED.count("{{") == _COMBINED.count("}}")
         # The only {{ }} should be the escaped JSON output format
-        assert "$json" not in STRUCTURAL_VALIDATION_PROMPT
-        assert "$(" not in STRUCTURAL_VALIDATION_PROMPT
+        assert "$json" not in _COMBINED
+        assert "$(" not in _COMBINED
 
 
 # ---------------------------------------------------------------------------
@@ -232,19 +234,19 @@ class TestSectionRuleCoverage:
     """Verify that the prompt covers all required validation sections."""
 
     def test_quick_highlights_section(self) -> None:
-        assert "QUICK HIGHLIGHTS" in STRUCTURAL_VALIDATION_PROMPT
+        assert "QUICK HIGHLIGHTS" in _COMBINED
 
     def test_featured_article_section(self) -> None:
-        assert "FEATURED ARTICLE" in STRUCTURAL_VALIDATION_PROMPT
+        assert "FEATURED ARTICLE" in _COMBINED
 
     def test_main_articles_section(self) -> None:
-        assert "MAIN ARTICLES" in STRUCTURAL_VALIDATION_PROMPT
+        assert "MAIN ARTICLES" in _COMBINED
 
     def test_industry_developments_section(self) -> None:
-        assert "INDUSTRY DEVELOPMENTS" in STRUCTURAL_VALIDATION_PROMPT
+        assert "INDUSTRY DEVELOPMENTS" in _COMBINED
 
     def test_footer_section(self) -> None:
-        assert "FOOTER" in STRUCTURAL_VALIDATION_PROMPT
+        assert "FOOTER" in _COMBINED
 
     def test_no_quick_hits_section(self) -> None:
         # Structural validation doesn't cover Quick Hits directly
@@ -252,9 +254,9 @@ class TestSectionRuleCoverage:
         pass
 
     def test_three_role_steps(self) -> None:
-        assert "Accept provided character errors exactly as-is" in STRUCTURAL_VALIDATION_PROMPT
-        assert "Validate all remaining non-numeric rules" in STRUCTURAL_VALIDATION_PROMPT
-        assert "Merge both into a single errors array" in STRUCTURAL_VALIDATION_PROMPT
+        assert "Accept provided character errors exactly as-is" in _COMBINED
+        assert "Validate all remaining non-numeric rules" in _COMBINED
+        assert "Merge both into a single errors array" in _COMBINED
 
 
 # ---------------------------------------------------------------------------
