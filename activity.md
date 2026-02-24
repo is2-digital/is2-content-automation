@@ -2,13 +2,59 @@
 
 ## Current Status
 **Last Updated:** 2026-02-23
-**Tasks Completed:** All (43 tasks + 28 parent tasks/epics closed)
+**Tasks Completed:** ica-aeb (Markdown Generation pipeline step)
 **Current Task:** None
-**Tasks Completed This Session:** 28 closures (session 51)
+**Tasks Completed This Session:** 1 (session 52)
 
 ---
 
 ## Session Log
+
+### 2026-02-23 (session 52)
+**Completed:**
+- ica-aeb: Implement markdown generation pipeline step
+
+**Changes Made:**
+- Created `ica/pipeline/markdown_generation.py` — full Step 4 implementation:
+  - SlackMarkdownReview protocol, GoogleDocsWriter protocol
+  - MarkdownGenerationResult, ValidationResult dataclasses
+  - aggregate_feedback: notes → bullet-point string
+  - call_markdown_llm: generation/regeneration with formatted_theme + errors
+  - Three-layer validation pipeline:
+    - Layer 1: format_char_errors_json + validate_character_counts (code-based)
+    - Layer 2: run_structural_validation (LLM, GPT-4.1)
+    - Layer 3: run_voice_validation (LLM, GPT-4.1)
+    - _parse_validation_response: JSON response parsing with code-block fallback
+    - run_three_layer_validation: combined orchestration
+  - generate_with_validation: generation + validation retry loop (up to 3 attempts)
+  - User review loop:
+    - build_next_steps_form, parse_next_steps_response
+    - call_user_feedback_regeneration (markdown regeneration prompt)
+    - extract_markdown_learning_data (JSON parsing)
+    - store_markdown_feedback (notes table, type='user_markdowngenerator')
+    - create_markdown_doc (Google Docs)
+    - run_markdown_review: full Slack feedback loop orchestration
+- Created `tests/test_pipeline/test_markdown_generation.py` (71 tests)
+
+**Status:**
+- Markdown generation pipeline step (PRD Section 3.4) fully implemented:
+  - Receives formatted_theme from Step 3
+  - Fetches learning data (last 40 entries, type='user_markdowngenerator')
+  - Calls LLM (claude-sonnet) with ~4000-word markdown generation prompt
+  - Three-layer validation: character count → structural LLM → voice LLM
+  - Up to 3 validation retry attempts, then force-accept
+  - Slack review: share → Yes/Feedback/Restart → feedback loop
+  - On approval: creates Google Doc, shares link
+  - Stores feedback as learning data in notes table
+- All 2935 tests pass (2864 existing + 71 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-23 (session 51)
 **Completed:**
