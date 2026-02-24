@@ -2,13 +2,32 @@
 
 ## Current Status
 **Last Updated:** 2026-02-24
-**Tasks Completed:** ica-p8k (Update model resolution to check JSON config)
+**Tasks Completed:** ica-mz4 (Full regression test suite for all 19 processes)
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 63)
+**Tasks Completed This Session:** 1 (session 64)
 
 ---
 
 ## Session Log
+
+### 2026-02-24 (session 64)
+**Completed:**
+- ica-mz4: Full regression test suite for all 19 processes
+
+**Changes Made:**
+- Created `tests/test_llm_configs/test_all_processes.py` (309 new tests across 9 test classes):
+  - `TestAllConfigsLoadAndValidate`: All 19 JSON configs load, validate schema, correct models (114 parametrized tests)
+  - `TestGetProcessPromptsAllProcesses`: Prompt retrieval, length snapshots, config consistency (76 parametrized tests)
+  - `TestBuildFunctionsMatchJsonConfigs`: All build_xxx_prompt() functions produce correct system prompts from JSON (22 tests)
+  - `TestGetModelAllPurposes`: Default model correctness for all 21 LLMPurpose values (42 parametrized tests)
+  - `TestGetModelEnvOverride`: Env var overrides take priority (10 parametrized tests)
+  - `TestGetModelJsonTier`: 3-tier resolution (JSON, env, default) (3 tests)
+  - `TestGetProcessModelAllProcesses`: get_process_model() for all 19 processes (19 parametrized tests)
+  - `TestEdgeCases`: Corrupted JSON, empty fields, missing files, version 0, unicode, schema mismatch (13 tests)
+  - `TestLLMPurposeCompleteness`, `TestPurposeToProcessMapping`, `TestProcessCategoryCoverage`: Cross-cutting integrity checks (10 tests)
+- Full suite: 359 tests (309 new + 50 existing), all passing in 0.34s, lint clean
+
+**No blockers.**
 
 ### 2026-02-24 (session 63)
 **Completed:**
