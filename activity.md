@@ -2,13 +2,25 @@
 
 ## Current Status
 **Last Updated:** 2026-02-23
-**Tasks Completed:** ica-d0z (Create schema.py and loader.py modules)
+**Tasks Completed:** ica-1gv (Create pilot JSON config files)
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 58)
+**Tasks Completed This Session:** 1 (session 59)
 
 ---
 
 ## Session Log
+
+### 2026-02-23 (session 59)
+**Completed:**
+- ica-1gv: Create pilot JSON config files (summarization + email-subject)
+
+**Changes Made:**
+- Created `ica/llm_configs/summarization-llm.json` — system + instruction prompts extracted from `ica/prompts/summarization.py`, model `anthropic/claude-sonnet-4.5`
+- Created `ica/llm_configs/email-subject-llm.json` — system + instruction prompts extracted from `ica/prompts/email_subject.py`, model `anthropic/claude-sonnet-4.5`
+- Both follow `ica-llm-config/v1` schema with metadata (googleDocId: null, lastSyncedAt: null, version: 1)
+- Validated both files load correctly through JSON parsing against schema structure
+
+**Blockers:** None
 
 ### 2026-02-23 (session 58)
 **Completed:**
