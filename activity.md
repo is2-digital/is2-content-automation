@@ -2,13 +2,52 @@
 
 ## Current Status
 **Last Updated:** 2026-02-23
-**Tasks Completed:** ica-8iq (HTML Generation pipeline step)
+**Tasks Completed:** ica-5fn (Social media generator)
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 53)
+**Tasks Completed This Session:** 1 (session 54)
 
 ---
 
 ## Session Log
+
+### 2026-02-23 (session 54)
+**Completed:**
+- ica-5fn: Implement social media generator
+
+**Changes Made:**
+- Created `ica/pipeline/social_media.py` — full Step 6c implementation:
+  - SlackSocialMediaReview protocol, GoogleDocsService protocol
+  - ParsedPost dataclass, SocialMediaResult dataclass
+  - Phase 1: call_social_media_post_llm (12 graphics-only posts: 6 DYK + 6 IT)
+  - Post parsing: parse_phase1_titles, parse_phase1_posts, get_source_url
+  - Phase 2: call_caption_llm (captions for selected posts, 150-300 chars)
+  - Feedback: call_caption_regeneration_llm (feedback-driven caption revision)
+  - Form builders: build_phase1_next_steps_form, build_post_selection_form, build_phase2_next_steps_form, build_final_selection_form
+  - Post filtering: parse_phase2_titles, filter_final_posts
+  - Google Doc: create_social_media_doc
+  - run_social_media_generation: full orchestration — approval → Phase 1 (generate/regenerate loop) → post selection → Phase 2 (captions with feedback loop) → final selection → Google Doc → Slack share
+- Created `tests/test_pipeline/test_social_media.py` (73 tests)
+
+**Status:**
+- Social media generator pipeline step (PRD Section 3.8) fully implemented:
+  - Two-phase process matching n8n social_media_generator_subworkflow
+  - Phase 1: LLM generates 12 graphics-only posts → Slack share → Yes/Regenerate loop
+  - Post selection: parse titles via regex, checkbox form for user selection
+  - Source URL resolution from formatted_theme (key-name priority, source-number fallback)
+  - Phase 2: LLM generates captions for selected posts → Slack share → Yes/Feedback/Restart loop
+  - Feedback regeneration via dedicated LLM call
+  - Final selection: checkbox form → filter and combine selected posts
+  - Google Doc creation with final content
+  - No notes/learning data storage (matches n8n workflow which has none)
+- All 3082 tests pass (3009 existing + 73 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-23 (session 53)
 **Completed:**
