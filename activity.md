@@ -2,13 +2,52 @@
 
 ## Current Status
 **Last Updated:** 2026-02-23
-**Tasks Completed:** ica-aeb (Markdown Generation pipeline step)
+**Tasks Completed:** ica-8iq (HTML Generation pipeline step)
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 52)
+**Tasks Completed This Session:** 1 (session 53)
 
 ---
 
 ## Session Log
+
+### 2026-02-23 (session 53)
+**Completed:**
+- ica-8iq: Implement HTML generation pipeline step
+
+**Changes Made:**
+- Created `ica/pipeline/html_generation.py` — full Step 5 implementation:
+  - SlackHtmlReview protocol, GoogleDocsService protocol
+  - HtmlGenerationResult dataclass
+  - aggregate_feedback: notes → bullet-point string
+  - call_html_llm: HTML generation from markdown + template
+  - call_html_regeneration: scoped HTML regeneration (only modifies sections mentioned in feedback)
+  - extract_html_learning_data: JSON parsing with fallback
+  - build_next_steps_form, parse_next_steps_response
+  - store_html_feedback (notes table, type='user_htmlgenerator')
+  - create_html_doc (Google Docs)
+  - run_html_generation: full orchestration — fetch learning data → generate HTML → create doc → Slack review loop with feedback/approval
+- Created `tests/test_pipeline/test_html_generation.py` (74 tests)
+
+**Status:**
+- HTML generation pipeline step (PRD Section 3.5) fully implemented:
+  - Receives markdown content + HTML template + newsletter date
+  - Fetches learning data (last 40 entries, type='user_htmlgenerator')
+  - Calls LLM (claude-sonnet) to populate HTML template with markdown content
+  - Creates Google Doc with generated HTML
+  - Slack review: share doc link → Yes/Feedback → feedback loop
+  - Scoped regeneration: only modifies sections mentioned in feedback
+  - Content validity check: `<!DOCTYPE html>` marker (case-insensitive)
+  - On approval: sends approval message, returns HtmlGenerationResult
+  - Stores feedback as learning data in notes table
+- All 3009 tests pass (2935 existing + 74 new)
+
+**Next:**
+- Next available task from `bd ready`
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-23 (session 52)
 **Completed:**
