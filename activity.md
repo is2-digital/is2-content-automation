@@ -2,13 +2,25 @@
 
 ## Current Status
 **Last Updated:** 2026-02-23
-**Tasks Completed:** ica-2s2 (Refactor pilot prompt files to load from JSON)
+**Tasks Completed:** ica-76h (Add regression tests for pilot migration)
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 60)
+**Tasks Completed This Session:** 1 (session 61)
 
 ---
 
 ## Session Log
+
+### 2026-02-23 (session 61)
+**Completed:**
+- ica-76h: Add regression tests for pilot migration
+
+**Changes Made:**
+- Created `tests/test_llm_configs/test_prompt_regression.py` with 14 regression tests: string-identity checks for system prompts, user prompts (with and without feedback), raw template comparisons, and length guards for both summarization and email-subject processes
+- Fixed whitespace bug in `ica/llm_configs/summarization-llm.json`: instruction had extra `\n` after `{feedback_section}` vs original hardcoded constant
+- Fixed whitespace bug in `ica/llm_configs/email-subject-llm.json`: instruction had extra `\n` after `{feedback_section}` vs original hardcoded constant
+- All 127 related tests pass (50 schema/loader + 14 regression + 63 prompt), ruff and mypy clean
+
+**No blockers.**
 
 ### 2026-02-23 (session 60)
 **Completed:**
