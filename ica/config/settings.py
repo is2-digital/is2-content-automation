@@ -48,6 +48,12 @@ class Settings(BaseSettings):
     # --- SearchApi ---
     searchapi_api_key: str
 
+    # --- Google Sheets ---
+    google_sheets_spreadsheet_id: str = ""
+
+    # --- HTML template ---
+    html_template_path: str = ""
+
     # --- General ---
     timezone: str = "America/Los_Angeles"
 

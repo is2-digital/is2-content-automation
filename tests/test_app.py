@@ -280,20 +280,31 @@ class TestStatusByIdEndpoint:
 
 
 class TestPipelineExecution:
-    def test_run_transitions_to_completed(self, client: TestClient):
-        """After triggering, the placeholder pipeline should complete."""
-        resp = client.post("/trigger")
-        run_id = resp.json()["run_id"]
-        # The TestClient runs the event loop synchronously, so
-        # the background task should have completed by the time
-        # we check.
-        # Give the async task a moment to complete
-        import time
+    def test_run_transitions_to_completed(self):
+        """After triggering, the pipeline with noop steps should complete."""
+        from unittest.mock import patch
 
-        time.sleep(0.1)
-        run = get_runs()[run_id]
-        # The run should reach completed (placeholder pipeline is instant)
-        assert run.status in (RunStatus.RUNNING, RunStatus.COMPLETED)
+        async def _noop(ctx):
+            return ctx
+
+        noop_seq = [("curation", _noop)]
+        noop_par: list = []
+
+        with patch(
+            "ica.app.build_default_steps",
+            return_value=(noop_seq, noop_par),
+        ):
+            app = create_app(include_slack=False, include_scheduler=False)
+            test_client = TestClient(app, raise_server_exceptions=False)
+            resp = test_client.post("/trigger")
+            run_id = resp.json()["run_id"]
+            # Give the async task a moment to complete
+            import time
+
+            time.sleep(0.1)
+            run = get_runs()[run_id]
+            # The run should reach completed
+            assert run.status in (RunStatus.RUNNING, RunStatus.COMPLETED)
 
 
 # ---------------------------------------------------------------------------

@@ -13,7 +13,6 @@ from ica.pipeline.orchestrator import (
     PipelineContext,
     StepName,
     StepResult,
-    _noop_step,
     _run_parallel_steps,
     build_default_steps,
     run_pipeline,
@@ -487,26 +486,6 @@ class TestRunParallelSteps:
 
 
 # ---------------------------------------------------------------------------
-# _noop_step
-# ---------------------------------------------------------------------------
-
-
-class TestNoopStep:
-    @pytest.mark.asyncio
-    async def test_returns_same_context(self):
-        ctx = PipelineContext(run_id="noop1")
-        result = await _noop_step(ctx)
-        assert result is ctx
-
-    @pytest.mark.asyncio
-    async def test_does_not_modify_context(self):
-        ctx = PipelineContext(run_id="noop2", newsletter_id="NL-1")
-        await _noop_step(ctx)
-        assert ctx.newsletter_id == "NL-1"
-        assert ctx.articles == []
-
-
-# ---------------------------------------------------------------------------
 # build_default_steps
 # ---------------------------------------------------------------------------
 
@@ -551,16 +530,34 @@ class TestBuildDefaultSteps:
         for _, fn in seq + par:
             assert callable(fn)
 
-    @pytest.mark.asyncio
-    async def test_default_steps_run_successfully(self):
-        """The default noop steps form a runnable pipeline."""
-        seq, par = build_default_steps()
-        ctx = PipelineContext(run_id="default1")
-        result = await run_pipeline(
-            ctx, sequential_steps=seq, parallel_steps=par,
+    def test_steps_are_real_implementations(self):
+        """Default steps are wired to real pipeline modules, not noop stubs."""
+        from ica.pipeline.steps import (
+            run_alternates_html_step,
+            run_curation_step,
+            run_email_subject_step,
+            run_html_generation_step,
+            run_linkedin_carousel_step,
+            run_markdown_generation_step,
+            run_social_media_step,
+            run_summarization_step,
+            run_theme_generation_step,
         )
-        assert len(result.step_results) == 9
-        assert all(r.status == "completed" for r in result.step_results)
+
+        seq, par = build_default_steps()
+
+        # Sequential steps
+        assert seq[0][1] is run_curation_step
+        assert seq[1][1] is run_summarization_step
+        assert seq[2][1] is run_theme_generation_step
+        assert seq[3][1] is run_markdown_generation_step
+        assert seq[4][1] is run_html_generation_step
+
+        # Parallel steps
+        assert par[0][1] is run_alternates_html_step
+        assert par[1][1] is run_email_subject_step
+        assert par[2][1] is run_social_media_step
+        assert par[3][1] is run_linkedin_carousel_step
 
 
 # ---------------------------------------------------------------------------

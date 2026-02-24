@@ -2,13 +2,44 @@
 
 ## Current Status
 **Last Updated:** 2026-02-23
-**Tasks Completed:** ica-9qv (Email subject & preview generator)
+**Tasks Completed:** ica-6oq (Wire all pipeline steps into orchestrator)
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 56)
+**Tasks Completed This Session:** 1 (session 57)
 
 ---
 
 ## Session Log
+
+### 2026-02-23 (session 57)
+**Completed:**
+- ica-6oq: Wire all pipeline steps into orchestrator
+
+**Changes Made:**
+- Created `ica/pipeline/steps.py` — 9 step wrapper functions adapting pipeline modules to PipelineStep protocol:
+  - Service factory helpers: `_get_settings()`, `_make_slack()`, `_make_sheets()`, `_make_docs()`, `_make_http()`, `_session()`
+  - `run_curation_step`: composes `prepare_curation_data` + `run_approval_flow`
+  - `run_summarization_step`: composes `prepare_summarization_data` + `summarize_articles` + `run_summarization_output`
+  - `run_theme_generation_step`: full selection/approval orchestration with nested loops (generation → selection → approval with feedback paths)
+  - `run_markdown_generation_step`: composes `aggregate_feedback` + `generate_with_validation` + `run_markdown_review`
+  - `run_html_generation_step`: fetches markdown from Google Docs, loads HTML template, calls `run_html_generation`
+  - `run_alternates_html_step`, `run_email_subject_step`, `run_social_media_step`, `run_linkedin_carousel_step`
+- Updated `ica/pipeline/orchestrator.py` — replaced `_noop_step` stubs with real step imports in `build_default_steps()`
+- Updated `ica/config/settings.py` — added `google_sheets_spreadsheet_id` and `html_template_path` optional settings
+- Created `tests/test_pipeline/test_steps.py` (26 tests covering all 9 steps, service factories, context propagation)
+- Updated `tests/test_pipeline/test_orchestrator.py` — removed noop tests, added real implementation verification
+- Updated `tests/test_app.py` — mock `build_default_steps` in pipeline execution test
+
+**Status:**
+- All pipeline steps wired into orchestrator with real implementations
+- All 3285 tests pass (3261 existing - 2 removed noop tests + 26 new)
+
+**Next:**
+- No remaining tasks — all pipeline steps fully wired
+
+**Blockers:**
+- None
+
+---
 
 ### 2026-02-23 (session 56)
 **Completed:**

@@ -318,38 +318,41 @@ async def _run_parallel_steps(
     return errors
 
 
-# ---------------------------------------------------------------------------
-# Default step stubs — no-op implementations for steps not yet wired
-# ---------------------------------------------------------------------------
-
-
-async def _noop_step(ctx: PipelineContext) -> PipelineContext:
-    """Placeholder step that does nothing."""
-    return ctx
-
-
 def build_default_steps() -> (
     tuple[list[tuple[str, PipelineStep]], list[tuple[str, PipelineStep]]]
 ):
     """Return the default sequential and parallel step lists.
 
-    All steps start as no-ops.  As each pipeline module is completed, its
-    real implementation replaces the corresponding stub here.
+    Each step is wired to its real implementation from
+    :mod:`ica.pipeline.steps`.  Imports are deferred to avoid circular
+    dependencies and heavy startup costs.
 
     Returns:
         ``(sequential_steps, parallel_steps)`` ready for :func:`run_pipeline`.
     """
+    from ica.pipeline.steps import (
+        run_alternates_html_step,
+        run_curation_step,
+        run_email_subject_step,
+        run_html_generation_step,
+        run_linkedin_carousel_step,
+        run_markdown_generation_step,
+        run_social_media_step,
+        run_summarization_step,
+        run_theme_generation_step,
+    )
+
     sequential: list[tuple[str, PipelineStep]] = [
-        (StepName.CURATION, _noop_step),
-        (StepName.SUMMARIZATION, _noop_step),
-        (StepName.THEME_GENERATION, _noop_step),
-        (StepName.MARKDOWN_GENERATION, _noop_step),
-        (StepName.HTML_GENERATION, _noop_step),
+        (StepName.CURATION, run_curation_step),
+        (StepName.SUMMARIZATION, run_summarization_step),
+        (StepName.THEME_GENERATION, run_theme_generation_step),
+        (StepName.MARKDOWN_GENERATION, run_markdown_generation_step),
+        (StepName.HTML_GENERATION, run_html_generation_step),
     ]
     parallel: list[tuple[str, PipelineStep]] = [
-        (StepName.ALTERNATES_HTML, _noop_step),
-        (StepName.EMAIL_SUBJECT, _noop_step),
-        (StepName.SOCIAL_MEDIA, _noop_step),
-        (StepName.LINKEDIN_CAROUSEL, _noop_step),
+        (StepName.ALTERNATES_HTML, run_alternates_html_step),
+        (StepName.EMAIL_SUBJECT, run_email_subject_step),
+        (StepName.SOCIAL_MEDIA, run_social_media_step),
+        (StepName.LINKEDIN_CAROUSEL, run_linkedin_carousel_step),
     ]
     return sequential, parallel
