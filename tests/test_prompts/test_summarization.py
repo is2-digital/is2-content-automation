@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-import pytest
-
+from ica.llm_configs import get_process_prompts
 from ica.prompts.summarization import (
-    SUMMARIZATION_SYSTEM_PROMPT,
-    SUMMARIZATION_USER_PROMPT,
     _FEEDBACK_SECTION_TEMPLATE,
     build_summarization_prompt,
 )
+
+# Load prompts from JSON config (same source the builder function uses).
+_SYSTEM_PROMPT, _INSTRUCTION = get_process_prompts("summarization")
 
 
 # ---------------------------------------------------------------------------
@@ -21,69 +21,69 @@ class TestSystemPrompt:
     """Verify the system prompt contains all required protocol sections."""
 
     def test_contains_accuracy_control_protocol(self):
-        assert "Accuracy Control Protocol (MANDATORY)" in SUMMARIZATION_SYSTEM_PROMPT
+        assert "Accuracy Control Protocol (MANDATORY)" in _SYSTEM_PROMPT
 
     def test_contains_do_not_search(self):
-        assert "Do NOT search for alternative sources" in SUMMARIZATION_SYSTEM_PROMPT
+        assert "Do NOT search for alternative sources" in _SYSTEM_PROMPT
 
     def test_contains_do_not_summarize_partial(self):
-        assert "Do NOT summarize partial or unavailable content" in SUMMARIZATION_SYSTEM_PROMPT
+        assert "Do NOT summarize partial or unavailable content" in _SYSTEM_PROMPT
 
     def test_contains_do_not_infer(self):
-        assert "Do NOT generate or infer missing details" in SUMMARIZATION_SYSTEM_PROMPT
+        assert "Do NOT generate or infer missing details" in _SYSTEM_PROMPT
 
     def test_contains_article_summary_standards(self):
-        assert "Article Summary Standards" in SUMMARIZATION_SYSTEM_PROMPT
+        assert "Article Summary Standards" in _SYSTEM_PROMPT
 
     def test_contains_summary_specifications(self):
-        assert "3-4 sentences per article" in SUMMARIZATION_SYSTEM_PROMPT
+        assert "3-4 sentences per article" in _SYSTEM_PROMPT
 
     def test_contains_business_relevance_specs(self):
-        assert "Business Relevance Specifications" in SUMMARIZATION_SYSTEM_PROMPT
+        assert "Business Relevance Specifications" in _SYSTEM_PROMPT
 
     def test_contains_solopreneur_audience(self):
-        assert "solopreneurs and SMB professionals" in SUMMARIZATION_SYSTEM_PROMPT
+        assert "solopreneurs and SMB professionals" in _SYSTEM_PROMPT
 
     def test_contains_data_integrity_standards(self):
-        assert "Data Integrity Standards" in SUMMARIZATION_SYSTEM_PROMPT
+        assert "Data Integrity Standards" in _SYSTEM_PROMPT
 
     def test_contains_do_not_fabricate(self):
-        assert "Do NOT fabricate, infer, or supplement" in SUMMARIZATION_SYSTEM_PROMPT
+        assert "Do NOT fabricate, infer, or supplement" in _SYSTEM_PROMPT
 
     def test_contains_flag_unverifiable(self):
-        assert "Statistic requires verification" in SUMMARIZATION_SYSTEM_PROMPT
+        assert "Statistic requires verification" in _SYSTEM_PROMPT
 
     def test_no_feedback_section_in_system_prompt(self):
         """Feedback is injected in the user prompt, not the system prompt."""
-        assert "Editorial Improvement Context" not in SUMMARIZATION_SYSTEM_PROMPT
+        assert "Editorial Improvement Context" not in _SYSTEM_PROMPT
 
 
 class TestUserPromptTemplate:
     """Verify the user prompt template contains required placeholders."""
 
     def test_has_feedback_section_placeholder(self):
-        assert "{feedback_section}" in SUMMARIZATION_USER_PROMPT
+        assert "{feedback_section}" in _INSTRUCTION
 
     def test_has_article_content_placeholder(self):
-        assert "{article_content}" in SUMMARIZATION_USER_PROMPT
+        assert "{article_content}" in _INSTRUCTION
 
     def test_contains_output_format(self):
-        assert "Output Format (MANDATORY)" in SUMMARIZATION_USER_PROMPT
+        assert "Output Format (MANDATORY)" in _INSTRUCTION
 
     def test_contains_url_field(self):
-        assert "URL: [article URL]" in SUMMARIZATION_USER_PROMPT
+        assert "URL: [article URL]" in _INSTRUCTION
 
     def test_contains_title_field(self):
-        assert "Title: [article title]" in SUMMARIZATION_USER_PROMPT
+        assert "Title: [article title]" in _INSTRUCTION
 
     def test_contains_summary_field(self):
-        assert "Summary:" in SUMMARIZATION_USER_PROMPT
+        assert "Summary:" in _INSTRUCTION
 
     def test_contains_business_relevance_field(self):
-        assert "Business Relevance:" in SUMMARIZATION_USER_PROMPT
+        assert "Business Relevance:" in _INSTRUCTION
 
     def test_contains_plain_text_instruction(self):
-        assert "plain text and not JSON object" in SUMMARIZATION_USER_PROMPT
+        assert "plain text and not JSON object" in _INSTRUCTION
 
 
 class TestFeedbackSectionTemplate:
@@ -118,9 +118,9 @@ class TestBuildSummarizationPrompt:
         assert isinstance(result, tuple)
         assert len(result) == 2
 
-    def test_system_prompt_is_constant(self):
+    def test_system_prompt_matches_json_config(self):
         system, _ = build_summarization_prompt(self.SAMPLE_CONTENT)
-        assert system is SUMMARIZATION_SYSTEM_PROMPT
+        assert system == _SYSTEM_PROMPT
 
     def test_article_content_in_user_prompt(self):
         _, user = build_summarization_prompt(self.SAMPLE_CONTENT)
@@ -196,7 +196,7 @@ class TestBuildSummarizationPrompt:
     def test_empty_article_content(self):
         """An empty article should still produce valid prompts."""
         system, user = build_summarization_prompt("")
-        assert system is SUMMARIZATION_SYSTEM_PROMPT
+        assert system == _SYSTEM_PROMPT
         assert "Output Format (MANDATORY)" in user
 
     def test_article_with_curly_braces(self):

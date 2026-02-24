@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from ica.llm_configs import get_process_prompts
 from ica.prompts.email_subject import (
-    EMAIL_SUBJECT_SYSTEM_PROMPT,
-    EMAIL_SUBJECT_USER_PROMPT,
     _FEEDBACK_SECTION_TEMPLATE,
     build_email_subject_prompt,
 )
+
+# Load prompts from JSON config (same source the builder function uses).
+_SYSTEM_PROMPT, _INSTRUCTION = get_process_prompts("email-subject")
 
 
 # ---------------------------------------------------------------------------
@@ -19,42 +21,42 @@ class TestEmailSubjectSystemPrompt:
     """Verify the system prompt contains all required sections."""
 
     def test_contains_role_preamble(self):
-        assert "professional AI research editor" in EMAIL_SUBJECT_SYSTEM_PROMPT
+        assert "professional AI research editor" in _SYSTEM_PROMPT
 
     def test_contains_content_analyst(self):
-        assert "content analyst" in EMAIL_SUBJECT_SYSTEM_PROMPT
+        assert "content analyst" in _SYSTEM_PROMPT
 
     def test_contains_10_subjects_instruction(self):
-        assert "up to 10" in EMAIL_SUBJECT_SYSTEM_PROMPT
+        assert "up to 10" in _SYSTEM_PROMPT
 
     def test_contains_definitive(self):
-        assert "definitive email subjects" in EMAIL_SUBJECT_SYSTEM_PROMPT
+        assert "definitive email subjects" in _SYSTEM_PROMPT
 
     # --- Accuracy Control Protocol ---
 
     def test_contains_accuracy_control(self):
-        assert "Accuracy Control Protocol" in EMAIL_SUBJECT_SYSTEM_PROMPT
+        assert "Accuracy Control Protocol" in _SYSTEM_PROMPT
 
     def test_contains_mandatory_label(self):
-        assert "MANDATORY" in EMAIL_SUBJECT_SYSTEM_PROMPT
+        assert "MANDATORY" in _SYSTEM_PROMPT
 
     def test_contains_no_alternative_sources(self):
-        assert "Do NOT search for alternative sources" in EMAIL_SUBJECT_SYSTEM_PROMPT
+        assert "Do NOT search for alternative sources" in _SYSTEM_PROMPT
 
     def test_contains_trending_instruction(self):
-        assert "trending" in EMAIL_SUBJECT_SYSTEM_PROMPT
+        assert "trending" in _SYSTEM_PROMPT
 
     def test_contains_7_word_max(self):
-        assert "maximum is 7 words" in EMAIL_SUBJECT_SYSTEM_PROMPT
+        assert "maximum is 7 words" in _SYSTEM_PROMPT
 
     def test_contains_be_creative(self):
-        assert "Be creative" in EMAIL_SUBJECT_SYSTEM_PROMPT
+        assert "Be creative" in _SYSTEM_PROMPT
 
     def test_is_string(self):
-        assert isinstance(EMAIL_SUBJECT_SYSTEM_PROMPT, str)
+        assert isinstance(_SYSTEM_PROMPT, str)
 
     def test_not_empty(self):
-        assert len(EMAIL_SUBJECT_SYSTEM_PROMPT) > 100
+        assert len(_SYSTEM_PROMPT) > 100
 
 
 # ---------------------------------------------------------------------------
@@ -66,34 +68,34 @@ class TestEmailSubjectUserPrompt:
     """Verify the user prompt template structure."""
 
     def test_contains_feedback_placeholder(self):
-        assert "{feedback_section}" in EMAIL_SUBJECT_USER_PROMPT
+        assert "{feedback_section}" in _INSTRUCTION
 
     def test_contains_newsletter_placeholder(self):
-        assert "{newsletter_text}" in EMAIL_SUBJECT_USER_PROMPT
+        assert "{newsletter_text}" in _INSTRUCTION
 
     def test_contains_output_format(self):
-        assert "Output Format" in EMAIL_SUBJECT_USER_PROMPT
+        assert "Output Format" in _INSTRUCTION
 
     def test_contains_mandatory_label(self):
-        assert "MANDATORY" in EMAIL_SUBJECT_USER_PROMPT
+        assert "MANDATORY" in _INSTRUCTION
 
     def test_contains_subject_number_format(self):
-        assert "Subject_[number]" in EMAIL_SUBJECT_USER_PROMPT
+        assert "Subject_[number]" in _INSTRUCTION
 
     def test_contains_separator_instruction(self):
-        assert '"-----"' in EMAIL_SUBJECT_USER_PROMPT
+        assert '"-----"' in _INSTRUCTION
 
     def test_contains_recommendation_format(self):
-        assert "RECOMMENDATION:" in EMAIL_SUBJECT_USER_PROMPT
+        assert "RECOMMENDATION:" in _INSTRUCTION
 
     def test_contains_no_markdown_instruction(self):
-        assert "no markdown" in EMAIL_SUBJECT_USER_PROMPT
+        assert "no markdown" in _INSTRUCTION
 
     def test_contains_no_duplicate_instruction(self):
-        assert "do not duplicate" in EMAIL_SUBJECT_USER_PROMPT
+        assert "do not duplicate" in _INSTRUCTION
 
     def test_contains_input_label(self):
-        assert "Input:" in EMAIL_SUBJECT_USER_PROMPT
+        assert "Input:" in _INSTRUCTION
 
 
 # ---------------------------------------------------------------------------
@@ -136,9 +138,9 @@ class TestBuildEmailSubjectPrompt:
         assert isinstance(result, tuple)
         assert len(result) == 2
 
-    def test_system_prompt_is_constant(self):
+    def test_system_prompt_matches_json_config(self):
         sys_prompt, _ = build_email_subject_prompt("text")
-        assert sys_prompt is EMAIL_SUBJECT_SYSTEM_PROMPT
+        assert sys_prompt == _SYSTEM_PROMPT
 
     def test_user_prompt_contains_newsletter_text(self):
         _, user_prompt = build_email_subject_prompt("My newsletter content here")

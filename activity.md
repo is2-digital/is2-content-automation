@@ -2,13 +2,27 @@
 
 ## Current Status
 **Last Updated:** 2026-02-23
-**Tasks Completed:** ica-1gv (Create pilot JSON config files)
+**Tasks Completed:** ica-2s2 (Refactor pilot prompt files to load from JSON)
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 59)
+**Tasks Completed This Session:** 1 (session 60)
 
 ---
 
 ## Session Log
+
+### 2026-02-23 (session 60)
+**Completed:**
+- ica-2s2: Refactor pilot prompt files to load from JSON
+
+**Changes Made:**
+- Refactored `ica/prompts/summarization.py` — removed `SUMMARIZATION_SYSTEM_PROMPT` and `SUMMARIZATION_USER_PROMPT` constants, `build_summarization_prompt()` now loads prompts from `summarization-llm.json` via `get_process_prompts("summarization")`
+- Refactored `ica/prompts/email_subject.py` — removed `EMAIL_SUBJECT_SYSTEM_PROMPT` and `EMAIL_SUBJECT_USER_PROMPT` constants, `build_email_subject_prompt()` now loads prompts from `email-subject-llm.json` via `get_process_prompts("email-subject")`
+- `_FEEDBACK_SECTION_TEMPLATE` and feedback injection logic unchanged in both files
+- Regeneration prompts (`build_summarization_regeneration_prompt`) left unchanged (no JSON config yet)
+- Updated `tests/test_prompts/test_summarization.py` and `tests/test_prompts/test_email_subject.py` to use `get_process_prompts()` instead of removed constants; identity checks (`is`) replaced with equality checks (`==`)
+- All 692 prompt tests pass, ruff and mypy clean
+
+**No blockers.**
 
 ### 2026-02-23 (session 59)
 **Completed:**
