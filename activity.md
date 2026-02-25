@@ -1,14 +1,28 @@
 # ims-tt - Activity Log
 
 ## Current Status
-**Last Updated:** 2026-02-24
-**Tasks Completed:** ica-c1i.3 (Rewrite CLAUDE.md and README.md for Docker-only workflow)
+**Last Updated:** 2026-02-25
+**Tasks Completed:** ica-50f (Create prompt_editor.py service module)
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 67)
+**Tasks Completed This Session:** 1 (session 68)
 
 ---
 
 ## Session Log
+
+### 2026-02-25 (session 68)
+**Completed:**
+- ica-50f: Create prompt_editor.py service module
+
+**Changes Made:**
+- `ica/llm_configs/loader.py`: Added `save_process_config()` function — serialises ProcessConfig with camelCase aliases, writes JSON to disk, invalidates cache.
+- `ica/services/prompt_editor.py`: New module with `PromptEditorService` class providing three operations:
+  - `start_edit(process_name, field)` — creates Google Doc with prompt content + header, returns Doc URL
+  - `sync_from_doc(process_name)` — pulls edited content from Doc back to JSON config, bumps version
+  - `get_config_summary(process_name)` — formats config info for Slack display
+- `tests/test_services/test_prompt_editor.py`: 24 tests covering all three methods plus helper functions (_build_edit_header, _parse_doc_content)
+
+**No blockers.**
 
 ### 2026-02-24 (session 67)
 **Completed:**

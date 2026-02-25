@@ -169,6 +169,24 @@ def _build_process_field_mapping() -> dict[str, str]:
     }
 
 
+def save_process_config(process_name: str, config: ProcessConfig) -> None:
+    """Write a ProcessConfig back to its JSON file.
+
+    Serialises the model using camelCase aliases and invalidates the
+    in-memory cache so the next :func:`load_process_config` call reads
+    fresh data.
+
+    Args:
+        process_name: The process identifier (e.g. ``"summarization"``).
+        config: The config to persist.
+    """
+    path = _config_path(process_name)
+    data = config.model_dump(by_alias=True)
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    _cache.pop(process_name, None)
+    logger.debug("Saved config for %s (version %d)", process_name, config.metadata.version)
+
+
 def get_process_prompts(process_name: str) -> tuple[str, str]:
     """Return the system and instruction prompts from a process config.
 
