@@ -6,7 +6,7 @@ services:
     build:
       target: dev
     env_file:
-      - .env.dev
+      - .env
     environment:
       ENVIRONMENT: development
     ports:

@@ -28,11 +28,11 @@ FROM base AS dev
 
 ENV ENVIRONMENT=development
 
+# Copy full source first — editable install requires the package directory
+COPY . .
+
 # Install the project with dev dependencies in editable mode
 RUN pip install --no-cache-dir -e ".[dev]"
-
-# Copy the full source (in dev, typically overridden by volume mount)
-COPY . .
 
 EXPOSE 8000
 
@@ -49,6 +49,7 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY pyproject.toml ./
+COPY ica/ ./ica/
 RUN pip install --no-cache-dir .
 
 # ============================================================
