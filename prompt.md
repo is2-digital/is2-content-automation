@@ -7,8 +7,6 @@ See `CLAUDE.md` for project architecture, dev commands, and conventions.
 # Key References
 
 * `docs/user-guide.md` — What the app does, pipeline steps, interaction patterns
-* `docs/credentials.md` — Credential setup for all 5 external services
-* `_context/APPLICATION.md` — Full functional + technical spec + DB schema
 * `_n8n-project/workflows/` — Original n8n JSON files (the reference implementation)
 
 # n8n Reference (MCP)
@@ -25,8 +23,6 @@ Use the **n8n-mcp** server to inspect the original n8n workflows being migrated:
 
 Be judicious — do NOT read large files upfront. Only read what the current task requires.
 
-* `_context/APPLICATION.md` (~46KB): Read only the relevant section (e.g., Section 3.1 for Article Curation, Section 4.1 for summarization prompts, Section 2.2 for DB schemas).
-* `_context/project-details.md` (~50KB): Only if your task specifically needs n8n project-level context.
 * `_n8n-project/`: Only the specific workflow JSON for your task. Prefer MCP over raw file reads.
 
 # Task Claiming
