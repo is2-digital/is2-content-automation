@@ -88,58 +88,45 @@ ica/
 
 ### Prerequisites
 
-* Python 3.12+ & PostgreSQL 16
+* Docker & Docker Compose
 * API Keys: OpenRouter, Slack (Bot + App tokens), Google Service Account, SearchApi
 
-### Installation & Setup
+### Setup
 
 ```bash
-# Install dependencies
-pip install -e ".[dev]"
-
 # Configure environment
 cp .env.example .env
 # Edit .env with your credentials (see docs/credentials.md)
 
-# Database migrations
-alembic -c alembic.ini upgrade head
+# Start the dev environment (app + PostgreSQL + Redis)
+make dev
 
+# In a separate terminal, run database migrations
+make migrate
 ```
 
 ### Running the Application
 
 ```bash
-# Start the full service (FastAPI + Slack + Scheduler)
-python -m ica serve
-
-# Manual CLI Commands
-python -m ica run                # Trigger a pipeline run
-python -m ica status             # Show pipeline status
-python -m ica collect-articles   # Run article collection manually
-
+make run-pipeline                # Trigger a pipeline run
+make pipeline-status             # Show pipeline run status
+make collect                     # Run article collection manually
 ```
 
-**Using Docker:**
-
-```bash
-make dev                         # Start app, PostgreSQL, and Redis
-make migrate                     # Run migrations within container
-
-```
+Run `make help` to see all available targets.
 
 ---
 
 ## Development & Testing
 
+All commands run inside Docker containers via `make` targets.
+
 ```bash
-# Run all tests (mock-based)
-pytest
-
-# Linting and Type Checking
-ruff check .
-ruff format .
-mypy ica
-
+make test                        # Run all tests (mock-based)
+make test ARGS="-k test_name"    # Run tests matching name
+make lint                        # Ruff linter
+make format                      # Ruff auto-format
+make typecheck                   # mypy type checking
 ```
 
 ---

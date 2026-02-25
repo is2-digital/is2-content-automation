@@ -2,13 +2,23 @@
 
 ## Current Status
 **Last Updated:** 2026-02-24
-**Tasks Completed:** ica-c1i.1 (Change code defaults from localhost to postgres)
+**Tasks Completed:** ica-c1i.3 (Rewrite CLAUDE.md and README.md for Docker-only workflow)
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 66)
+**Tasks Completed This Session:** 1 (session 67)
 
 ---
 
 ## Session Log
+
+### 2026-02-24 (session 67)
+**Completed:**
+- ica-c1i.3: Rewrite CLAUDE.md and README.md for Docker-only workflow
+
+**Changes Made:**
+- `CLAUDE.md`: Replaced Development Commands section (lines 9-43) — removed `pip install`, bare `pytest`/`ruff`/`mypy`/`alembic`/`python -m ica` commands; replaced with `make` targets (`make test`, `make lint`, `make format`, `make typecheck`, `make migrate`, etc.). Added note that all commands run in Docker. Added "Docker is the only supported development workflow" to Docker/Infrastructure section.
+- `README.md`: Rewrote Quick Start (lines 87-143) — prerequisites now Docker & Docker Compose only (removed Python 3.12+ & PostgreSQL 16), removed `pip install` and bare `alembic` commands, removed separate "Using Docker" subsection, replaced all bare commands with `make` targets.
+
+**No blockers.**
 
 ### 2026-02-24 (session 66)
 **Completed:**

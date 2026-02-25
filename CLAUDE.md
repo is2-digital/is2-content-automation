@@ -8,36 +8,38 @@ Python rewrite of an n8n-based AI newsletter generation system (IS2-News → is2
 
 ## Development Commands
 
+All commands run inside Docker containers via `make` targets. Run `make help` for the full list.
+
 ```bash
-# Install (uses hatch build system, Python 3.12+)
-pip install -e ".[dev]"
+# Start / stop
+make dev                                  # Start dev environment (app + postgres + redis)
+make down                                 # Stop all containers
+make logs                                 # Tail container logs
+make ps                                   # Show running containers
 
 # Tests
-pytest                                    # Run all tests
-pytest tests/test_pipeline/               # Run one test directory
-pytest tests/test_services/test_llm.py    # Run one test file
-pytest -k "test_successful_step"          # Run tests matching name
+make test                                 # Run all tests
+make test ARGS="tests/test_pipeline/"     # Run one test directory
+make test ARGS="-k test_successful_step"  # Run tests matching name
 
 # Linting & type checking
-ruff check .                              # Lint
-ruff format .                             # Auto-format
-mypy ica                                  # Type check (strict mode, pydantic plugin)
+make lint                                 # Ruff linter
+make format                               # Ruff auto-format
+make typecheck                            # mypy (strict mode, pydantic plugin)
 
 # Run the app
-python -m ica serve                       # Start FastAPI server
-python -m ica run                         # Trigger pipeline via API
-python -m ica status                      # Show pipeline run status
-python -m ica collect-articles            # Manual article collection
+make run-pipeline                         # Trigger pipeline via API
+make pipeline-status                      # Show pipeline run status
+make collect                              # Manual article collection
 
-# Docker / Makefile
-make dev                                  # Start dev environment
-make migrate                              # Run Alembic migrations
+# Database
+make migrate                              # Run Alembic migrations to latest
+make migration msg="description"          # Create a new auto-generated migration
 make db-shell                             # psql shell in postgres container
-make help                                 # Show all targets
 
-# Alembic migrations
-alembic -c alembic.ini upgrade head
-alembic -c alembic.ini revision --autogenerate -m "description"
+# Utilities
+make shell                                # Bash shell inside app container
+make clean                                # Stop containers and remove volumes
 ```
 
 ## Issue Tracking
@@ -112,6 +114,8 @@ A **separate scheduled job** runs independently for article collection:
 PostgreSQL `n8n_custom_data` with 3 tables: `articles` (PK: `url`), `themes` (PK: `theme`), `notes` (PK: `id`, auto-increment). All use `type` column as discriminator. CRUD in `db/crud.py` uses PostgreSQL `ON CONFLICT DO UPDATE` for upserts. Async sessions via `db/session.py`.
 
 ### Docker / Infrastructure
+
+Docker is the **only supported development workflow** — there is no local/bare-metal install path. All `make` targets execute inside containers.
 
 - Multi-stage `Dockerfile`: `dev` target (uvicorn --reload) and `prod` target (gunicorn + UvicornWorker, non-root user).
 - `docker-compose.yml` base services: `app`, `postgres:16-alpine`, `redis:7-alpine`. Overlays: `docker-compose.dev.yml`, `docker-compose.stage.yml`, `docker-compose.prod.yml`.
