@@ -37,7 +37,7 @@ COPY . .
 EXPOSE 8000
 
 # Run with uvicorn reload for hot-reloading during development
-CMD ["uvicorn", "ica.app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "ica.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 # ============================================================
 # Builder stage: install production dependencies in isolation
@@ -86,7 +86,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
 
 # Run with gunicorn + uvicorn workers for production
-CMD ["gunicorn", "ica.app:app", \
+CMD ["gunicorn", "ica.app:create_app()", \
      "--bind", "0.0.0.0:8000", \
      "--workers", "2", \
      "--worker-class", "uvicorn.workers.UvicornWorker", \
