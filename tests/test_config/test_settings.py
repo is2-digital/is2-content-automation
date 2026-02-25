@@ -43,7 +43,7 @@ class TestDefaults:
 
     def test_postgres_host_default(self) -> None:
         s = _make_settings()
-        assert s.postgres_host == "localhost"
+        assert s.postgres_host == "postgres"
 
     def test_postgres_port_default(self) -> None:
         s = _make_settings()
@@ -159,7 +159,7 @@ class TestDatabaseUrl:
     def test_async_url_with_defaults(self) -> None:
         s = _make_settings()
         assert s.database_url == (
-            "postgresql+asyncpg://ica:secret@localhost:5432/n8n_custom_data"
+            "postgresql+asyncpg://ica:secret@postgres:5432/n8n_custom_data"
         )
 
     def test_async_url_with_overrides(self) -> None:
@@ -177,7 +177,7 @@ class TestDatabaseUrl:
     def test_sync_url_with_defaults(self) -> None:
         s = _make_settings()
         assert s.database_url_sync == (
-            "postgresql://ica:secret@localhost:5432/n8n_custom_data"
+            "postgresql://ica:secret@postgres:5432/n8n_custom_data"
         )
 
     def test_sync_url_with_overrides(self) -> None:

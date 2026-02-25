@@ -2,13 +2,25 @@
 
 ## Current Status
 **Last Updated:** 2026-02-24
-**Tasks Completed:** ica-zek (Fix Docker dev build bugs)
+**Tasks Completed:** ica-c1i.1 (Change code defaults from localhost to postgres)
 **Current Task:** None
-**Tasks Completed This Session:** 1 (session 65)
+**Tasks Completed This Session:** 1 (session 66)
 
 ---
 
 ## Session Log
+
+### 2026-02-24 (session 66)
+**Completed:**
+- ica-c1i.1: Change code defaults from localhost to postgres
+
+**Changes Made:**
+- `ica/config/settings.py`: Changed `postgres_host` default from `"localhost"` to `"postgres"`
+- `ica/db/migrations/env.py`: Changed `POSTGRES_HOST` fallback from `"localhost"` to `"postgres"`
+- `tests/test_config/test_settings.py`: Updated 3 assertions to expect `"postgres"` (host default, async URL, sync URL)
+- All 40 settings tests pass
+
+**No blockers.**
 
 ### 2026-02-24 (session 64)
 **Completed:**

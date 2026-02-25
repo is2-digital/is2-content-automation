@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     )
 
     # --- PostgreSQL ---
-    postgres_host: str = "localhost"
+    postgres_host: str = "postgres"
     postgres_port: int = 5432
     postgres_db: str = "n8n_custom_data"
     postgres_user: str = "ica"

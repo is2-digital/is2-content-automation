@@ -33,7 +33,7 @@ def _get_url() -> str:
     """
     user = os.environ.get("POSTGRES_USER", "ica")
     password = os.environ.get("POSTGRES_PASSWORD", "")
-    host = os.environ.get("POSTGRES_HOST", "localhost")
+    host = os.environ.get("POSTGRES_HOST", "postgres")
     port = os.environ.get("POSTGRES_PORT", "5432")
     db = os.environ.get("POSTGRES_DB", "n8n_custom_data")
     return f"postgresql://{user}:{password}@{host}:{port}/{db}"
