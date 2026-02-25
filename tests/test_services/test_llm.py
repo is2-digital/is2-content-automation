@@ -163,6 +163,7 @@ class TestCompletionBasic:
         with (
             _patch_litellm() as mock_litellm,
             patch("ica.services.llm.get_model", return_value="anthropic/claude-sonnet-4.5") as mock_get,
+            patch.dict("os.environ", {"OPENROUTER_API_KEY": ""}, clear=False),
         ):
             _set_retryable_types(mock_litellm)
             mock_litellm.acompletion = AsyncMock(return_value=_make_response("ok"))
@@ -181,6 +182,7 @@ class TestCompletionBasic:
         with (
             _patch_litellm() as mock_litellm,
             patch("ica.services.llm.get_model") as mock_get,
+            patch.dict("os.environ", {"OPENROUTER_API_KEY": ""}, clear=False),
         ):
             _set_retryable_types(mock_litellm)
             mock_litellm.acompletion = AsyncMock(return_value=_make_response("ok"))
@@ -197,7 +199,10 @@ class TestCompletionBasic:
 
     @pytest.mark.asyncio
     async def test_model_only_no_purpose(self) -> None:
-        with _patch_litellm() as mock_litellm:
+        with (
+            _patch_litellm() as mock_litellm,
+            patch.dict("os.environ", {"OPENROUTER_API_KEY": ""}, clear=False),
+        ):
             _set_retryable_types(mock_litellm)
             mock_litellm.acompletion = AsyncMock(return_value=_make_response("ok"))
 
@@ -209,6 +214,41 @@ class TestCompletionBasic:
 
         assert result.model == "google/gemini-2.5-flash"
         assert result.purpose is None
+
+    @pytest.mark.asyncio
+    async def test_openrouter_prefix_added_when_key_set(self) -> None:
+        with (
+            _patch_litellm() as mock_litellm,
+            patch("ica.services.llm.get_model", return_value="anthropic/claude-sonnet-4.5"),
+            patch.dict("os.environ", {"OPENROUTER_API_KEY": "sk-test"}, clear=False),
+        ):
+            _set_retryable_types(mock_litellm)
+            mock_litellm.acompletion = AsyncMock(return_value=_make_response("ok"))
+
+            result = await completion(
+                purpose=LLMPurpose.THEME,
+                system_prompt=SYSTEM,
+                user_prompt=USER,
+            )
+
+        assert result.model == "openrouter/anthropic/claude-sonnet-4.5"
+
+    @pytest.mark.asyncio
+    async def test_openrouter_prefix_not_doubled(self) -> None:
+        with (
+            _patch_litellm() as mock_litellm,
+            patch.dict("os.environ", {"OPENROUTER_API_KEY": "sk-test"}, clear=False),
+        ):
+            _set_retryable_types(mock_litellm)
+            mock_litellm.acompletion = AsyncMock(return_value=_make_response("ok"))
+
+            result = await completion(
+                model="openrouter/anthropic/claude-sonnet-4.5",
+                system_prompt=SYSTEM,
+                user_prompt=USER,
+            )
+
+        assert result.model == "openrouter/anthropic/claude-sonnet-4.5"
 
     @pytest.mark.asyncio
     async def test_neither_purpose_nor_model_raises(self) -> None:
@@ -244,7 +284,10 @@ class TestCompletionMessages:
 
     @pytest.mark.asyncio
     async def test_model_passed_to_litellm(self) -> None:
-        with _patch_litellm() as mock_litellm:
+        with (
+            _patch_litellm() as mock_litellm,
+            patch.dict("os.environ", {"OPENROUTER_API_KEY": ""}, clear=False),
+        ):
             _set_retryable_types(mock_litellm)
             mock_litellm.acompletion = AsyncMock(return_value=_make_response("ok"))
 
@@ -729,6 +772,7 @@ class TestCompletionAllPurposes:
         with (
             _patch_litellm() as mock_litellm,
             patch("ica.services.llm.get_model", return_value=f"test/{purpose.name.lower()}"),
+            patch.dict("os.environ", {"OPENROUTER_API_KEY": ""}, clear=False),
         ):
             _set_retryable_types(mock_litellm)
             mock_litellm.acompletion = AsyncMock(return_value=_make_response("ok"))

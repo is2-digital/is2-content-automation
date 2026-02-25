@@ -25,6 +25,7 @@ Usage::
 from __future__ import annotations
 
 import asyncio
+import os
 from dataclasses import dataclass
 from typing import Any
 
@@ -117,6 +118,14 @@ async def completion(
         raise ValueError("Either 'purpose' or 'model' must be provided")
 
     model_id = model or get_model(purpose)  # type: ignore[arg-type]
+
+    # Prepend "openrouter/" so LiteLLM routes through OpenRouter when the
+    # key is configured and the model isn't already prefixed.
+    if (
+        os.environ.get("OPENROUTER_API_KEY")
+        and not model_id.startswith("openrouter/")
+    ):
+        model_id = f"openrouter/{model_id}"
 
     messages: list[dict[str, str]] = [
         {"role": "system", "content": system_prompt},
