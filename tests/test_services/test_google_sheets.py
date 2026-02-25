@@ -192,7 +192,9 @@ class TestClearSheet:
 
     @pytest.mark.asyncio
     async def test_calls_api(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         clear_mock = _setup_values_mock(mock_service, "clear")
         await svc.clear_sheet("sheet-id-123", "Sheet1")
@@ -205,7 +207,9 @@ class TestClearSheet:
 
     @pytest.mark.asyncio
     async def test_custom_sheet_name(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         clear_mock = _setup_values_mock(mock_service, "clear")
         await svc.clear_sheet("abc", "Articles")
@@ -218,7 +222,9 @@ class TestClearSheet:
 
     @pytest.mark.asyncio
     async def test_returns_none(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         _setup_values_mock(mock_service, "clear")
         result = await svc.clear_sheet("id", "Sheet1")
@@ -226,7 +232,9 @@ class TestClearSheet:
 
     @pytest.mark.asyncio
     async def test_api_error_propagates(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         execute_mock = MagicMock(side_effect=Exception("API error"))
         method_mock = MagicMock(return_value=MagicMock(execute=execute_mock))
@@ -247,7 +255,9 @@ class TestAppendRows:
 
     @pytest.mark.asyncio
     async def test_empty_rows_returns_zero(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         result = await svc.append_rows("id", "Sheet1", [])
         assert result == 0
@@ -256,7 +266,9 @@ class TestAppendRows:
 
     @pytest.mark.asyncio
     async def test_single_row(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         update_mock = _setup_values_mock(mock_service, "update")
 
@@ -276,7 +288,9 @@ class TestAppendRows:
 
     @pytest.mark.asyncio
     async def test_multiple_rows(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         update_mock = _setup_values_mock(mock_service, "update")
 
@@ -293,7 +307,9 @@ class TestAppendRows:
 
     @pytest.mark.asyncio
     async def test_headers_from_first_row(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         update_mock = _setup_values_mock(mock_service, "update")
 
@@ -308,7 +324,9 @@ class TestAppendRows:
 
     @pytest.mark.asyncio
     async def test_missing_key_defaults_to_empty(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         update_mock = _setup_values_mock(mock_service, "update")
 
@@ -323,7 +341,9 @@ class TestAppendRows:
 
     @pytest.mark.asyncio
     async def test_non_string_values_converted(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         update_mock = _setup_values_mock(mock_service, "update")
 
@@ -335,7 +355,9 @@ class TestAppendRows:
 
     @pytest.mark.asyncio
     async def test_custom_sheet_name(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         update_mock = _setup_values_mock(mock_service, "update")
 
@@ -346,7 +368,9 @@ class TestAppendRows:
 
     @pytest.mark.asyncio
     async def test_return_count_matches_data_rows(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         _setup_values_mock(mock_service, "update")
 
@@ -356,7 +380,9 @@ class TestAppendRows:
 
     @pytest.mark.asyncio
     async def test_api_error_propagates(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         execute_mock = MagicMock(side_effect=RuntimeError("quota exceeded"))
         method_mock = MagicMock(return_value=MagicMock(execute=execute_mock))
@@ -377,7 +403,9 @@ class TestReadRows:
 
     @pytest.mark.asyncio
     async def test_empty_sheet(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         _setup_values_mock(mock_service, "get", return_value={"values": []})
         result = await svc.read_rows("id", "Sheet1")
@@ -385,7 +413,9 @@ class TestReadRows:
 
     @pytest.mark.asyncio
     async def test_no_values_key(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         _setup_values_mock(mock_service, "get", return_value={})
         result = await svc.read_rows("id", "Sheet1")
@@ -393,10 +423,13 @@ class TestReadRows:
 
     @pytest.mark.asyncio
     async def test_only_header_row(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         _setup_values_mock(
-            mock_service, "get",
+            mock_service,
+            "get",
             return_value={"values": [["url", "title"]]},
         )
         result = await svc.read_rows("id", "Sheet1")
@@ -404,10 +437,13 @@ class TestReadRows:
 
     @pytest.mark.asyncio
     async def test_single_data_row(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         _setup_values_mock(
-            mock_service, "get",
+            mock_service,
+            "get",
             return_value={
                 "values": [
                     ["url", "title"],
@@ -420,10 +456,13 @@ class TestReadRows:
 
     @pytest.mark.asyncio
     async def test_multiple_data_rows(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         _setup_values_mock(
-            mock_service, "get",
+            mock_service,
+            "get",
             return_value={
                 "values": [
                     ["a", "b"],
@@ -441,11 +480,14 @@ class TestReadRows:
 
     @pytest.mark.asyncio
     async def test_short_row_fills_empty(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         """Rows shorter than headers get empty strings for missing cells."""
         _setup_values_mock(
-            mock_service, "get",
+            mock_service,
+            "get",
             return_value={
                 "values": [
                     ["a", "b", "c"],
@@ -458,23 +500,41 @@ class TestReadRows:
 
     @pytest.mark.asyncio
     async def test_seven_column_sheet(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         """Full curated-articles sheet columns."""
         headers = [
-            "url", "title", "publish_date", "origin",
-            "approved", "newsletter_id", "industry_news",
+            "url",
+            "title",
+            "publish_date",
+            "origin",
+            "approved",
+            "newsletter_id",
+            "industry_news",
         ]
         row1 = [
-            "https://example.com/1", "Article 1", "02/22/2026",
-            "google_news", "yes", "NL-001", "",
+            "https://example.com/1",
+            "Article 1",
+            "02/22/2026",
+            "google_news",
+            "yes",
+            "NL-001",
+            "",
         ]
         row2 = [
-            "https://example.com/2", "Article 2", "02/21/2026",
-            "searchapi", "", "", "yes",
+            "https://example.com/2",
+            "Article 2",
+            "02/21/2026",
+            "searchapi",
+            "",
+            "",
+            "yes",
         ]
         _setup_values_mock(
-            mock_service, "get",
+            mock_service,
+            "get",
             return_value={"values": [headers, row1, row2]},
         )
         result = await svc.read_rows("id", "Sheet1")
@@ -488,10 +548,14 @@ class TestReadRows:
 
     @pytest.mark.asyncio
     async def test_custom_sheet_name(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         get_mock = _setup_values_mock(
-            mock_service, "get", return_value={"values": []},
+            mock_service,
+            "get",
+            return_value={"values": []},
         )
         await svc.read_rows("id", "MySheet")
 
@@ -500,7 +564,9 @@ class TestReadRows:
 
     @pytest.mark.asyncio
     async def test_api_error_propagates(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         execute_mock = MagicMock(side_effect=ConnectionError("network"))
         method_mock = MagicMock(return_value=MagicMock(execute=execute_mock))
@@ -530,14 +596,17 @@ class TestProtocolSatisfaction:
 
     def test_clear_sheet_is_async(self, svc: GoogleSheetsService) -> None:
         import asyncio
+
         assert asyncio.iscoroutinefunction(svc.clear_sheet)
 
     def test_append_rows_is_async(self, svc: GoogleSheetsService) -> None:
         import asyncio
+
         assert asyncio.iscoroutinefunction(svc.append_rows)
 
     def test_read_rows_is_async(self, svc: GoogleSheetsService) -> None:
         import asyncio
+
         assert asyncio.iscoroutinefunction(svc.read_rows)
 
 
@@ -551,7 +620,9 @@ class TestDataIntegrity:
 
     @pytest.mark.asyncio
     async def test_column_order_preserved(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         """Headers come from dict key order of the first row."""
         update_mock = _setup_values_mock(mock_service, "update")
@@ -565,7 +636,9 @@ class TestDataIntegrity:
 
     @pytest.mark.asyncio
     async def test_special_characters_preserved(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         update_mock = _setup_values_mock(mock_service, "update")
 
@@ -577,7 +650,9 @@ class TestDataIntegrity:
 
     @pytest.mark.asyncio
     async def test_unicode_preserved(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         update_mock = _setup_values_mock(mock_service, "update")
 
@@ -589,7 +664,9 @@ class TestDataIntegrity:
 
     @pytest.mark.asyncio
     async def test_empty_string_values(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         update_mock = _setup_values_mock(mock_service, "update")
 
@@ -610,11 +687,14 @@ class TestReadRowsEdgeCases:
 
     @pytest.mark.asyncio
     async def test_extra_data_beyond_headers_ignored(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         """Data cells beyond the header count are silently ignored."""
         _setup_values_mock(
-            mock_service, "get",
+            mock_service,
+            "get",
             return_value={
                 "values": [
                     ["a", "b"],
@@ -628,11 +708,14 @@ class TestReadRowsEdgeCases:
 
     @pytest.mark.asyncio
     async def test_completely_empty_row(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         """An empty data row (no cells at all) gets all empty strings."""
         _setup_values_mock(
-            mock_service, "get",
+            mock_service,
+            "get",
             return_value={
                 "values": [
                     ["a", "b"],
@@ -645,11 +728,14 @@ class TestReadRowsEdgeCases:
 
     @pytest.mark.asyncio
     async def test_whitespace_header_names(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         """Headers with whitespace are used as-is (no trimming)."""
         _setup_values_mock(
-            mock_service, "get",
+            mock_service,
+            "get",
             return_value={
                 "values": [
                     [" url ", "title"],
@@ -663,11 +749,14 @@ class TestReadRowsEdgeCases:
 
     @pytest.mark.asyncio
     async def test_duplicate_headers(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         """When headers are duplicated, last value wins in the dict."""
         _setup_values_mock(
-            mock_service, "get",
+            mock_service,
+            "get",
             return_value={
                 "values": [
                     ["a", "a"],
@@ -680,10 +769,14 @@ class TestReadRowsEdgeCases:
 
     @pytest.mark.asyncio
     async def test_read_rows_spreadsheet_id_forwarded(
-        self, svc: GoogleSheetsService, mock_service: MagicMock,
+        self,
+        svc: GoogleSheetsService,
+        mock_service: MagicMock,
     ) -> None:
         get_mock = _setup_values_mock(
-            mock_service, "get", return_value={"values": []},
+            mock_service,
+            "get",
+            return_value={"values": []},
         )
         await svc.read_rows("my-spreadsheet-id", "Sheet1")
 

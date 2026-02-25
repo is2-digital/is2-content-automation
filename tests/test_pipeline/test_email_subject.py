@@ -103,9 +103,7 @@ RECOMMENDATION: Subject 2 - When Machines Meet Markets
 Explanation: This subject captures the core tension of the newsletter.
 """
 
-SAMPLE_NEWSLETTER_TEXT = (
-    "AI Newsletter This week's content about artificial intelligence."
-)
+SAMPLE_NEWSLETTER_TEXT = "AI Newsletter This week's content about artificial intelligence."
 
 
 def _mock_llm_response(content: str) -> MagicMock:
@@ -271,8 +269,10 @@ class TestAggregateFeedback:
 class TestCallEmailSubjectLlm:
     @pytest.mark.asyncio
     async def test_basic_call(self) -> None:
-        with patch("ica.pipeline.email_subject.litellm") as mock_litellm, \
-             patch("ica.pipeline.email_subject.get_model", return_value="test-model"):
+        with (
+            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
+            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        ):
             mock_litellm.acompletion = AsyncMock(
                 return_value=_mock_llm_response(SAMPLE_LLM_OUTPUT)
             )
@@ -282,14 +282,14 @@ class TestCallEmailSubjectLlm:
 
     @pytest.mark.asyncio
     async def test_with_feedback(self) -> None:
-        with patch("ica.pipeline.email_subject.litellm") as mock_litellm, \
-             patch("ica.pipeline.email_subject.get_model", return_value="test-model"):
+        with (
+            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
+            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        ):
             mock_litellm.acompletion = AsyncMock(
                 return_value=_mock_llm_response("Subject_1: Test\n-----")
             )
-            result = await call_email_subject_llm(
-                "text", aggregated_feedback="Be creative"
-            )
+            result = await call_email_subject_llm("text", aggregated_feedback="Be creative")
             assert "Subject_1" in result
 
     @pytest.mark.asyncio
@@ -304,18 +304,20 @@ class TestCallEmailSubjectLlm:
 
     @pytest.mark.asyncio
     async def test_empty_response_raises(self) -> None:
-        with patch("ica.pipeline.email_subject.litellm") as mock_litellm, \
-             patch("ica.pipeline.email_subject.get_model", return_value="test-model"):
-            mock_litellm.acompletion = AsyncMock(
-                return_value=_mock_llm_response("")
-            )
+        with (
+            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
+            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        ):
+            mock_litellm.acompletion = AsyncMock(return_value=_mock_llm_response(""))
             with pytest.raises(RuntimeError, match="empty response"):
                 await call_email_subject_llm("text")
 
     @pytest.mark.asyncio
     async def test_none_response_raises(self) -> None:
-        with patch("ica.pipeline.email_subject.litellm") as mock_litellm, \
-             patch("ica.pipeline.email_subject.get_model", return_value="test-model"):
+        with (
+            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
+            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        ):
             mock_litellm.acompletion = AsyncMock(
                 return_value=_mock_llm_response(None)  # type: ignore[arg-type]
             )
@@ -459,9 +461,7 @@ class TestFormatSubjectsSlackMessage:
         assert "SUBJECT 3" in msg
 
     def test_contains_recommendation(self) -> None:
-        msg = format_subjects_slack_message(
-            _make_subjects(), "RECOMMENDATION: Subject 2"
-        )
+        msg = format_subjects_slack_message(_make_subjects(), "RECOMMENDATION: Subject 2")
         assert "*RECOMMENDATION:*" in msg
 
     def test_separator_present(self) -> None:
@@ -535,9 +535,7 @@ class TestIsSubjectSelection:
 class TestExtractSelectedSubject:
     def test_basic_extraction(self) -> None:
         subjects = _make_subjects()
-        result = extract_selected_subject(
-            "SUBJECT 2: When Machines Meet Markets", subjects
-        )
+        result = extract_selected_subject("SUBJECT 2: When Machines Meet Markets", subjects)
         assert result is not None
         assert result.subject == "When Machines Meet Markets"
 
@@ -576,8 +574,10 @@ class TestExtractSelectedSubject:
 class TestCallEmailReviewLlm:
     @pytest.mark.asyncio
     async def test_basic_call(self) -> None:
-        with patch("ica.pipeline.email_subject.litellm") as mock_litellm, \
-             patch("ica.pipeline.email_subject.get_model", return_value="test-model"):
+        with (
+            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
+            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        ):
             mock_litellm.acompletion = AsyncMock(
                 return_value=_mock_llm_response("Hi Friend, great newsletter")
             )
@@ -586,23 +586,21 @@ class TestCallEmailReviewLlm:
 
     @pytest.mark.asyncio
     async def test_with_feedback(self) -> None:
-        with patch("ica.pipeline.email_subject.litellm") as mock_litellm, \
-             patch("ica.pipeline.email_subject.get_model", return_value="test-model"):
-            mock_litellm.acompletion = AsyncMock(
-                return_value=_mock_llm_response("Updated review")
-            )
-            result = await call_email_review_llm(
-                "text", user_review_feedback="Be warmer"
-            )
+        with (
+            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
+            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        ):
+            mock_litellm.acompletion = AsyncMock(return_value=_mock_llm_response("Updated review"))
+            result = await call_email_review_llm("text", user_review_feedback="Be warmer")
             assert result == "Updated review"
 
     @pytest.mark.asyncio
     async def test_empty_response_raises(self) -> None:
-        with patch("ica.pipeline.email_subject.litellm") as mock_litellm, \
-             patch("ica.pipeline.email_subject.get_model", return_value="test-model"):
-            mock_litellm.acompletion = AsyncMock(
-                return_value=_mock_llm_response("")
-            )
+        with (
+            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
+            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        ):
+            mock_litellm.acompletion = AsyncMock(return_value=_mock_llm_response(""))
             with pytest.raises(RuntimeError, match="empty response"):
                 await call_email_review_llm("text")
 
@@ -687,9 +685,7 @@ class TestParseReviewApproval:
         assert parse_review_approval(response) == "feedback"
 
     def test_reset(self) -> None:
-        response = {
-            REVIEW_APPROVAL_FIELD_LABEL: "Reset All (Generate Subjects and Review Again)"
-        }
+        response = {REVIEW_APPROVAL_FIELD_LABEL: "Reset All (Generate Subjects and Review Again)"}
         assert parse_review_approval(response) == "reset"
 
     def test_unknown(self) -> None:
@@ -720,18 +716,20 @@ class TestExtractEmailLearningData:
     @pytest.mark.asyncio
     async def test_json_response(self) -> None:
         json_data = json.dumps({"learning_feedback": "Be more concise"})
-        with patch("ica.pipeline.email_subject.litellm") as mock_litellm, \
-             patch("ica.pipeline.email_subject.get_model", return_value="test-model"):
-            mock_litellm.acompletion = AsyncMock(
-                return_value=_mock_llm_response(json_data)
-            )
+        with (
+            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
+            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        ):
+            mock_litellm.acompletion = AsyncMock(return_value=_mock_llm_response(json_data))
             result = await extract_email_learning_data("feedback", "output")
             assert result == "Be more concise"
 
     @pytest.mark.asyncio
     async def test_plain_text_fallback(self) -> None:
-        with patch("ica.pipeline.email_subject.litellm") as mock_litellm, \
-             patch("ica.pipeline.email_subject.get_model", return_value="test-model"):
+        with (
+            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
+            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        ):
             mock_litellm.acompletion = AsyncMock(
                 return_value=_mock_llm_response("Plain learning note")
             )
@@ -740,21 +738,21 @@ class TestExtractEmailLearningData:
 
     @pytest.mark.asyncio
     async def test_empty_response_raises(self) -> None:
-        with patch("ica.pipeline.email_subject.litellm") as mock_litellm, \
-             patch("ica.pipeline.email_subject.get_model", return_value="test-model"):
-            mock_litellm.acompletion = AsyncMock(
-                return_value=_mock_llm_response("")
-            )
+        with (
+            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
+            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        ):
+            mock_litellm.acompletion = AsyncMock(return_value=_mock_llm_response(""))
             with pytest.raises(RuntimeError, match="empty response"):
                 await extract_email_learning_data("feedback", "output")
 
     @pytest.mark.asyncio
     async def test_invalid_json_fallback(self) -> None:
-        with patch("ica.pipeline.email_subject.litellm") as mock_litellm, \
-             patch("ica.pipeline.email_subject.get_model", return_value="test-model"):
-            mock_litellm.acompletion = AsyncMock(
-                return_value=_mock_llm_response("{invalid json")
-            )
+        with (
+            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
+            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        ):
+            mock_litellm.acompletion = AsyncMock(return_value=_mock_llm_response("{invalid json"))
             result = await extract_email_learning_data("feedback", "output")
             assert result == "{invalid json"
 
@@ -783,9 +781,7 @@ class TestStoreEmailFeedback:
         with patch("ica.pipeline.email_subject.add_note") as mock_add_note:
             mock_add_note.return_value = None
             session = AsyncMock()
-            await store_email_feedback(
-                session, "feedback", newsletter_id="N20260223"
-            )
+            await store_email_feedback(session, "feedback", newsletter_id="N20260223")
             mock_add_note.assert_called_once_with(
                 session,
                 "user_email_subject",
@@ -851,13 +847,26 @@ class TestRunEmailSubjectGenerationApproval:
         # First form: select subject 1
         slack.send_and_wait_form.side_effect = [
             {SUBJECT_SELECTION_FIELD_LABEL: "SUBJECT 1: AI Revolution", FEEDBACK_FIELD_LABEL: ""},
-            {REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue", REVIEW_NOTES_FIELD_LABEL: ""},
+            {
+                REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue",
+                REVIEW_NOTES_FIELD_LABEL: "",
+            },
         ]
 
-        with patch("ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock) as mock_subject, \
-             patch("ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock) as mock_review, \
-             patch("ica.pipeline.email_subject.get_model", return_value="test-model"), \
-             patch("ica.pipeline.email_subject.get_recent_notes", new_callable=AsyncMock, return_value=[]):
+        with (
+            patch(
+                "ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock
+            ) as mock_subject,
+            patch(
+                "ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock
+            ) as mock_review,
+            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+            patch(
+                "ica.pipeline.email_subject.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
             mock_subject.return_value = SAMPLE_LLM_OUTPUT
             mock_review.return_value = "Hi Friend, great newsletter"
 
@@ -883,13 +892,26 @@ class TestRunEmailSubjectGenerationApproval:
 
         slack.send_and_wait_form.side_effect = [
             {SUBJECT_SELECTION_FIELD_LABEL: "SUBJECT 1: Test", FEEDBACK_FIELD_LABEL: ""},
-            {REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue", REVIEW_NOTES_FIELD_LABEL: ""},
+            {
+                REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue",
+                REVIEW_NOTES_FIELD_LABEL: "",
+            },
         ]
 
-        with patch("ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock) as mock_subject, \
-             patch("ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock) as mock_review, \
-             patch("ica.pipeline.email_subject.get_model", return_value="m"), \
-             patch("ica.pipeline.email_subject.get_recent_notes", new_callable=AsyncMock, return_value=[]):
+        with (
+            patch(
+                "ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock
+            ) as mock_subject,
+            patch(
+                "ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock
+            ) as mock_review,
+            patch("ica.pipeline.email_subject.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.email_subject.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
             mock_subject.return_value = "Subject_1: Test\n-----"
             mock_review.return_value = "review text"
 
@@ -909,13 +931,26 @@ class TestRunEmailSubjectGenerationApproval:
 
         slack.send_and_wait_form.side_effect = [
             {SUBJECT_SELECTION_FIELD_LABEL: "SUBJECT 1: X", FEEDBACK_FIELD_LABEL: ""},
-            {REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue", REVIEW_NOTES_FIELD_LABEL: ""},
+            {
+                REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue",
+                REVIEW_NOTES_FIELD_LABEL: "",
+            },
         ]
 
-        with patch("ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock) as mock_sub, \
-             patch("ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock) as mock_rev, \
-             patch("ica.pipeline.email_subject.get_model", return_value="m"), \
-             patch("ica.pipeline.email_subject.get_recent_notes", new_callable=AsyncMock, return_value=[]):
+        with (
+            patch(
+                "ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock
+            ) as mock_sub,
+            patch(
+                "ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock
+            ) as mock_rev,
+            patch("ica.pipeline.email_subject.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.email_subject.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
             mock_sub.return_value = "Subject_1: X\n-----"
             mock_rev.return_value = "r"
 
@@ -945,17 +980,35 @@ class TestRunEmailSubjectGenerationFeedback:
 
         # Call 1: feedback, Call 2: select subject, Call 3: approve review
         slack.send_and_wait_form.side_effect = [
-            {SUBJECT_SELECTION_FIELD_LABEL: "Add Feedback", FEEDBACK_FIELD_LABEL: "Be more creative"},
+            {
+                SUBJECT_SELECTION_FIELD_LABEL: "Add Feedback",
+                FEEDBACK_FIELD_LABEL: "Be more creative",
+            },
             {SUBJECT_SELECTION_FIELD_LABEL: "SUBJECT 1: Better Subject", FEEDBACK_FIELD_LABEL: ""},
-            {REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue", REVIEW_NOTES_FIELD_LABEL: ""},
+            {
+                REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue",
+                REVIEW_NOTES_FIELD_LABEL: "",
+            },
         ]
 
-        with patch("ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock) as mock_subject, \
-             patch("ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock) as mock_review, \
-             patch("ica.pipeline.email_subject.extract_email_learning_data", new_callable=AsyncMock) as mock_extract, \
-             patch("ica.pipeline.email_subject.store_email_feedback", new_callable=AsyncMock), \
-             patch("ica.pipeline.email_subject.get_model", return_value="m"), \
-             patch("ica.pipeline.email_subject.get_recent_notes", new_callable=AsyncMock, return_value=[]):
+        with (
+            patch(
+                "ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock
+            ) as mock_subject,
+            patch(
+                "ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock
+            ) as mock_review,
+            patch(
+                "ica.pipeline.email_subject.extract_email_learning_data", new_callable=AsyncMock
+            ) as mock_extract,
+            patch("ica.pipeline.email_subject.store_email_feedback", new_callable=AsyncMock),
+            patch("ica.pipeline.email_subject.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.email_subject.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
             mock_subject.side_effect = [
                 SAMPLE_LLM_OUTPUT,  # Initial generation
                 "Subject_1: Better Subject\n-----",  # Regeneration
@@ -980,15 +1033,32 @@ class TestRunEmailSubjectGenerationFeedback:
         slack.send_and_wait_form.side_effect = [
             {SUBJECT_SELECTION_FIELD_LABEL: "Add Feedback", FEEDBACK_FIELD_LABEL: "More creative"},
             {SUBJECT_SELECTION_FIELD_LABEL: "SUBJECT 1: X", FEEDBACK_FIELD_LABEL: ""},
-            {REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue", REVIEW_NOTES_FIELD_LABEL: ""},
+            {
+                REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue",
+                REVIEW_NOTES_FIELD_LABEL: "",
+            },
         ]
 
-        with patch("ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock) as mock_sub, \
-             patch("ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock) as mock_rev, \
-             patch("ica.pipeline.email_subject.extract_email_learning_data", new_callable=AsyncMock) as mock_extract, \
-             patch("ica.pipeline.email_subject.store_email_feedback", new_callable=AsyncMock) as mock_store, \
-             patch("ica.pipeline.email_subject.get_model", return_value="m"), \
-             patch("ica.pipeline.email_subject.get_recent_notes", new_callable=AsyncMock, return_value=[]):
+        with (
+            patch(
+                "ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock
+            ) as mock_sub,
+            patch(
+                "ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock
+            ) as mock_rev,
+            patch(
+                "ica.pipeline.email_subject.extract_email_learning_data", new_callable=AsyncMock
+            ) as mock_extract,
+            patch(
+                "ica.pipeline.email_subject.store_email_feedback", new_callable=AsyncMock
+            ) as mock_store,
+            patch("ica.pipeline.email_subject.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.email_subject.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
             mock_sub.side_effect = [
                 SAMPLE_LLM_OUTPUT,
                 "Subject_1: X\n-----",
@@ -1023,13 +1093,26 @@ class TestRunEmailSubjectGenerationReviewFeedback:
         slack.send_and_wait_form.side_effect = [
             {SUBJECT_SELECTION_FIELD_LABEL: "SUBJECT 1: Test", FEEDBACK_FIELD_LABEL: ""},
             {REVIEW_APPROVAL_FIELD_LABEL: "Add a feedback", REVIEW_NOTES_FIELD_LABEL: "Be warmer"},
-            {REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue", REVIEW_NOTES_FIELD_LABEL: ""},
+            {
+                REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue",
+                REVIEW_NOTES_FIELD_LABEL: "",
+            },
         ]
 
-        with patch("ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock) as mock_sub, \
-             patch("ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock) as mock_rev, \
-             patch("ica.pipeline.email_subject.get_model", return_value="m"), \
-             patch("ica.pipeline.email_subject.get_recent_notes", new_callable=AsyncMock, return_value=[]):
+        with (
+            patch(
+                "ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock
+            ) as mock_sub,
+            patch(
+                "ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock
+            ) as mock_rev,
+            patch("ica.pipeline.email_subject.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.email_subject.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
             mock_sub.return_value = "Subject_1: Test\n-----"
             mock_rev.side_effect = ["First review", "Warmer review"]
 
@@ -1049,14 +1132,30 @@ class TestRunEmailSubjectGenerationReviewFeedback:
 
         slack.send_and_wait_form.side_effect = [
             {SUBJECT_SELECTION_FIELD_LABEL: "SUBJECT 1: T", FEEDBACK_FIELD_LABEL: ""},
-            {REVIEW_APPROVAL_FIELD_LABEL: "Add a feedback", REVIEW_NOTES_FIELD_LABEL: "More warmth"},
-            {REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue", REVIEW_NOTES_FIELD_LABEL: ""},
+            {
+                REVIEW_APPROVAL_FIELD_LABEL: "Add a feedback",
+                REVIEW_NOTES_FIELD_LABEL: "More warmth",
+            },
+            {
+                REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue",
+                REVIEW_NOTES_FIELD_LABEL: "",
+            },
         ]
 
-        with patch("ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock) as mock_sub, \
-             patch("ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock) as mock_rev, \
-             patch("ica.pipeline.email_subject.get_model", return_value="m"), \
-             patch("ica.pipeline.email_subject.get_recent_notes", new_callable=AsyncMock, return_value=[]):
+        with (
+            patch(
+                "ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock
+            ) as mock_sub,
+            patch(
+                "ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock
+            ) as mock_rev,
+            patch("ica.pipeline.email_subject.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.email_subject.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
             mock_sub.return_value = "Subject_1: T\n-----"
             mock_rev.side_effect = ["r1", "r2"]
 
@@ -1088,15 +1187,31 @@ class TestRunEmailSubjectGenerationReset:
         # Round 2: select subject → approve
         slack.send_and_wait_form.side_effect = [
             {SUBJECT_SELECTION_FIELD_LABEL: "SUBJECT 1: Old", FEEDBACK_FIELD_LABEL: ""},
-            {REVIEW_APPROVAL_FIELD_LABEL: "Reset All (Generate Subjects and Review Again)", REVIEW_NOTES_FIELD_LABEL: ""},
+            {
+                REVIEW_APPROVAL_FIELD_LABEL: "Reset All (Generate Subjects and Review Again)",
+                REVIEW_NOTES_FIELD_LABEL: "",
+            },
             {SUBJECT_SELECTION_FIELD_LABEL: "SUBJECT 1: New", FEEDBACK_FIELD_LABEL: ""},
-            {REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue", REVIEW_NOTES_FIELD_LABEL: ""},
+            {
+                REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue",
+                REVIEW_NOTES_FIELD_LABEL: "",
+            },
         ]
 
-        with patch("ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock) as mock_sub, \
-             patch("ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock) as mock_rev, \
-             patch("ica.pipeline.email_subject.get_model", return_value="m"), \
-             patch("ica.pipeline.email_subject.get_recent_notes", new_callable=AsyncMock, return_value=[]):
+        with (
+            patch(
+                "ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock
+            ) as mock_sub,
+            patch(
+                "ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock
+            ) as mock_rev,
+            patch("ica.pipeline.email_subject.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.email_subject.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
             mock_sub.side_effect = [
                 "Subject_1: Old\n-----",
                 "Subject_1: New\n-----",
@@ -1125,12 +1240,21 @@ class TestRunEmailSubjectGenerationNoDeps:
 
         slack.send_and_wait_form.side_effect = [
             {SUBJECT_SELECTION_FIELD_LABEL: "SUBJECT 1: Test", FEEDBACK_FIELD_LABEL: ""},
-            {REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue", REVIEW_NOTES_FIELD_LABEL: ""},
+            {
+                REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue",
+                REVIEW_NOTES_FIELD_LABEL: "",
+            },
         ]
 
-        with patch("ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock) as mock_sub, \
-             patch("ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock) as mock_rev, \
-             patch("ica.pipeline.email_subject.get_model", return_value="m"):
+        with (
+            patch(
+                "ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock
+            ) as mock_sub,
+            patch(
+                "ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock
+            ) as mock_rev,
+            patch("ica.pipeline.email_subject.get_model", return_value="m"),
+        ):
             mock_sub.return_value = "Subject_1: Test\n-----"
             mock_rev.return_value = "review"
 
@@ -1151,12 +1275,21 @@ class TestRunEmailSubjectGenerationNoDeps:
 
         slack.send_and_wait_form.side_effect = [
             {SUBJECT_SELECTION_FIELD_LABEL: "SUBJECT 1: T", FEEDBACK_FIELD_LABEL: ""},
-            {REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue", REVIEW_NOTES_FIELD_LABEL: ""},
+            {
+                REVIEW_APPROVAL_FIELD_LABEL: "Approve review and continue",
+                REVIEW_NOTES_FIELD_LABEL: "",
+            },
         ]
 
-        with patch("ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock) as mock_sub, \
-             patch("ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock) as mock_rev, \
-             patch("ica.pipeline.email_subject.get_model", return_value="m"):
+        with (
+            patch(
+                "ica.pipeline.email_subject.call_email_subject_llm", new_callable=AsyncMock
+            ) as mock_sub,
+            patch(
+                "ica.pipeline.email_subject.call_email_review_llm", new_callable=AsyncMock
+            ) as mock_rev,
+            patch("ica.pipeline.email_subject.get_model", return_value="m"),
+        ):
             mock_sub.return_value = "Subject_1: T\n-----"
             mock_rev.return_value = "r"
 

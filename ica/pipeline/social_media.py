@@ -171,8 +171,7 @@ class SocialMediaResult:
 SLACK_CHANNEL = "#n8n-is2"
 
 APPROVAL_MESSAGE = (
-    "*Fetched final HTML newsletter. "
-    "Are we good to proceed to social media content generation ?*"
+    "*Fetched final HTML newsletter. Are we good to proceed to social media content generation ?*"
 )
 
 # Phase 1 — post generation next steps
@@ -202,9 +201,7 @@ PHASE2_FORM_DESCRIPTION = "Social media posts generated"
 FEEDBACK_MESSAGE = "*Please provide feedback to improve social media posts content*"
 FEEDBACK_BUTTON_LABEL = "Add feedback"
 FEEDBACK_FORM_TITLE = "Feedback Form"
-FEEDBACK_FORM_DESCRIPTION = (
-    "Please provide feedback to improve social media posts content"
-)
+FEEDBACK_FORM_DESCRIPTION = "Please provide feedback to improve social media posts content"
 
 # Final selection
 FINAL_SELECTION_FIELD = "Select DYK & IT Posts to create final artifact"
@@ -213,9 +210,7 @@ FINAL_SELECTION_MESSAGE = (
 )
 FINAL_SELECTION_BUTTON = "Select Posts"
 FINAL_SELECTION_FORM_TITLE = "Proceed to next step"
-FINAL_SELECTION_FORM_DESCRIPTION = (
-    "Select the posts you'd like to add to social media artifact"
-)
+FINAL_SELECTION_FORM_DESCRIPTION = "Select the posts you'd like to add to social media artifact"
 
 GOOGLE_DOC_TITLE = "Social-media-posts"
 """Default title for the Google Doc created for social media output."""
@@ -538,9 +533,7 @@ async def call_social_media_post_llm(
 
     content = response.choices[0].message.content  # type: ignore[union-attr]
     if not content or not content.strip():
-        raise RuntimeError(
-            "LLM returned an empty response for social media post generation"
-        )
+        raise RuntimeError("LLM returned an empty response for social media post generation")
 
     return content.strip()
 
@@ -610,9 +603,7 @@ async def call_caption_llm(
 
     content = response.choices[0].message.content  # type: ignore[union-attr]
     if not content or not content.strip():
-        raise RuntimeError(
-            "LLM returned an empty response for social media caption generation"
-        )
+        raise RuntimeError("LLM returned an empty response for social media caption generation")
 
     return content.strip()
 
@@ -652,9 +643,7 @@ async def call_caption_regeneration_llm(
 
     content = response.choices[0].message.content  # type: ignore[union-attr]
     if not content or not content.strip():
-        raise RuntimeError(
-            "LLM returned an empty response for social media caption regeneration"
-        )
+        raise RuntimeError("LLM returned an empty response for social media caption regeneration")
 
     return content.strip()
 
@@ -783,9 +772,7 @@ async def run_social_media_generation(
     selected_titles = _parse_checkbox_response(selected_raw)
 
     # Step 7: Parse selected posts
-    selected_posts = parse_phase1_posts(
-        phase1_output, selected_titles, formatted_theme
-    )
+    selected_posts = parse_phase1_posts(phase1_output, selected_titles, formatted_theme)
 
     # Step 8: Call LLM for Phase 2 captions
     captions_output = await call_caption_llm(selected_posts, formatted_theme)
@@ -805,9 +792,7 @@ async def run_social_media_generation(
             form_description=PHASE2_FORM_DESCRIPTION,
         )
 
-        phase2_choice = (
-            phase2_response.get(PHASE2_NEXT_STEPS_FIELD, "").strip().lower()
-        )
+        phase2_choice = phase2_response.get(PHASE2_NEXT_STEPS_FIELD, "").strip().lower()
 
         if "yes" in phase2_choice:
             break
@@ -834,9 +819,7 @@ async def run_social_media_generation(
             newsletter_content = ""
             if docs is not None:
                 newsletter_content = await docs.get_content(html_doc_id)
-            captions_output = await call_caption_llm(
-                selected_posts, formatted_theme
-            )
+            captions_output = await call_caption_llm(selected_posts, formatted_theme)
             continue
 
         # Unknown choice — loop back

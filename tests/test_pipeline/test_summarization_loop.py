@@ -95,9 +95,7 @@ class FakeHttpFetcher:
         self.result = result or _make_fetch_result()
         self.calls: list[tuple[str, dict[str, str] | None]] = []
 
-    async def get(
-        self, url: str, *, headers: dict[str, str] | None = None
-    ) -> FetchResult:
+    async def get(self, url: str, *, headers: dict[str, str] | None = None) -> FetchResult:
         self.calls.append((url, headers))
         return self.result
 
@@ -386,7 +384,7 @@ class TestStripHtmlTags:
 
     def test_entity_unescaping(self) -> None:
         result = strip_html_tags("&amp; &lt; &gt; &quot;")
-        assert "& < > \"" == result
+        assert '& < > "' == result
 
     def test_br_tags(self) -> None:
         result = strip_html_tags("Line 1<br>Line 2<br/>Line 3")
@@ -570,12 +568,7 @@ class TestParseSummaryOutput:
         assert "Line 3" in summary
 
     def test_multiline_business_relevance(self) -> None:
-        raw = (
-            "URL: https://a.com\n"
-            "Title: T\n"
-            "Summary: S\n"
-            "Business Relevance: Line 1.\nLine 2."
-        )
+        raw = "URL: https://a.com\nTitle: T\nSummary: S\nBusiness Relevance: Line 1.\nLine 2."
         _, _, _, business = parse_summary_output(raw)
         assert "Line 1" in business
         assert "Line 2" in business
@@ -770,9 +763,7 @@ class TestSummarizeSingleArticle:
 
         with patch("ica.pipeline.summarization.litellm") as mock_litellm:
             mock_litellm.acompletion = AsyncMock(return_value=mock_response)
-            await summarize_single_article(
-                article, order=1, http=http, model="test/model"
-            )
+            await summarize_single_article(article, order=1, http=http, model="test/model")
 
         assert len(http.calls) == 1
         _, headers = http.calls[0]
@@ -812,9 +803,7 @@ class TestSummarizeSingleArticle:
         http = FakeHttpFetcher(_make_fetch_result(content=None, error="timeout"))
 
         with pytest.raises(RuntimeError, match="no Slack fallback"):
-            await summarize_single_article(
-                article, order=1, http=http, model="test/model"
-            )
+            await summarize_single_article(article, order=1, http=http, model="test/model")
 
     @pytest.mark.asyncio
     async def test_youtube_triggers_fallback(self) -> None:
@@ -839,9 +828,7 @@ class TestSummarizeSingleArticle:
     async def test_captcha_triggers_fallback(self) -> None:
         """Captcha in response triggers Slack fallback."""
         article = _make_article()
-        http = FakeHttpFetcher(
-            _make_fetch_result(content="<html>sgcaptcha challenge</html>")
-        )
+        http = FakeHttpFetcher(_make_fetch_result(content="<html>sgcaptcha challenge</html>"))
         slack = FakeSlackFallback("Clean article text")
 
         mock_response = MagicMock()
@@ -884,9 +871,7 @@ class TestSummarizeSingleArticle:
         """Successfully fetched HTML is stripped of tags before LLM call."""
         article = _make_article()
         http = FakeHttpFetcher(
-            _make_fetch_result(
-                content="<html><body><p>Clean text</p></body></html>"
-            )
+            _make_fetch_result(content="<html><body><p>Clean text</p></body></html>")
         )
 
         mock_response = MagicMock()
@@ -895,9 +880,7 @@ class TestSummarizeSingleArticle:
 
         with patch("ica.pipeline.summarization.litellm") as mock_litellm:
             mock_litellm.acompletion = AsyncMock(return_value=mock_response)
-            await summarize_single_article(
-                article, order=1, http=http, model="test/model"
-            )
+            await summarize_single_article(article, order=1, http=http, model="test/model")
 
         call_kwargs = mock_litellm.acompletion.call_args
         user_msg = call_kwargs.kwargs["messages"][1]["content"]
@@ -1027,9 +1010,7 @@ class TestSummarizeArticles:
     @pytest.mark.asyncio
     async def test_multiple_articles_sequential(self) -> None:
         """Articles are processed one at a time (splitInBatches style)."""
-        articles = [
-            _make_article(url=f"https://example.com/{i}") for i in range(3)
-        ]
+        articles = [_make_article(url=f"https://example.com/{i}") for i in range(3)]
         http = FakeHttpFetcher()
 
         mock_response = MagicMock()
@@ -1052,9 +1033,7 @@ class TestSummarizeArticles:
     @pytest.mark.asyncio
     async def test_orders_are_sequential(self) -> None:
         """Articles get 1-based sequential order numbers."""
-        articles = [
-            _make_article(url=f"https://example.com/{i}") for i in range(3)
-        ]
+        articles = [_make_article(url=f"https://example.com/{i}") for i in range(3)]
         http = FakeHttpFetcher()
 
         mock_response = MagicMock()
@@ -1143,9 +1122,7 @@ class TestSummarizeArticles:
 
         with patch("ica.pipeline.summarization.litellm") as mock_litellm:
             mock_litellm.acompletion = AsyncMock(return_value=mock_response)
-            result = await summarize_articles(
-                articles, http=http, model="custom/model"
-            )
+            result = await summarize_articles(articles, http=http, model="custom/model")
 
         assert result.model == "custom/model"
         call_kwargs = mock_litellm.acompletion.call_args
@@ -1162,9 +1139,7 @@ class TestSummarizeArticles:
 
         call_count = 0
 
-        async def fake_get(
-            url: str, *, headers: dict[str, str] | None = None
-        ) -> FetchResult:
+        async def fake_get(url: str, *, headers: dict[str, str] | None = None) -> FetchResult:
             nonlocal call_count
             call_count += 1
             return _make_fetch_result(content="<p>HTML content</p>")
@@ -1185,9 +1160,7 @@ class TestSummarizeArticles:
             ),
         ):
             mock_litellm.acompletion = AsyncMock(return_value=mock_response)
-            result = await summarize_articles(
-                articles, http=http, slack=slack
-            )
+            result = await summarize_articles(articles, http=http, slack=slack)
 
         assert len(result.summaries) == 3
         # YouTube article should have triggered Slack fallback

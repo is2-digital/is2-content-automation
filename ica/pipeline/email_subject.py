@@ -145,9 +145,7 @@ SUBJECT_SELECTION_BUTTON_LABEL = "Select  Subject or Submit Feedback"
 """Button label matching n8n sendAndWait node."""
 
 SUBJECT_SELECTION_FORM_TITLE = "Proceed to next step"
-SUBJECT_SELECTION_FORM_DESCRIPTION = (
-    "All Subjecsts have been successfully created."
-)
+SUBJECT_SELECTION_FORM_DESCRIPTION = "All Subjecsts have been successfully created."
 SUBJECT_SELECTION_MESSAGE = (
     "*Please select whitch subject you'd like to develop, "
     "or let me know if you'd like to explore other thematic angles.*"
@@ -161,9 +159,7 @@ REVIEW_NOTES_FIELD_LABEL = "Editor Notes"
 
 REVIEW_APPROVAL_BUTTON_LABEL = "Approve Review or Submit Feedback"
 REVIEW_APPROVAL_FORM_TITLE = "Proceed to next step"
-REVIEW_APPROVAL_FORM_DESCRIPTION = (
-    "The Review has been successfully created."
-)
+REVIEW_APPROVAL_FORM_DESCRIPTION = "The Review has been successfully created."
 REVIEW_APPROVAL_MESSAGE = "*The Review has been successfully created.*"
 
 REVIEW_APPROVAL_OPTIONS: list[str] = [
@@ -274,9 +270,7 @@ async def call_email_subject_llm(
 
     content = response.choices[0].message.content  # type: ignore[union-attr]
     if not content or not content.strip():
-        raise RuntimeError(
-            "LLM returned an empty response for email subject generation"
-        )
+        raise RuntimeError("LLM returned an empty response for email subject generation")
 
     return content.strip()
 
@@ -380,23 +374,27 @@ def build_subjects_slack_blocks(
     ]
 
     for i, s in enumerate(subjects):
-        blocks.append({
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": f"*SUBJECT {i + 1}:* {s.subject}\n",
-            },
-        })
+        blocks.append(
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*SUBJECT {i + 1}:* {s.subject}\n",
+                },
+            }
+        )
         blocks.append({"type": "divider"})
 
     if recommendation:
-        blocks.append({
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": f"\n{format_recommendation(recommendation)}\n",
-            },
-        })
+        blocks.append(
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"\n{format_recommendation(recommendation)}\n",
+                },
+            }
+        )
 
     return blocks
 
@@ -446,10 +444,7 @@ def build_subject_selection_form(
     Returns:
         JSON-serialisable form field list for Slack sendAndWait.
     """
-    options = [
-        {"option": f"SUBJECT {s.subject_id}: {s.subject}"}
-        for s in subjects
-    ]
+    options = [{"option": f"SUBJECT {s.subject_id}: {s.subject}"} for s in subjects]
     options.append({"option": "Add Feedback"})
 
     return [
@@ -552,9 +547,7 @@ async def call_email_review_llm(
 
     content = response.choices[0].message.content  # type: ignore[union-attr]
     if not content or not content.strip():
-        raise RuntimeError(
-            "LLM returned an empty response for email review generation"
-        )
+        raise RuntimeError("LLM returned an empty response for email review generation")
 
     return content.strip()
 
@@ -717,9 +710,7 @@ async def extract_email_learning_data(
 
     content = response.choices[0].message.content  # type: ignore[union-attr]
     if not content or not content.strip():
-        raise RuntimeError(
-            "LLM returned an empty response for learning data extraction"
-        )
+        raise RuntimeError("LLM returned an empty response for learning data extraction")
 
     text = content.strip()
 
@@ -897,9 +888,7 @@ async def run_email_subject_generation(
 
             if is_subject_selection(selection_value):
                 # User selected a subject
-                selected_subject = extract_selected_subject(
-                    selection_value, subjects
-                )
+                selected_subject = extract_selected_subject(selection_value, subjects)
                 # Capture editor feedback if provided alongside selection
                 if editor_feedback and editor_feedback.strip():
                     fresh_feedback = editor_feedback.strip()
@@ -983,9 +972,7 @@ async def run_email_subject_generation(
                 doc_id = ""
                 doc_url = ""
                 if docs is not None:
-                    doc_id, doc_url = await create_email_doc(
-                        docs, subject_text, review_text
-                    )
+                    doc_id, doc_url = await create_email_doc(docs, subject_text, review_text)
 
                     # Share Google Doc link in Slack
                     share_message = (
@@ -1005,9 +992,7 @@ async def run_email_subject_generation(
 
             if choice == "feedback":
                 # Step 11: Regenerate review with feedback
-                user_review_feedback = (
-                    editor_notes.strip() if editor_notes else None
-                )
+                user_review_feedback = editor_notes.strip() if editor_notes else None
                 continue
 
             if choice == "reset":

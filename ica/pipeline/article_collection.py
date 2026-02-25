@@ -167,14 +167,10 @@ async def collect_articles(
         engine = "default"
         num = 10
     else:
-        raise ValueError(
-            f"schedule must be 'daily' or 'every_2_days', got {schedule!r}"
-        )
+        raise ValueError(f"schedule must be 'daily' or 'every_2_days', got {schedule!r}")
 
     # Step 1: Search
-    raw_results = await client.search_keywords(
-        keywords, engine=engine, num=num
-    )
+    raw_results = await client.search_keywords(keywords, engine=engine, num=num)
 
     # Step 2: Deduplicate
     deduplicated = deduplicate_results(raw_results)

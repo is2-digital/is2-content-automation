@@ -43,16 +43,10 @@ class TestRegenerationSystemPrompt:
         assert "Do NOT generate or infer missing details" in REGENERATION_SYSTEM_PROMPT
 
     def test_contains_feedback_only_rule(self):
-        assert (
-            "Incorporate ONLY the requested feedback"
-            in REGENERATION_SYSTEM_PROMPT
-        )
+        assert "Incorporate ONLY the requested feedback" in REGENERATION_SYSTEM_PROMPT
 
     def test_contains_do_not_rewrite(self):
-        assert (
-            "Do NOT rewrite, expand, or regenerate other sections"
-            in REGENERATION_SYSTEM_PROMPT
-        )
+        assert "Do NOT rewrite, expand, or regenerate other sections" in REGENERATION_SYSTEM_PROMPT
 
     # -- Article Summary Standards -----------------------------------------
 
@@ -131,9 +125,7 @@ class TestBuildSummarizationRegenerationPrompt:
     SAMPLE_FEEDBACK = "Make the summary more concise and add the specific study name."
 
     def test_returns_tuple(self):
-        result = build_summarization_regeneration_prompt(
-            self.SAMPLE_CONTENT, self.SAMPLE_FEEDBACK
-        )
+        result = build_summarization_regeneration_prompt(self.SAMPLE_CONTENT, self.SAMPLE_FEEDBACK)
         assert isinstance(result, tuple)
         assert len(result) == 2
 
@@ -174,24 +166,18 @@ class TestBuildSummarizationRegenerationPrompt:
 
     def test_multiline_feedback(self):
         feedback = "1. Be more concise\n2. Add statistics\n3. Fix the title"
-        _, user = build_summarization_regeneration_prompt(
-            self.SAMPLE_CONTENT, feedback
-        )
+        _, user = build_summarization_regeneration_prompt(self.SAMPLE_CONTENT, feedback)
         assert feedback in user
 
     def test_empty_feedback(self):
         """Even empty feedback should produce a valid prompt."""
-        system, user = build_summarization_regeneration_prompt(
-            self.SAMPLE_CONTENT, ""
-        )
+        system, user = build_summarization_regeneration_prompt(self.SAMPLE_CONTENT, "")
         assert system is REGENERATION_SYSTEM_PROMPT
         assert self.SAMPLE_CONTENT in user
 
     def test_feedback_with_special_characters(self):
         feedback = 'Use "quoted" text and include {braces} & <angles>'
-        _, user = build_summarization_regeneration_prompt(
-            self.SAMPLE_CONTENT, feedback
-        )
+        _, user = build_summarization_regeneration_prompt(self.SAMPLE_CONTENT, feedback)
         assert feedback in user
 
     # -- Various content inputs --------------------------------------------
@@ -208,8 +194,8 @@ class TestBuildSummarizationRegenerationPrompt:
         assert content in user
 
     def test_multiline_content(self):
-        content = "URL: https://example.com\nTitle: Test\nSummary: Line 1.\nBusiness Relevance: Line 2."
-        _, user = build_summarization_regeneration_prompt(
-            content, "Add more detail"
+        content = (
+            "URL: https://example.com\nTitle: Test\nSummary: Line 1.\nBusiness Relevance: Line 2."
         )
+        _, user = build_summarization_regeneration_prompt(content, "Add more detail")
         assert content in user

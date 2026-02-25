@@ -184,9 +184,7 @@ class TestBuildSummarizationPrompt:
         assert "{aggregated_feedback}" not in user
 
     def test_no_unresolved_placeholders_with_feedback(self):
-        _, user = build_summarization_prompt(
-            self.SAMPLE_CONTENT, "• Some feedback"
-        )
+        _, user = build_summarization_prompt(self.SAMPLE_CONTENT, "• Some feedback")
         assert "{feedback_section}" not in user
         assert "{article_content}" not in user
         assert "{aggregated_feedback}" not in user

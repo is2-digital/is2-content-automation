@@ -141,16 +141,13 @@ NEXT_STEPS_BUTTON_LABEL = "Proceed to Next Steps"
 NEXT_STEPS_FORM_TITLE = "Proceed to next step"
 NEXT_STEPS_FORM_DESCRIPTION = "HTML newsletter has been generated."
 NEXT_STEPS_MESSAGE = (
-    "*Newsletter HTML has been generated.* "
-    "Review the Google Doc and click to proceed when done."
+    "*Newsletter HTML has been generated.* Review the Google Doc and click to proceed when done."
 )
 
 FEEDBACK_MESSAGE = "*Please provide feedback to improve generated HTML content*"
 FEEDBACK_BUTTON_LABEL = "Add feedback"
 FEEDBACK_FORM_TITLE = "Feedback Form"
-FEEDBACK_FORM_DESCRIPTION = (
-    "Please provide feedback to improve generated HTML content"
-)
+FEEDBACK_FORM_DESCRIPTION = "Please provide feedback to improve generated HTML content"
 
 GOOGLE_DOC_TITLE = "Newsletter HTML"
 """Default title for the Google Doc created for HTML output."""
@@ -227,9 +224,7 @@ async def call_html_llm(
 
     content = response.choices[0].message.content  # type: ignore[union-attr]
     if not content or not content.strip():
-        raise RuntimeError(
-            "LLM returned an empty response for HTML generation"
-        )
+        raise RuntimeError("LLM returned an empty response for HTML generation")
 
     return content.strip()
 
@@ -281,9 +276,7 @@ async def call_html_regeneration(
 
     content = response.choices[0].message.content  # type: ignore[union-attr]
     if not content or not content.strip():
-        raise RuntimeError(
-            "LLM returned an empty response for HTML regeneration"
-        )
+        raise RuntimeError("LLM returned an empty response for HTML regeneration")
 
     return content.strip()
 
@@ -334,9 +327,7 @@ async def extract_html_learning_data(
 
     content = response.choices[0].message.content  # type: ignore[union-attr]
     if not content or not content.strip():
-        raise RuntimeError(
-            "LLM returned an empty response for learning data extraction"
-        )
+        raise RuntimeError("LLM returned an empty response for learning data extraction")
 
     text = content.strip()
 
@@ -523,8 +514,7 @@ async def run_html_generation(
             original_text=original_html,
             re_generated_text=regenerated_html,
             content_valid=(
-                HTML_VALID_MARKER.lower()
-                in regenerated_html.lower()
+                HTML_VALID_MARKER.lower() in regenerated_html.lower()
                 if regenerated_html is not None
                 else True
             ),

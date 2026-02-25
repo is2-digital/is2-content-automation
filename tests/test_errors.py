@@ -163,9 +163,7 @@ class TestFormatErrorSlackMessage:
 
     def test_matches_n8n_template(self) -> None:
         """Verify the message matches the n8n template structure."""
-        msg = format_error_slack_message(
-            "the Summarization step", "connection reset"
-        )
+        msg = format_error_slack_message("the Summarization step", "connection reset")
         expected = (
             "*Execution Stopped at the Summarization step,"
             " due to the following error :*"
@@ -175,9 +173,7 @@ class TestFormatErrorSlackMessage:
         assert msg == expected
 
     def test_markdown_generation_step(self) -> None:
-        msg = format_error_slack_message(
-            "Markdown generation step", "empty response"
-        )
+        msg = format_error_slack_message("Markdown generation step", "empty response")
         assert "Markdown generation step" in msg
         assert "empty response" in msg
 
@@ -257,9 +253,7 @@ class TestHandleStepError:
     @pytest.mark.asyncio
     async def test_raises_pipeline_stop_error(self) -> None:
         with pytest.raises(PipelineStopError) as exc_info:
-            await handle_step_error(
-                RuntimeError("boom"), "Summarization"
-            )
+            await handle_step_error(RuntimeError("boom"), "Summarization")
         assert exc_info.value.step == "Summarization"
         assert "boom" in exc_info.value.detail
 
@@ -267,18 +261,14 @@ class TestHandleStepError:
     async def test_sends_slack_notification(self) -> None:
         notifier = AsyncMock()
         with pytest.raises(PipelineStopError):
-            await handle_step_error(
-                RuntimeError("boom"), "step", notifier
-            )
+            await handle_step_error(RuntimeError("boom"), "step", notifier)
         notifier.send_error.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_slack_message_contains_error(self) -> None:
         notifier = AsyncMock()
         with pytest.raises(PipelineStopError):
-            await handle_step_error(
-                ValueError("bad value"), "Theme Generation", notifier
-            )
+            await handle_step_error(ValueError("bad value"), "Theme Generation", notifier)
         msg = notifier.send_error.call_args[0][0]
         assert "bad value" in msg
         assert "Theme Generation" in msg

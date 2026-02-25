@@ -61,9 +61,7 @@ class FakeSheetReader:
         self.rows = rows or []
         self.calls: list[tuple[str, str]] = []
 
-    async def read_rows(
-        self, spreadsheet_id: str, sheet_name: str
-    ) -> list[dict[str, str]]:
+    async def read_rows(self, spreadsheet_id: str, sheet_name: str) -> list[dict[str, str]]:
         self.calls.append((spreadsheet_id, sheet_name))
         return self.rows
 
@@ -321,9 +319,7 @@ class TestSummarizationPrepResult:
     """Tests for the SummarizationPrepResult frozen dataclass."""
 
     def test_frozen(self) -> None:
-        result = SummarizationPrepResult(
-            articles=[], rows_upserted=0, model="test-model"
-        )
+        result = SummarizationPrepResult(articles=[], rows_upserted=0, model="test-model")
         with pytest.raises(AttributeError):
             result.model = "changed"  # type: ignore[misc]
 

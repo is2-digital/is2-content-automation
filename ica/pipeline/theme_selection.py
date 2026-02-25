@@ -218,9 +218,11 @@ def format_themes_slack_message(result: ThemeGenerationResult) -> str:
     Returns:
         Slack mrkdwn message text.
     """
-    divider = "\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500" \
-              "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500" \
-              "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n"
+    divider = (
+        "\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+        "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+        "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n"
+    )
 
     parts: list[str] = ["\n* Newsletter Text Themes: *\n"]
 
@@ -270,17 +272,13 @@ def format_selected_theme_body(theme_body: str) -> str:
     t = re.sub(r"%FA_WHY FEATURED:", "*\u2022 Why featured:*", t)
 
     # Main Articles
-    t = re.sub(
-        r"^%M1_TITLE:?", "\n\n*MAIN ARTICLE 1:*  \n*\u2022 Title:*", t, flags=re.MULTILINE
-    )
+    t = re.sub(r"^%M1_TITLE:?", "\n\n*MAIN ARTICLE 1:*  \n*\u2022 Title:*", t, flags=re.MULTILINE)
     t = re.sub(r"%M1_CATEGORY:?", "*\u2022 Category:*", t)
     t = re.sub(r"%M1_ORIGIN:", "*\u2022 Source:*", t)
     t = re.sub(r"%M1_URL:", "*\u2022 URL:*", t)
     t = re.sub(r"%M1_RATIONALE:", "*\u2022 Rationale:*", t)
 
-    t = re.sub(
-        r"^%M2_TITLE:?", "\n\n*MAIN ARTICLE 2:*  \n*\u2022 Title:*", t, flags=re.MULTILINE
-    )
+    t = re.sub(r"^%M2_TITLE:?", "\n\n*MAIN ARTICLE 2:*  \n*\u2022 Title:*", t, flags=re.MULTILINE)
     t = re.sub(r"%M2_CATEGORY:?", "*\u2022 Category:*", t)
     t = re.sub(r"%M2_ORIGIN:", "*\u2022 Source:*", t)
     t = re.sub(r"%M2_URL:", "*\u2022 URL:*", t)
@@ -344,9 +342,11 @@ def format_freshness_slack_message(
     Returns:
         Slack mrkdwn message text.
     """
-    divider = "\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500" \
-              "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500" \
-              "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n"
+    divider = (
+        "\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+        "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+        "\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n"
+    )
 
     parts: list[str] = [
         "\n Selected theme: \n",

@@ -32,32 +32,34 @@ from ica.utils.marker_parser import FormattedTheme
 # Fixtures
 # ---------------------------------------------------------------------------
 
-SAMPLE_SUMMARIES_JSON = json.dumps([
-    {
-        "Title": "GPT-5 Released with Advanced Reasoning",
-        "Summary": "OpenAI released GPT-5 with improved reasoning capabilities.",
-        "BusinessRelevance": "Major leap in AI capability for enterprise adoption.",
-        "Order": 1,
-        "URL": "https://example.com/gpt5",
-        "industry_news": "true",
-    },
-    {
-        "Title": "Small Business AI Adoption Surges",
-        "Summary": "Survey shows 70% of SMBs now use AI tools daily.",
-        "BusinessRelevance": "Key market signal for AI tool providers.",
-        "Order": 2,
-        "URL": "https://example.com/smb-ai",
-        "industry_news": "false",
-    },
-    {
-        "Title": "AI Ethics Framework Published",
-        "Summary": "New comprehensive AI ethics guidelines released.",
-        "BusinessRelevance": "Compliance requirements for AI deployments.",
-        "Order": 3,
-        "URL": "https://example.com/ethics",
-        "industry_news": "false",
-    },
-])
+SAMPLE_SUMMARIES_JSON = json.dumps(
+    [
+        {
+            "Title": "GPT-5 Released with Advanced Reasoning",
+            "Summary": "OpenAI released GPT-5 with improved reasoning capabilities.",
+            "BusinessRelevance": "Major leap in AI capability for enterprise adoption.",
+            "Order": 1,
+            "URL": "https://example.com/gpt5",
+            "industry_news": "true",
+        },
+        {
+            "Title": "Small Business AI Adoption Surges",
+            "Summary": "Survey shows 70% of SMBs now use AI tools daily.",
+            "BusinessRelevance": "Key market signal for AI tool providers.",
+            "Order": 2,
+            "URL": "https://example.com/smb-ai",
+            "industry_news": "false",
+        },
+        {
+            "Title": "AI Ethics Framework Published",
+            "Summary": "New comprehensive AI ethics guidelines released.",
+            "BusinessRelevance": "Compliance requirements for AI deployments.",
+            "Order": 3,
+            "URL": "https://example.com/ethics",
+            "industry_news": "false",
+        },
+    ]
+)
 
 SAMPLE_LLM_OUTPUT = """\
 THEME: AI Revolution in Small Business
@@ -437,9 +439,7 @@ class TestCallThemeLlm:
         with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
             mock_litellm.acompletion = AsyncMock(return_value=mock_response)
 
-            text, model = await call_theme_llm(
-                SAMPLE_SUMMARIES_JSON, model="test-model"
-            )
+            text, model = await call_theme_llm(SAMPLE_SUMMARIES_JSON, model="test-model")
 
             mock_litellm.acompletion.assert_called_once()
             call_kwargs = mock_litellm.acompletion.call_args
@@ -458,9 +458,7 @@ class TestCallThemeLlm:
         with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
             mock_litellm.acompletion = AsyncMock(return_value=mock_response)
 
-            text, model = await call_theme_llm(
-                SAMPLE_SUMMARIES_JSON, model="test-model"
-            )
+            text, model = await call_theme_llm(SAMPLE_SUMMARIES_JSON, model="test-model")
 
             assert text == "THEME: Test\n-----"
             assert model == "test-model"
@@ -584,9 +582,7 @@ class TestGenerateThemes:
         with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
             mock_litellm.acompletion = AsyncMock(return_value=mock_response)
 
-            result = await generate_themes(
-                SAMPLE_SUMMARIES_JSON, model="test-model"
-            )
+            result = await generate_themes(SAMPLE_SUMMARIES_JSON, model="test-model")
 
             assert isinstance(result, ThemeGenerationResult)
             assert len(result.themes) == 2
@@ -601,9 +597,7 @@ class TestGenerateThemes:
         with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
             mock_litellm.acompletion = AsyncMock(return_value=mock_response)
 
-            result = await generate_themes(
-                SAMPLE_SUMMARIES_JSON, model="test-model"
-            )
+            result = await generate_themes(SAMPLE_SUMMARIES_JSON, model="test-model")
 
             assert "RECOMMENDATION" in result.recommendation
             assert "Theme 1" in result.recommendation
@@ -617,9 +611,7 @@ class TestGenerateThemes:
         with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
             mock_litellm.acompletion = AsyncMock(return_value=mock_response)
 
-            result = await generate_themes(
-                SAMPLE_SUMMARIES_JSON, model="test-model"
-            )
+            result = await generate_themes(SAMPLE_SUMMARIES_JSON, model="test-model")
 
             assert result.raw_llm_output == SAMPLE_LLM_OUTPUT.strip()
 
@@ -632,9 +624,7 @@ class TestGenerateThemes:
         with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
             mock_litellm.acompletion = AsyncMock(return_value=mock_response)
 
-            result = await generate_themes(
-                SAMPLE_SUMMARIES_JSON, model="test-model"
-            )
+            result = await generate_themes(SAMPLE_SUMMARIES_JSON, model="test-model")
 
             for theme in result.themes:
                 assert theme.formatted_theme.featured_article.title is not None
@@ -742,9 +732,7 @@ class TestGenerateThemes:
         with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
             mock_litellm.acompletion = AsyncMock(return_value=mock_response)
 
-            result = await generate_themes(
-                SAMPLE_SUMMARIES_JSON, model="test-model"
-            )
+            result = await generate_themes(SAMPLE_SUMMARIES_JSON, model="test-model")
 
             with pytest.raises(AttributeError):
                 result.model = "changed"  # type: ignore[misc]
@@ -839,10 +827,7 @@ class TestEdgeCases:
         assert themes[1].formatted_theme.featured_article.title == "Article 2"
 
     def test_theme_with_recommendation_only(self) -> None:
-        raw = (
-            "RECOMMENDATION: Theme 1\n"
-            "Rationale: It's the best"
-        )
+        raw = "RECOMMENDATION: Theme 1\nRationale: It's the best"
         themes = parse_theme_output(raw)
         assert themes == []
 
@@ -897,14 +882,10 @@ class TestEdgeCases:
     @pytest.mark.asyncio
     async def test_generate_themes_propagates_llm_error(self) -> None:
         with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(
-                side_effect=Exception("API rate limit exceeded")
-            )
+            mock_litellm.acompletion = AsyncMock(side_effect=Exception("API rate limit exceeded"))
 
             with pytest.raises(Exception, match="API rate limit"):
-                await generate_themes(
-                    SAMPLE_SUMMARIES_JSON, model="test-model"
-                )
+                await generate_themes(SAMPLE_SUMMARIES_JSON, model="test-model")
 
     def test_all_marker_types_present_in_sample(self) -> None:
         themes = parse_theme_output(SAMPLE_LLM_OUTPUT)

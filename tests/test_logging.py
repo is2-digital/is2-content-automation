@@ -178,6 +178,7 @@ class TestJsonFormatter:
             raise ValueError("test error")
         except ValueError:
             import sys
+
             record.exc_info = sys.exc_info()
         result = self._format(record)
         assert "exception" in result
@@ -345,6 +346,7 @@ class TestConfigureLogging:
 
     def test_handler_writes_to_stderr(self) -> None:
         import sys
+
         configure_logging()
         root = logging.getLogger()
         handler = root.handlers[0]
@@ -517,6 +519,7 @@ class TestIntegration:
         configure_logging(log_format="json")
         lgr = get_logger("ica.integration.json")
         import io
+
         buf = io.StringIO()
         # Replace stderr handler stream for capture
         root = logging.getLogger()
@@ -537,6 +540,7 @@ class TestIntegration:
         configure_logging(log_format="text")
         lgr = get_logger("ica.integration.text")
         import io
+
         buf = io.StringIO()
         root = logging.getLogger()
         root.handlers[0].stream = buf
@@ -553,6 +557,7 @@ class TestIntegration:
         configure_logging(log_format="text")
         lgr = get_logger("ica.integration.plain")
         import io
+
         buf = io.StringIO()
         root = logging.getLogger()
         root.handlers[0].stream = buf
@@ -568,6 +573,7 @@ class TestIntegration:
         configure_logging(log_format="json")
         lgr = get_logger("ica.integration.noctx")
         import io
+
         buf = io.StringIO()
         root = logging.getLogger()
         root.handlers[0].stream = buf
@@ -583,6 +589,7 @@ class TestIntegration:
         configure_logging(log_format="json")
         lgr = get_logger("ica.integration.leak")
         import io
+
         buf = io.StringIO()
         root = logging.getLogger()
         root.handlers[0].stream = buf

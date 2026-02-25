@@ -182,8 +182,7 @@ class LinkedInCarouselResult:
 SLACK_CHANNEL = "#n8n-is2"
 
 APPROVAL_MESSAGE = (
-    "*Fetched final HTML newsletter. "
-    "Are we good to proceed to Linkedin Posts generation ?*"
+    "*Fetched final HTML newsletter. Are we good to proceed to Linkedin Posts generation ?*"
 )
 
 # Next steps form
@@ -198,9 +197,7 @@ NEXT_STEPS_FORM_DESCRIPTION = "Linkedin posts generated"
 FEEDBACK_MESSAGE = "*Please provide feedback to improve LinkedIn posts content*"
 FEEDBACK_BUTTON_LABEL = "Add feedback"
 FEEDBACK_FORM_TITLE = "Feedback Form"
-FEEDBACK_FORM_DESCRIPTION = (
-    "Please provide feedback to improve Linkedin posts content"
-)
+FEEDBACK_FORM_DESCRIPTION = "Please provide feedback to improve Linkedin posts content"
 
 GOOGLE_DOC_TITLE = "Linkedin-posts"
 """Default title for the Google Doc created for carousel output."""
@@ -217,9 +214,7 @@ MAX_VALIDATION_ATTEMPTS = 2
 # ---------------------------------------------------------------------------
 
 # Regex to extract slide body blocks: *Body:*\n ... until next section
-_BODY_RE = re.compile(
-    r"(\*Body:\*\n)([\s\S]*?)(?=\n\n---|\n\n\*Slide|\s*$)"
-)
+_BODY_RE = re.compile(r"(\*Body:\*\n)([\s\S]*?)(?=\n\n---|\n\n\*Slide|\s*$)")
 
 
 def validate_slide_bodies(raw_output: str) -> ValidationResult:
@@ -344,9 +339,7 @@ async def call_carousel_llm(
 
     content = response.choices[0].message.content  # type: ignore[union-attr]
     if not content or not content.strip():
-        raise RuntimeError(
-            "LLM returned an empty response for LinkedIn carousel generation"
-        )
+        raise RuntimeError("LLM returned an empty response for LinkedIn carousel generation")
 
     return content.strip()
 
@@ -394,9 +387,7 @@ async def call_regeneration_llm(
 
     content = response.choices[0].message.content  # type: ignore[union-attr]
     if not content or not content.strip():
-        raise RuntimeError(
-            "LLM returned an empty response for LinkedIn carousel regeneration"
-        )
+        raise RuntimeError("LLM returned an empty response for LinkedIn carousel regeneration")
 
     return content.strip()
 
@@ -448,13 +439,8 @@ async def generate_with_validation(
             return result.annotated_output, []
 
         # Build previous output with character errors for the retry prompt
-        error_payload = json.dumps(
-            [e.to_dict() for e in result.errors], indent=2
-        )
-        previous_with_errors = (
-            f"{result.annotated_output}\n\n"
-            f"character_errors:\n{error_payload}"
-        )
+        error_payload = json.dumps([e.to_dict() for e in result.errors], indent=2)
+        previous_with_errors = f"{result.annotated_output}\n\ncharacter_errors:\n{error_payload}"
 
         # Retry LLM with error context
         raw_output = await call_carousel_llm(

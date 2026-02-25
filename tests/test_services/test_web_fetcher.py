@@ -341,9 +341,7 @@ class TestWebFetcherServiceGetSuccess:
 
     @pytest.mark.asyncio
     async def test_empty_response_body(self):
-        transport = httpx.MockTransport(
-            lambda request: httpx.Response(200, text="")
-        )
+        transport = httpx.MockTransport(lambda request: httpx.Response(200, text=""))
         client = httpx.AsyncClient(transport=transport)
         svc = WebFetcherService(client=client)
 
@@ -362,9 +360,7 @@ class TestWebFetcherServiceGetHttpErrors:
 
     @pytest.mark.asyncio
     async def test_404_returns_error(self):
-        transport = httpx.MockTransport(
-            lambda request: httpx.Response(404)
-        )
+        transport = httpx.MockTransport(lambda request: httpx.Response(404))
         client = httpx.AsyncClient(transport=transport)
         svc = WebFetcherService(client=client)
 
@@ -375,9 +371,7 @@ class TestWebFetcherServiceGetHttpErrors:
 
     @pytest.mark.asyncio
     async def test_403_returns_error(self):
-        transport = httpx.MockTransport(
-            lambda request: httpx.Response(403)
-        )
+        transport = httpx.MockTransport(lambda request: httpx.Response(403))
         client = httpx.AsyncClient(transport=transport)
         svc = WebFetcherService(client=client)
 
@@ -387,9 +381,7 @@ class TestWebFetcherServiceGetHttpErrors:
 
     @pytest.mark.asyncio
     async def test_500_returns_error(self):
-        transport = httpx.MockTransport(
-            lambda request: httpx.Response(500)
-        )
+        transport = httpx.MockTransport(lambda request: httpx.Response(500))
         client = httpx.AsyncClient(transport=transport)
         svc = WebFetcherService(client=client)
 
@@ -526,9 +518,7 @@ class TestWebFetcherServiceProtocol:
 
     @pytest.mark.asyncio
     async def test_get_returns_fetch_result(self):
-        transport = httpx.MockTransport(
-            lambda request: httpx.Response(200, text="OK")
-        )
+        transport = httpx.MockTransport(lambda request: httpx.Response(200, text="OK"))
         client = httpx.AsyncClient(transport=transport)
         svc = WebFetcherService(client=client)
 
@@ -537,9 +527,7 @@ class TestWebFetcherServiceProtocol:
 
     @pytest.mark.asyncio
     async def test_get_accepts_headers_kwarg(self):
-        transport = httpx.MockTransport(
-            lambda request: httpx.Response(200, text="OK")
-        )
+        transport = httpx.MockTransport(lambda request: httpx.Response(200, text="OK"))
         client = httpx.AsyncClient(transport=transport)
         svc = WebFetcherService(client=client)
 
@@ -580,9 +568,7 @@ class TestWebFetcherIntegration:
 
     @pytest.mark.asyncio
     async def test_error_response_is_failure(self):
-        transport = httpx.MockTransport(
-            lambda request: httpx.Response(500)
-        )
+        transport = httpx.MockTransport(lambda request: httpx.Response(500))
         client = httpx.AsyncClient(transport=transport)
         svc = WebFetcherService(client=client)
 

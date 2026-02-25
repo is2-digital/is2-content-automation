@@ -177,9 +177,7 @@ class TestStepResult:
 
     def test_error_set(self):
         now = datetime.now(timezone.utc)
-        r = StepResult(
-            step="x", status="failed", started_at=now, completed_at=now, error="boom"
-        )
+        r = StepResult(step="x", status="failed", started_at=now, completed_at=now, error="boom")
         assert r.error == "boom"
 
 
@@ -271,6 +269,7 @@ class TestRunPipelineSequential:
             async def step(ctx: PipelineContext) -> PipelineContext:
                 call_order.append(name)
                 return ctx
+
             return step
 
         steps = [
@@ -286,6 +285,7 @@ class TestRunPipelineSequential:
     @pytest.mark.asyncio
     async def test_context_propagation_between_steps(self):
         """Each step sees modifications from previous steps."""
+
         async def step_a(ctx: PipelineContext) -> PipelineContext:
             ctx.newsletter_id = "NL-100"
             return ctx
@@ -360,6 +360,7 @@ class TestRunPipelineParallel:
             async def step(ctx: PipelineContext) -> PipelineContext:
                 executed.append(name)
                 return ctx
+
             return step
 
         parallel = [
@@ -580,8 +581,7 @@ class TestFullPipeline:
 
         async def summarization(ctx: PipelineContext) -> PipelineContext:
             ctx.summaries = [
-                {"URL": a["url"], "Title": a["title"], "Summary": "..."}
-                for a in ctx.articles
+                {"URL": a["url"], "Title": a["title"], "Summary": "..."} for a in ctx.articles
             ]
             ctx.summaries_json = '["summary1", "summary2"]'
             return ctx
@@ -607,6 +607,7 @@ class TestFullPipeline:
                 assert ctx.html_doc_id == "doc-html-456"
                 parallel_ran.append(name)
                 return ctx
+
             return step
 
         seq = [

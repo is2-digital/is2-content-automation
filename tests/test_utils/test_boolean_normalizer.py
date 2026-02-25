@@ -175,7 +175,5 @@ class TestTaskSpecifiedValues:
         ],
         ids=["yes", "no", "Yes", "YES", "true", "false", "empty"],
     )
-    def test_specified_conversions(
-        self, input_value: str, expected: bool
-    ) -> None:
+    def test_specified_conversions(self, input_value: str, expected: bool) -> None:
         assert normalize_boolean(input_value) is expected

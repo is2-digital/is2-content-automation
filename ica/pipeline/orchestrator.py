@@ -318,9 +318,7 @@ async def _run_parallel_steps(
     return errors
 
 
-def build_default_steps() -> (
-    tuple[list[tuple[str, PipelineStep]], list[tuple[str, PipelineStep]]]
-):
+def build_default_steps() -> tuple[list[tuple[str, PipelineStep]], list[tuple[str, PipelineStep]]]:
     """Return the default sequential and parallel step lists.
 
     Each step is wired to its real implementation from

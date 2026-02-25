@@ -194,10 +194,7 @@ def filter_approved_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     Returns:
         Only rows where the ``approved`` field normalizes to ``True``.
     """
-    return [
-        row for row in rows
-        if normalize_boolean(row.get("approved", ""))
-    ]
+    return [row for row in rows if normalize_boolean(row.get("approved", ""))]
 
 
 def normalize_article_row(row: dict[str, str]) -> CuratedArticle:
@@ -472,9 +469,7 @@ def parse_summary_output(raw: str) -> tuple[str, str, str, str]:
     title = title_match.group(1).strip() if title_match else "Untitled"
     summary = summary_match.group(1).strip() if summary_match else "No summary available."
     business = (
-        business_match.group(1).strip()
-        if business_match
-        else "No business relevance available."
+        business_match.group(1).strip() if business_match else "No business relevance available."
     )
 
     return url, title, summary, business
@@ -710,19 +705,13 @@ NEXT_STEPS_FIELD_LABEL = "Ready to proceed to next step ?"
 NEXT_STEPS_OPTIONS: list[str] = ["Yes", "Provide Feedback", "Restart Chat"]
 NEXT_STEPS_BUTTON_LABEL = "Proceed to Next Steps"
 NEXT_STEPS_FORM_TITLE = "Proceed to next step"
-NEXT_STEPS_FORM_DESCRIPTION = (
-    "All articles have been successfully summarized."
-)
+NEXT_STEPS_FORM_DESCRIPTION = "All articles have been successfully summarized."
 NEXT_STEPS_MESSAGE = "*All articles have been successfully summarized.*"
 
-FEEDBACK_MESSAGE = (
-    "*Please provide feedback to improve summarized content*"
-)
+FEEDBACK_MESSAGE = "*Please provide feedback to improve summarized content*"
 FEEDBACK_BUTTON_LABEL = "Add feedback"
 FEEDBACK_FORM_TITLE = "Feedback Form"
-FEEDBACK_FORM_DESCRIPTION = (
-    "Please provide feedback to improve summarized content"
-)
+FEEDBACK_FORM_DESCRIPTION = "Please provide feedback to improve summarized content"
 
 SUMMARY_DIVIDER = "\u2500" * 30
 """Visual divider line used between article summaries."""
@@ -783,28 +772,27 @@ def build_summary_slack_blocks(
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": (
-                    f"*{SUMMARY_HEADER}*\n\n"
-                    f"_Total Articles:_ {len(summaries)}"
-                ),
+                "text": (f"*{SUMMARY_HEADER}*\n\n_Total Articles:_ {len(summaries)}"),
             },
         },
         {"type": "divider"},
     ]
 
     for summary in summaries:
-        blocks.append({
-            "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": (
-                    f"*{summary.order}. {summary.title}*\n"
-                    f"*URL:* {summary.url}\n\n"
-                    f"*Summary:*\n{summary.summary}\n\n"
-                    f"*Business Relevance:*\n{summary.business_relevance}"
-                ),
-            },
-        })
+        blocks.append(
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": (
+                        f"*{summary.order}. {summary.title}*\n"
+                        f"*URL:* {summary.url}\n\n"
+                        f"*Summary:*\n{summary.summary}\n\n"
+                        f"*Business Relevance:*\n{summary.business_relevance}"
+                    ),
+                },
+            }
+        )
         blocks.append({"type": "divider"})
 
     return blocks
@@ -936,9 +924,7 @@ async def call_regeneration_llm(
 
     content = response.choices[0].message.content  # type: ignore[union-attr]
     if not content or not content.strip():
-        raise RuntimeError(
-            "LLM returned an empty response for summarization regeneration"
-        )
+        raise RuntimeError("LLM returned an empty response for summarization regeneration")
 
     return content.strip()
 
@@ -989,9 +975,7 @@ async def extract_summary_learning_data(
 
     content = response.choices[0].message.content  # type: ignore[union-attr]
     if not content or not content.strip():
-        raise RuntimeError(
-            "LLM returned an empty response for learning data extraction"
-        )
+        raise RuntimeError("LLM returned an empty response for learning data extraction")
 
     text = content.strip()
 
@@ -1096,9 +1080,7 @@ async def run_summarization_output(
             original_text=original_text,
             re_generated_text=regenerated_text,
             content_valid=(
-                SUMMARY_HEADER in regenerated_text
-                if regenerated_text is not None
-                else True
+                SUMMARY_HEADER in regenerated_text if regenerated_text is not None else True
             ),
         )
         current_text = route.text

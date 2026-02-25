@@ -764,9 +764,7 @@ class TestRunLinkedInCarouselGeneration:
         slack.send_and_wait_freetext = AsyncMock(return_value=feedback_text)
 
         # Form response: the next-steps dropdown
-        slack.send_and_wait_form = AsyncMock(
-            return_value={NEXT_STEPS_FIELD: next_steps_choice}
-        )
+        slack.send_and_wait_form = AsyncMock(return_value={NEXT_STEPS_FIELD: next_steps_choice})
 
         return slack
 
@@ -1209,9 +1207,7 @@ class TestRunLinkedInCarouselGeneration:
 
         regen_count = 0
 
-        async def fake_regen(
-            previous_output: str, **kwargs: object
-        ) -> str:
+        async def fake_regen(previous_output: str, **kwargs: object) -> str:
             nonlocal regen_count
             regen_inputs.append(previous_output)
             regen_count += 1

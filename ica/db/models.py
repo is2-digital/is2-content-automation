@@ -42,7 +42,9 @@ class Article(Base):
     industry_news: Mapped[bool | None] = mapped_column(Boolean)
     newsletter_id: Mapped[str | None] = mapped_column(Text)
     type: Mapped[str] = mapped_column(
-        String(50), nullable=False, server_default="curated",
+        String(50),
+        nullable=False,
+        server_default="curated",
     )
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
@@ -67,7 +69,9 @@ class Theme(Base):
     newsletter_id: Mapped[str | None] = mapped_column(Text)
     approved: Mapped[bool | None] = mapped_column(Boolean)
     type: Mapped[str] = mapped_column(
-        String(50), nullable=False, server_default="newsletter",
+        String(50),
+        nullable=False,
+        server_default="newsletter",
     )
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 

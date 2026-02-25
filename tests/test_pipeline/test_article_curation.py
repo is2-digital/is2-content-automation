@@ -189,9 +189,7 @@ class TestFormatArticleForSheet:
             (6, 15, 2026, "06/15/2026"),
         ],
     )
-    def test_date_formatting_various(
-        self, month: int, day: int, year: int, expected: str
-    ) -> None:
+    def test_date_formatting_various(self, month: int, day: int, year: int, expected: str) -> None:
         article = FakeArticle(publish_date=date(year, month, day))
         result = format_article_for_sheet(article)
         assert result.publish_date == expected
@@ -292,10 +290,7 @@ class TestArticlesToRowDicts:
         assert set(result[0].keys()) == set(SHEET_COLUMNS)
 
     def test_preserves_order(self) -> None:
-        articles = [
-            SheetArticle(f"url{i}", f"t{i}", "", "", "", "", "")
-            for i in range(5)
-        ]
+        articles = [SheetArticle(f"url{i}", f"t{i}", "", "", "", "", "") for i in range(5)]
         result = articles_to_row_dicts(articles)
         for i, row in enumerate(result):
             assert row["url"] == f"url{i}"
@@ -568,9 +563,7 @@ class TestPrepareCurationData:
             async def clear_sheet(self, sid: str, sname: str) -> None:
                 call_order.append("sheet_clear")
 
-            async def append_rows(
-                self, sid: str, sname: str, rows: list[dict[str, Any]]
-            ) -> int:
+            async def append_rows(self, sid: str, sname: str, rows: list[dict[str, Any]]) -> int:
                 call_order.append("sheet_append")
                 return len(rows)
 
@@ -590,8 +583,7 @@ class TestPrepareCurationData:
     @pytest.mark.asyncio
     async def test_multiple_articles_all_written(self) -> None:
         articles = [
-            FakeArticle(url=f"https://example.com/{i}", title=f"Article {i}")
-            for i in range(10)
+            FakeArticle(url=f"https://example.com/{i}", title=f"Article {i}") for i in range(10)
         ]
         session = _make_session_with_articles(articles)
         slack = FakeSlack()
@@ -774,8 +766,7 @@ class TestEdgeCases:
     @pytest.mark.asyncio
     async def test_prepare_curation_preserves_article_order(self) -> None:
         articles = [
-            FakeArticle(url=f"https://example.com/{i}", title=f"Article {i}")
-            for i in range(5)
+            FakeArticle(url=f"https://example.com/{i}", title=f"Article {i}") for i in range(5)
         ]
         session = _make_session_with_articles(articles)
         slack = FakeSlack()
@@ -859,9 +850,7 @@ class FakeSheetReader:
         self._call_index = 0
         self.calls: list[tuple[str, str]] = []
 
-    async def read_rows(
-        self, spreadsheet_id: str, sheet_name: str
-    ) -> list[dict[str, str]]:
+    async def read_rows(self, spreadsheet_id: str, sheet_name: str) -> list[dict[str, str]]:
         self.calls.append((spreadsheet_id, sheet_name))
         rows = self._responses[self._call_index]
         self._call_index += 1
@@ -1167,10 +1156,7 @@ class TestParseApprovedArticles:
         assert art.industry_news is True
 
     def test_preserves_order(self) -> None:
-        rows = [
-            _make_sheet_row(url=f"https://example.com/{i}", approved="yes")
-            for i in range(5)
-        ]
+        rows = [_make_sheet_row(url=f"https://example.com/{i}", approved="yes") for i in range(5)]
         result = parse_approved_articles(rows)
         for i, art in enumerate(result):
             assert art.url == f"https://example.com/{i}"
@@ -1195,8 +1181,12 @@ class TestApprovedArticle:
 
     def test_is_frozen(self) -> None:
         art = ApprovedArticle(
-            url="u", title="t", publish_date="d",
-            origin="o", approved=True, newsletter_id="n",
+            url="u",
+            title="t",
+            publish_date="d",
+            origin="o",
+            approved=True,
+            newsletter_id="n",
             industry_news=False,
         )
         with pytest.raises(AttributeError):
@@ -1214,9 +1204,12 @@ class TestApprovedArticle:
 
     def test_field_types(self) -> None:
         art = ApprovedArticle(
-            url="https://example.com", title="Test",
-            publish_date="02/15/2026", origin="google_news",
-            approved=True, newsletter_id="NL-001",
+            url="https://example.com",
+            title="Test",
+            publish_date="02/15/2026",
+            origin="google_news",
+            approved=True,
+            newsletter_id="NL-001",
             industry_news=True,
         )
         assert isinstance(art.url, str)
@@ -1260,8 +1253,11 @@ class TestRunApprovalFlow:
         reader = FakeSheetReader([valid_rows])
 
         result = await run_approval_flow(
-            slack, approval, reader,
-            spreadsheet_id="abc123", channel="#test",
+            slack,
+            approval,
+            reader,
+            spreadsheet_id="abc123",
+            channel="#test",
         )
 
         assert result.validation_attempts == 1
@@ -1276,8 +1272,11 @@ class TestRunApprovalFlow:
         reader = FakeSheetReader([invalid_rows, valid_rows])
 
         result = await run_approval_flow(
-            slack, approval, reader,
-            spreadsheet_id="abc123", channel="#test",
+            slack,
+            approval,
+            reader,
+            spreadsheet_id="abc123",
+            channel="#test",
         )
 
         assert result.validation_attempts == 2
@@ -1291,8 +1290,11 @@ class TestRunApprovalFlow:
         reader = FakeSheetReader([invalid, invalid, invalid, valid])
 
         result = await run_approval_flow(
-            slack, approval, reader,
-            spreadsheet_id="abc123", channel="#test",
+            slack,
+            approval,
+            reader,
+            spreadsheet_id="abc123",
+            channel="#test",
         )
 
         assert result.validation_attempts == 4
@@ -1305,8 +1307,11 @@ class TestRunApprovalFlow:
         reader = FakeSheetReader([valid_rows])
 
         await run_approval_flow(
-            slack, approval, reader,
-            spreadsheet_id="abc123", channel="#test",
+            slack,
+            approval,
+            reader,
+            spreadsheet_id="abc123",
+            channel="#test",
         )
 
         # First sendAndWait should use the approval message
@@ -1325,8 +1330,11 @@ class TestRunApprovalFlow:
         reader = FakeSheetReader([invalid, valid])
 
         await run_approval_flow(
-            slack, approval, reader,
-            spreadsheet_id="abc123", channel="#test",
+            slack,
+            approval,
+            reader,
+            spreadsheet_id="abc123",
+            channel="#test",
         )
 
         # Second sendAndWait should use the re-validation message
@@ -1342,8 +1350,11 @@ class TestRunApprovalFlow:
         reader = FakeSheetReader([valid_rows])
 
         await run_approval_flow(
-            slack, approval, reader,
-            spreadsheet_id="abc123", channel="#test",
+            slack,
+            approval,
+            reader,
+            spreadsheet_id="abc123",
+            channel="#test",
         )
 
         assert len(slack.messages) == 1
@@ -1361,8 +1372,11 @@ class TestRunApprovalFlow:
         reader = FakeSheetReader([rows])
 
         result = await run_approval_flow(
-            slack, approval, reader,
-            spreadsheet_id="abc123", channel="#test",
+            slack,
+            approval,
+            reader,
+            spreadsheet_id="abc123",
+            channel="#test",
         )
 
         assert len(result.articles) == 2
@@ -1377,8 +1391,11 @@ class TestRunApprovalFlow:
         reader = FakeSheetReader([valid_rows])
 
         await run_approval_flow(
-            slack, approval, reader,
-            spreadsheet_id="abc123", channel="#test",
+            slack,
+            approval,
+            reader,
+            spreadsheet_id="abc123",
+            channel="#test",
         )
 
         assert reader.calls[0] == ("abc123", "Sheet1")
@@ -1391,8 +1408,11 @@ class TestRunApprovalFlow:
         reader = FakeSheetReader([valid_rows])
 
         await run_approval_flow(
-            slack, approval, reader,
-            spreadsheet_id="abc123", sheet_name="Articles",
+            slack,
+            approval,
+            reader,
+            spreadsheet_id="abc123",
+            sheet_name="Articles",
             channel="#test",
         )
 
@@ -1407,8 +1427,11 @@ class TestRunApprovalFlow:
         reader = FakeSheetReader([invalid, valid])
 
         await run_approval_flow(
-            slack, approval, reader,
-            spreadsheet_id="my-sheet-id", channel="#test",
+            slack,
+            approval,
+            reader,
+            spreadsheet_id="my-sheet-id",
+            channel="#test",
         )
 
         # Both sendAndWait messages should reference the spreadsheet
@@ -1486,8 +1509,10 @@ class TestRunApprovalFlow:
         )
 
         assert call_order == [
-            "send_and_wait", "read_rows",  # first attempt (fail)
-            "send_and_wait", "read_rows",  # second attempt (pass)
+            "send_and_wait",
+            "read_rows",  # first attempt (fail)
+            "send_and_wait",
+            "read_rows",  # second attempt (pass)
             "status_message",
         ]
 
@@ -1499,8 +1524,11 @@ class TestRunApprovalFlow:
         reader = FakeSheetReader([valid_rows])
 
         result = await run_approval_flow(
-            slack, approval, reader,
-            spreadsheet_id="abc123", channel="#test",
+            slack,
+            approval,
+            reader,
+            spreadsheet_id="abc123",
+            channel="#test",
         )
 
         assert isinstance(result, ApprovalResult)
@@ -1509,12 +1537,16 @@ class TestRunApprovalFlow:
     async def test_industry_news_normalized(self) -> None:
         rows = [
             _make_sheet_row(
-                url="https://a.com", approved="yes",
-                newsletter_id="NL-1", industry_news="yes",
+                url="https://a.com",
+                approved="yes",
+                newsletter_id="NL-1",
+                industry_news="yes",
             ),
             _make_sheet_row(
-                url="https://b.com", approved="yes",
-                newsletter_id="NL-2", industry_news="",
+                url="https://b.com",
+                approved="yes",
+                newsletter_id="NL-2",
+                industry_news="",
             ),
         ]
         slack = FakeSlack()
@@ -1522,8 +1554,11 @@ class TestRunApprovalFlow:
         reader = FakeSheetReader([rows])
 
         result = await run_approval_flow(
-            slack, approval, reader,
-            spreadsheet_id="abc123", channel="#test",
+            slack,
+            approval,
+            reader,
+            spreadsheet_id="abc123",
+            channel="#test",
         )
 
         assert result.articles[0].industry_news is True
@@ -1537,8 +1572,11 @@ class TestRunApprovalFlow:
         reader = FakeSheetReader([valid_rows])
 
         await run_approval_flow(
-            slack, approval, reader,
-            spreadsheet_id="abc123", channel="#my-channel",
+            slack,
+            approval,
+            reader,
+            spreadsheet_id="abc123",
+            channel="#my-channel",
         )
 
         assert approval.calls[0][0] == "#my-channel"

@@ -142,8 +142,13 @@ class TestSerializeRun:
         run = PipelineRun(run_id="s4")
         data = _serialize_run(run)
         expected_keys = {
-            "run_id", "status", "trigger", "started_at",
-            "completed_at", "current_step", "error",
+            "run_id",
+            "status",
+            "trigger",
+            "started_at",
+            "completed_at",
+            "current_step",
+            "error",
         }
         assert set(data.keys()) == expected_keys
 
@@ -251,8 +256,13 @@ class TestStatusAllEndpoint:
         resp = client.get("/status")
         run_data = resp.json()["runs"][0]
         expected_keys = {
-            "run_id", "status", "trigger", "started_at",
-            "completed_at", "current_step", "error",
+            "run_id",
+            "status",
+            "trigger",
+            "started_at",
+            "completed_at",
+            "current_step",
+            "error",
         }
         assert set(run_data.keys()) == expected_keys
 

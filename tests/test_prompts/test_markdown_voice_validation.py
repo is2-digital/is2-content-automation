@@ -32,7 +32,9 @@ Autonomous agents are transforming workflows across industries.
 [Read more →](https://example.com/agents)
 """
 
-SAMPLE_PRIOR_ERRORS = '{"output": {"isValid": false, "errors": ["QH bullet 1: 145 chars (min 150, delta -5)"]}}'
+SAMPLE_PRIOR_ERRORS = (
+    '{"output": {"isValid": false, "errors": ["QH bullet 1: 145 chars (min 150, delta -5)"]}}'
+)
 EMPTY_PRIOR_ERRORS = '{"output": {"isValid": true, "errors": []}}'
 
 

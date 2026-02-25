@@ -38,10 +38,7 @@ class TestEmailReviewSystemPrompt:
         assert "Critical Distinction from Newsletter Content" in _SYSTEM
 
     def test_contains_essential_rule(self):
-        assert (
-            "Email and newsletter introductions must serve distinct functions"
-            in _SYSTEM
-        )
+        assert "Email and newsletter introductions must serve distinct functions" in _SYSTEM
 
     # --- Pre-Draft Analysis ---
 
@@ -270,9 +267,7 @@ class TestBuildEmailReviewPrompt:
         assert "{user_review_feedback}" not in user
 
     def test_no_unresolved_placeholders_with_feedback(self):
-        _, user = build_email_review_prompt(
-            self.SAMPLE_NEWSLETTER, "Some feedback"
-        )
+        _, user = build_email_review_prompt(self.SAMPLE_NEWSLETTER, "Some feedback")
         assert "{feedback_section}" not in user
         assert "{newsletter_text}" not in user
         assert "{user_review_feedback}" not in user

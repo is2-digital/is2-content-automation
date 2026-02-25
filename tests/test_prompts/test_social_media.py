@@ -299,9 +299,7 @@ class TestBuildSocialMediaPostPrompt:
         assert sys_prompt == _POST_SYSTEM
 
     def test_user_prompt_contains_newsletter_content(self):
-        _, user_prompt = build_social_media_post_prompt(
-            "<html>newsletter</html>", "theme"
-        )
+        _, user_prompt = build_social_media_post_prompt("<html>newsletter</html>", "theme")
         assert "<html>newsletter</html>" in user_prompt
 
     def test_user_prompt_contains_formatted_theme(self):
@@ -374,9 +372,7 @@ class TestBuildSocialMediaRegenerationPrompt:
         assert sys_prompt == _REGEN_SYSTEM
 
     def test_user_prompt_contains_feedback(self):
-        _, user_prompt = build_social_media_regeneration_prompt(
-            "make it shorter", "old captions"
-        )
+        _, user_prompt = build_social_media_regeneration_prompt("make it shorter", "old captions")
         assert "make it shorter" in user_prompt
 
     def test_user_prompt_contains_previous_captions(self):

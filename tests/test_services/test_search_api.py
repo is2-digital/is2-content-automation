@@ -348,9 +348,7 @@ class TestSearchKeywords:
         for req in http.requests:
             assert req["params"]["num"] == 10
 
-    async def test_passes_time_period_to_all(
-        self, client: SearchApiClient, http: StubHttpClient
-    ):
+    async def test_passes_time_period_to_all(self, client: SearchApiClient, http: StubHttpClient):
         await client.search_keywords(["a"], time_period="last_month")
         assert http.requests[0]["params"]["time_period"] == "last_month"
 

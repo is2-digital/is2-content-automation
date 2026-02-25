@@ -75,13 +75,7 @@ def _make_doc_response(text_parts: list[str]) -> dict:
     """
     content = []
     for text in text_parts:
-        content.append({
-            "paragraph": {
-                "elements": [
-                    {"textRun": {"content": text}}
-                ]
-            }
-        })
+        content.append({"paragraph": {"elements": [{"textRun": {"content": text}}]}})
     return {"body": {"content": content}}
 
 
@@ -209,10 +203,13 @@ class TestCreateDocument:
 
     @pytest.mark.asyncio
     async def test_creates_and_returns_id(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         create_mock = _setup_documents_mock(
-            mock_service, "create",
+            mock_service,
+            "create",
             return_value={"documentId": "doc-abc-123"},
         )
         doc_id = await svc.create_document("My Newsletter")
@@ -222,10 +219,13 @@ class TestCreateDocument:
 
     @pytest.mark.asyncio
     async def test_title_forwarded(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         create_mock = _setup_documents_mock(
-            mock_service, "create",
+            mock_service,
+            "create",
             return_value={"documentId": "id"},
         )
         await svc.create_document("Newsletter HTML")
@@ -233,10 +233,13 @@ class TestCreateDocument:
 
     @pytest.mark.asyncio
     async def test_empty_title(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         create_mock = _setup_documents_mock(
-            mock_service, "create",
+            mock_service,
+            "create",
             return_value={"documentId": "id"},
         )
         doc_id = await svc.create_document("")
@@ -245,17 +248,22 @@ class TestCreateDocument:
 
     @pytest.mark.asyncio
     async def test_special_characters_in_title(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         _setup_documents_mock(
-            mock_service, "create",
+            mock_service,
+            "create",
             return_value={"documentId": "id"},
         )
         await svc.create_document("Newsletter — Feb 2026 (Draft)")
 
     @pytest.mark.asyncio
     async def test_api_error_propagates(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         execute_mock = MagicMock(side_effect=Exception("API quota exceeded"))
         method_mock = MagicMock(return_value=MagicMock(execute=execute_mock))
@@ -266,10 +274,13 @@ class TestCreateDocument:
 
     @pytest.mark.asyncio
     async def test_return_type_is_string(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         _setup_documents_mock(
-            mock_service, "create",
+            mock_service,
+            "create",
             return_value={"documentId": "doc-xyz"},
         )
         result = await svc.create_document("test")
@@ -286,7 +297,9 @@ class TestInsertContent:
 
     @pytest.mark.asyncio
     async def test_inserts_text(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         batch_mock = _setup_documents_mock(mock_service, "batchUpdate")
         await svc.insert_content("doc-123", "Hello, world!")
@@ -307,14 +320,18 @@ class TestInsertContent:
 
     @pytest.mark.asyncio
     async def test_empty_text_skips_api_call(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         await svc.insert_content("doc-123", "")
         mock_service.documents.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_document_id_forwarded(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         batch_mock = _setup_documents_mock(mock_service, "batchUpdate")
         await svc.insert_content("my-special-doc-id", "content")
@@ -324,7 +341,9 @@ class TestInsertContent:
 
     @pytest.mark.asyncio
     async def test_html_content(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         batch_mock = _setup_documents_mock(mock_service, "batchUpdate")
         html = "<html><body><h1>Newsletter</h1></body></html>"
@@ -335,7 +354,9 @@ class TestInsertContent:
 
     @pytest.mark.asyncio
     async def test_markdown_content(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         batch_mock = _setup_documents_mock(mock_service, "batchUpdate")
         md = "# Title\n\nSome **bold** and *italic* text.\n\n- Bullet 1\n- Bullet 2"
@@ -346,7 +367,9 @@ class TestInsertContent:
 
     @pytest.mark.asyncio
     async def test_multiline_content(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         batch_mock = _setup_documents_mock(mock_service, "batchUpdate")
         text = "Line 1\nLine 2\nLine 3"
@@ -357,7 +380,9 @@ class TestInsertContent:
 
     @pytest.mark.asyncio
     async def test_unicode_content(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         batch_mock = _setup_documents_mock(mock_service, "batchUpdate")
         text = "AI \u2192 Business \u2022 \u00e9\u00e0\u00fc\u00f1"
@@ -368,7 +393,9 @@ class TestInsertContent:
 
     @pytest.mark.asyncio
     async def test_insert_at_index_one(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         """Content is inserted at index 1 (beginning of document body)."""
         batch_mock = _setup_documents_mock(mock_service, "batchUpdate")
@@ -380,7 +407,9 @@ class TestInsertContent:
 
     @pytest.mark.asyncio
     async def test_returns_none(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         _setup_documents_mock(mock_service, "batchUpdate")
         result = await svc.insert_content("doc-123", "text")
@@ -388,7 +417,9 @@ class TestInsertContent:
 
     @pytest.mark.asyncio
     async def test_api_error_propagates(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         execute_mock = MagicMock(side_effect=RuntimeError("permission denied"))
         method_mock = MagicMock(return_value=MagicMock(execute=execute_mock))
@@ -399,7 +430,9 @@ class TestInsertContent:
 
     @pytest.mark.asyncio
     async def test_large_content(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         """Handles large content without issues."""
         batch_mock = _setup_documents_mock(mock_service, "batchUpdate")
@@ -420,7 +453,9 @@ class TestGetContent:
 
     @pytest.mark.asyncio
     async def test_single_paragraph(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         doc_response = _make_doc_response(["Hello, world!\n"])
         _setup_documents_mock(mock_service, "get", return_value=doc_response)
@@ -430,7 +465,9 @@ class TestGetContent:
 
     @pytest.mark.asyncio
     async def test_multiple_paragraphs(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         doc_response = _make_doc_response(["First paragraph\n", "Second paragraph\n"])
         _setup_documents_mock(mock_service, "get", return_value=doc_response)
@@ -440,10 +477,13 @@ class TestGetContent:
 
     @pytest.mark.asyncio
     async def test_empty_document(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         _setup_documents_mock(
-            mock_service, "get",
+            mock_service,
+            "get",
             return_value={"body": {"content": []}},
         )
         result = await svc.get_content("doc-123")
@@ -451,7 +491,9 @@ class TestGetContent:
 
     @pytest.mark.asyncio
     async def test_no_body(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         _setup_documents_mock(mock_service, "get", return_value={})
         result = await svc.get_content("doc-123")
@@ -459,10 +501,13 @@ class TestGetContent:
 
     @pytest.mark.asyncio
     async def test_no_content_key(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         _setup_documents_mock(
-            mock_service, "get",
+            mock_service,
+            "get",
             return_value={"body": {}},
         )
         result = await svc.get_content("doc-123")
@@ -470,10 +515,13 @@ class TestGetContent:
 
     @pytest.mark.asyncio
     async def test_document_id_forwarded(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         get_mock = _setup_documents_mock(
-            mock_service, "get",
+            mock_service,
+            "get",
             return_value={"body": {"content": []}},
         )
         await svc.get_content("my-doc-id-abc")
@@ -481,7 +529,9 @@ class TestGetContent:
 
     @pytest.mark.asyncio
     async def test_non_paragraph_elements_skipped(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         """Elements without a 'paragraph' key are skipped."""
         doc = {
@@ -499,7 +549,9 @@ class TestGetContent:
 
     @pytest.mark.asyncio
     async def test_non_text_run_elements_skipped(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         """Elements without a 'textRun' key are skipped."""
         doc = {
@@ -522,7 +574,9 @@ class TestGetContent:
 
     @pytest.mark.asyncio
     async def test_multiple_text_runs_in_paragraph(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         """Multiple text runs in a single paragraph are concatenated."""
         doc = {
@@ -545,7 +599,9 @@ class TestGetContent:
 
     @pytest.mark.asyncio
     async def test_html_content_preserved(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         html = "<html><body><h1>Newsletter</h1></body></html>\n"
         doc_response = _make_doc_response([html])
@@ -556,7 +612,9 @@ class TestGetContent:
 
     @pytest.mark.asyncio
     async def test_api_error_propagates(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         execute_mock = MagicMock(side_effect=ConnectionError("network error"))
         method_mock = MagicMock(return_value=MagicMock(execute=execute_mock))
@@ -567,7 +625,9 @@ class TestGetContent:
 
     @pytest.mark.asyncio
     async def test_return_type_is_string(
-        self, svc: GoogleDocsService, mock_service: MagicMock,
+        self,
+        svc: GoogleDocsService,
+        mock_service: MagicMock,
     ) -> None:
         doc_response = _make_doc_response(["text\n"])
         _setup_documents_mock(mock_service, "get", return_value=doc_response)
@@ -600,13 +660,7 @@ class TestExtractText:
 
     def test_text_run_missing_content(self) -> None:
         """textRun without 'content' key yields empty string."""
-        doc = {
-            "body": {
-                "content": [
-                    {"paragraph": {"elements": [{"textRun": {}}]}}
-                ]
-            }
-        }
+        doc = {"body": {"content": [{"paragraph": {"elements": [{"textRun": {}}]}}]}}
         assert _extract_text(doc) == ""
 
     def test_paragraph_without_elements(self) -> None:
@@ -651,14 +705,17 @@ class TestAsyncMethods:
 
     def test_create_document_is_async(self, svc: GoogleDocsService) -> None:
         import asyncio
+
         assert asyncio.iscoroutinefunction(svc.create_document)
 
     def test_insert_content_is_async(self, svc: GoogleDocsService) -> None:
         import asyncio
+
         assert asyncio.iscoroutinefunction(svc.insert_content)
 
     def test_get_content_is_async(self, svc: GoogleDocsService) -> None:
         import asyncio
+
         assert asyncio.iscoroutinefunction(svc.get_content)
 
 

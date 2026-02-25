@@ -253,7 +253,8 @@ async def run_theme_generation_step(ctx: PipelineContext) -> PipelineContext:
 
             # 4b. Theme selected
             selected_theme = extract_selected_theme(
-                selection_value, gen_result.themes,
+                selection_value,
+                gen_result.themes,
             )
             if selected_theme is None:
                 # Fallback: use first theme
@@ -288,7 +289,8 @@ async def run_theme_generation_step(ctx: PipelineContext) -> PipelineContext:
                 )
                 approval_value = approval_response.get(APPROVAL_FIELD_LABEL, "")
                 approval_feedback = approval_response.get(
-                    FEEDBACK_TEXTAREA_LABEL, "",
+                    FEEDBACK_TEXTAREA_LABEL,
+                    "",
                 )
                 choice = parse_approval_choice(approval_value)
 
@@ -308,7 +310,8 @@ async def run_theme_generation_step(ctx: PipelineContext) -> PipelineContext:
                     ctx.theme_summary = selected_theme.theme_description
 
                     logger.info(
-                        "Theme approved: %s", ctx.theme_name,
+                        "Theme approved: %s",
+                        ctx.theme_name,
                     )
                     return ctx
 

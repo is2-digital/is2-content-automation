@@ -24,9 +24,7 @@ class SearchResult:
 class HttpClient(Protocol):
     """Minimal async HTTP client interface for dependency injection."""
 
-    async def get(
-        self, url: str, *, params: dict[str, Any]
-    ) -> dict[str, Any]: ...
+    async def get(self, url: str, *, params: dict[str, Any]) -> dict[str, Any]: ...
 
 
 @dataclass
@@ -111,9 +109,7 @@ class SearchApiClient:
         return all_results
 
     @staticmethod
-    def _parse_results(
-        data: dict[str, Any], *, origin: str
-    ) -> list[SearchResult]:
+    def _parse_results(data: dict[str, Any], *, origin: str) -> list[SearchResult]:
         """Extract organic results from SearchApi response JSON.
 
         Args:

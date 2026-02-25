@@ -25,10 +25,7 @@ import httpx
 
 BROWSER_HEADERS: dict[str, str] = {
     "User-Agent": "Safari/537.36",
-    "Accept": (
-        "text/html,application/xhtml+xml,application/xml;"
-        "q=0.9,image/webp,*/*;q=0.8"
-    ),
+    "Accept": ("text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"),
     "Accept-Language": "en-US,en;q=0.9",
     "Referer": "https://www.google.com/",
     "Connection": "keep-alive",

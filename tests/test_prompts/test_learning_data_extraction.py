@@ -87,46 +87,60 @@ class TestBuildLearningDataExtractionPrompt:
 
     def test_returns_tuple(self) -> None:
         result = build_learning_data_extraction_prompt(
-            SAMPLE_FEEDBACK, SAMPLE_INPUT, SAMPLE_OUTPUT,
+            SAMPLE_FEEDBACK,
+            SAMPLE_INPUT,
+            SAMPLE_OUTPUT,
         )
         assert isinstance(result, tuple)
         assert len(result) == 2
 
     def test_returns_strings(self) -> None:
         system, user = build_learning_data_extraction_prompt(
-            SAMPLE_FEEDBACK, SAMPLE_INPUT, SAMPLE_OUTPUT,
+            SAMPLE_FEEDBACK,
+            SAMPLE_INPUT,
+            SAMPLE_OUTPUT,
         )
         assert isinstance(system, str)
         assert isinstance(user, str)
 
     def test_system_prompt_contains_role(self) -> None:
         system, _ = build_learning_data_extraction_prompt(
-            SAMPLE_FEEDBACK, SAMPLE_INPUT, SAMPLE_OUTPUT,
+            SAMPLE_FEEDBACK,
+            SAMPLE_INPUT,
+            SAMPLE_OUTPUT,
         )
         assert "AI assistant" in system
         assert "learning data" in system
 
     def test_user_prompt_contains_feedback(self) -> None:
         _, user = build_learning_data_extraction_prompt(
-            SAMPLE_FEEDBACK, SAMPLE_INPUT, SAMPLE_OUTPUT,
+            SAMPLE_FEEDBACK,
+            SAMPLE_INPUT,
+            SAMPLE_OUTPUT,
         )
         assert SAMPLE_FEEDBACK in user
 
     def test_user_prompt_contains_input(self) -> None:
         _, user = build_learning_data_extraction_prompt(
-            SAMPLE_FEEDBACK, SAMPLE_INPUT, SAMPLE_OUTPUT,
+            SAMPLE_FEEDBACK,
+            SAMPLE_INPUT,
+            SAMPLE_OUTPUT,
         )
         assert SAMPLE_INPUT in user
 
     def test_user_prompt_contains_model_output(self) -> None:
         _, user = build_learning_data_extraction_prompt(
-            SAMPLE_FEEDBACK, SAMPLE_INPUT, SAMPLE_OUTPUT,
+            SAMPLE_FEEDBACK,
+            SAMPLE_INPUT,
+            SAMPLE_OUTPUT,
         )
         assert SAMPLE_OUTPUT in user
 
     def test_all_placeholders_replaced(self) -> None:
         _, user = build_learning_data_extraction_prompt(
-            SAMPLE_FEEDBACK, SAMPLE_INPUT, SAMPLE_OUTPUT,
+            SAMPLE_FEEDBACK,
+            SAMPLE_INPUT,
+            SAMPLE_OUTPUT,
         )
         assert "{feedback}" not in user
         assert "{input_text}" not in user
@@ -154,7 +168,9 @@ class TestBuildLearningDataExtractionPrompt:
 
     def test_user_prompt_has_section_headers(self) -> None:
         _, user = build_learning_data_extraction_prompt(
-            SAMPLE_FEEDBACK, SAMPLE_INPUT, SAMPLE_OUTPUT,
+            SAMPLE_FEEDBACK,
+            SAMPLE_INPUT,
+            SAMPLE_OUTPUT,
         )
         assert "### Feedback Data" in user
         assert "**User Feedback:**" in user
@@ -164,7 +180,9 @@ class TestBuildLearningDataExtractionPrompt:
 
     def test_user_prompt_has_json_example(self) -> None:
         _, user = build_learning_data_extraction_prompt(
-            SAMPLE_FEEDBACK, SAMPLE_INPUT, SAMPLE_OUTPUT,
+            SAMPLE_FEEDBACK,
+            SAMPLE_INPUT,
+            SAMPLE_OUTPUT,
         )
         assert '"learning_feedback"' in user
 

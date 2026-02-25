@@ -559,9 +559,7 @@ class TestParseMultipleDates:
         assert result == date(2026, 2, 20)
 
     def test_different_units_picks_first(self) -> None:
-        result = parse_relative_date(
-            "1 week ago (originally 30 days ago)", reference=REF_DATE
-        )
+        result = parse_relative_date("1 week ago (originally 30 days ago)", reference=REF_DATE)
         assert result == date(2026, 2, 15)
 
 
@@ -826,7 +824,5 @@ class TestParseMonthBoundaries:
             "jul-to-jun",
         ],
     )
-    def test_month_boundary(
-        self, ref: date, relative: str, expected: date
-    ) -> None:
+    def test_month_boundary(self, ref: date, relative: str, expected: date) -> None:
         assert parse_relative_date(relative, reference=ref) == expected

@@ -420,16 +420,12 @@ class TestGetSourceUrl:
 class TestParsePhase1Posts:
     def test_parses_selected_posts(self):
         selected = ["DYK #1 — AI Governance ROI", "IT #1 — Start With Governance"]
-        posts = parse_phase1_posts(
-            SAMPLE_PHASE1_OUTPUT, selected, SAMPLE_FORMATTED_THEME
-        )
+        posts = parse_phase1_posts(SAMPLE_PHASE1_OUTPUT, selected, SAMPLE_FORMATTED_THEME)
         assert len(posts) == 2
 
     def test_post_fields(self):
         selected = ["DYK #1 — AI Governance ROI"]
-        posts = parse_phase1_posts(
-            SAMPLE_PHASE1_OUTPUT, selected, SAMPLE_FORMATTED_THEME
-        )
+        posts = parse_phase1_posts(SAMPLE_PHASE1_OUTPUT, selected, SAMPLE_FORMATTED_THEME)
         assert len(posts) == 1
         p = posts[0]
         assert p.post_type == "DYK"
@@ -441,9 +437,7 @@ class TestParsePhase1Posts:
 
     def test_source_url_resolved(self):
         selected = ["IT #5 — Monitor Policy Shifts"]
-        posts = parse_phase1_posts(
-            SAMPLE_PHASE1_OUTPUT, selected, SAMPLE_FORMATTED_THEME
-        )
+        posts = parse_phase1_posts(SAMPLE_PHASE1_OUTPUT, selected, SAMPLE_FORMATTED_THEME)
         assert len(posts) == 1
         # "Industry Dev 1 Title" → source number "1" matches FEATURED ARTICLE
         # (Source="1") via fallback. Source name doesn't match any key exactly.
@@ -464,25 +458,19 @@ class TestParsePhase1Posts:
 
     def test_graphic_text_extracted(self):
         selected = ["DYK #1 — AI Governance ROI"]
-        posts = parse_phase1_posts(
-            SAMPLE_PHASE1_OUTPUT, selected, SAMPLE_FORMATTED_THEME
-        )
+        posts = parse_phase1_posts(SAMPLE_PHASE1_OUTPUT, selected, SAMPLE_FORMATTED_THEME)
         assert "Did You Know?" in posts[0].graphic_text
 
     def test_it_post_parsed(self):
         selected = ["IT #1 — Start With Governance"]
-        posts = parse_phase1_posts(
-            SAMPLE_PHASE1_OUTPUT, selected, SAMPLE_FORMATTED_THEME
-        )
+        posts = parse_phase1_posts(SAMPLE_PHASE1_OUTPUT, selected, SAMPLE_FORMATTED_THEME)
         assert len(posts) == 1
         assert posts[0].post_type == "IT"
         assert "Inside Tip:" in posts[0].graphic_text
 
     def test_frozen_dataclass(self):
         selected = ["DYK #1 — AI Governance ROI"]
-        posts = parse_phase1_posts(
-            SAMPLE_PHASE1_OUTPUT, selected, SAMPLE_FORMATTED_THEME
-        )
+        posts = parse_phase1_posts(SAMPLE_PHASE1_OUTPUT, selected, SAMPLE_FORMATTED_THEME)
         with pytest.raises(AttributeError):
             posts[0].title = "changed"  # type: ignore[misc]
 

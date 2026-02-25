@@ -158,9 +158,7 @@ class TestDatabaseUrl:
 
     def test_async_url_with_defaults(self) -> None:
         s = _make_settings()
-        assert s.database_url == (
-            "postgresql+asyncpg://ica:secret@postgres:5432/n8n_custom_data"
-        )
+        assert s.database_url == ("postgresql+asyncpg://ica:secret@postgres:5432/n8n_custom_data")
 
     def test_async_url_with_overrides(self) -> None:
         s = _make_settings(
@@ -170,15 +168,11 @@ class TestDatabaseUrl:
             POSTGRES_PORT="5433",
             POSTGRES_DB="mydb",
         )
-        assert s.database_url == (
-            "postgresql+asyncpg://admin:hunter2@db.example.com:5433/mydb"
-        )
+        assert s.database_url == ("postgresql+asyncpg://admin:hunter2@db.example.com:5433/mydb")
 
     def test_sync_url_with_defaults(self) -> None:
         s = _make_settings()
-        assert s.database_url_sync == (
-            "postgresql://ica:secret@postgres:5432/n8n_custom_data"
-        )
+        assert s.database_url_sync == ("postgresql://ica:secret@postgres:5432/n8n_custom_data")
 
     def test_sync_url_with_overrides(self) -> None:
         s = _make_settings(
@@ -188,9 +182,7 @@ class TestDatabaseUrl:
             POSTGRES_PORT="5433",
             POSTGRES_DB="mydb",
         )
-        assert s.database_url_sync == (
-            "postgresql://admin:hunter2@db.example.com:5433/mydb"
-        )
+        assert s.database_url_sync == ("postgresql://admin:hunter2@db.example.com:5433/mydb")
 
     def test_password_with_special_chars_in_url(self) -> None:
         s = _make_settings(POSTGRES_PASSWORD="p@ss/word#1")
@@ -279,8 +271,10 @@ class TestPackageExport:
 
     def test_import_settings_from_config(self) -> None:
         from ica.config import Settings as S
+
         assert S is Settings
 
     def test_import_get_settings_from_config(self) -> None:
         from ica.config import get_settings as gs
+
         assert gs is get_settings

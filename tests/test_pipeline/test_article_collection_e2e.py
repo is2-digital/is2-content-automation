@@ -42,9 +42,7 @@ class MockHttpClient:
     responses: dict[str, dict[str, Any]] = field(default_factory=dict)
     requests: list[dict[str, Any]] = field(default_factory=list)
 
-    async def get(
-        self, url: str, *, params: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def get(self, url: str, *, params: dict[str, Any]) -> dict[str, Any]:
         self.requests.append({"url": url, "params": params})
         keyword = params.get("q", "")
         return self.responses.get(keyword, {"organic_results": []})
@@ -230,7 +228,9 @@ class TestDeduplication:
         results = [
             SearchResult(url="https://a.com", title="First", date=None, origin="google_news"),
             SearchResult(url="https://b.com", title="Second", date=None, origin="google_news"),
-            SearchResult(url="https://a.com", title="First Duplicate", date=None, origin="google_news"),
+            SearchResult(
+                url="https://a.com", title="First Duplicate", date=None, origin="google_news"
+            ),
         ]
         deduped = deduplicate_results(results)
         assert len(deduped) == 2
@@ -239,8 +239,12 @@ class TestDeduplication:
 
     def test_first_occurrence_wins(self):
         results = [
-            SearchResult(url="https://a.com", title="Original", date="1 day ago", origin="google_news"),
-            SearchResult(url="https://a.com", title="Duplicate", date="2 days ago", origin="default"),
+            SearchResult(
+                url="https://a.com", title="Original", date="1 day ago", origin="google_news"
+            ),
+            SearchResult(
+                url="https://a.com", title="Duplicate", date="2 days ago", origin="default"
+            ),
         ]
         deduped = deduplicate_results(results)
         assert len(deduped) == 1
@@ -298,8 +302,12 @@ class TestParseArticles:
 
     def test_parses_relative_dates(self):
         results = [
-            SearchResult(url="https://a.com", title="Article A", date="3 days ago", origin="google_news"),
-            SearchResult(url="https://b.com", title="Article B", date="1 week ago", origin="google_news"),
+            SearchResult(
+                url="https://a.com", title="Article A", date="3 days ago", origin="google_news"
+            ),
+            SearchResult(
+                url="https://b.com", title="Article B", date="1 week ago", origin="google_news"
+            ),
         ]
         articles = parse_articles(results, reference_date=REF_DATE)
         assert len(articles) == 2
@@ -332,7 +340,9 @@ class TestParseArticles:
 
     def test_strips_whitespace(self):
         results = [
-            SearchResult(url="  https://a.com  ", title="  Title  ", date=None, origin="google_news"),
+            SearchResult(
+                url="  https://a.com  ", title="  Title  ", date=None, origin="google_news"
+            ),
         ]
         articles = parse_articles(results, reference_date=REF_DATE)
         assert articles[0].url == "https://a.com"
@@ -400,9 +410,7 @@ class TestSearchApiClient:
     async def test_search_keywords_aggregates(
         self, client: SearchApiClient, http_client: MockHttpClient
     ):
-        results = await client.search_keywords(
-            DAILY_KEYWORDS, engine="google_news", num=15
-        )
+        results = await client.search_keywords(DAILY_KEYWORDS, engine="google_news", num=15)
         # AGI: 2 + Automation: 2 + AI: 1 = 5 total (before dedup)
         assert len(results) == 5
         assert len(http_client.requests) == 3
@@ -453,9 +461,7 @@ class TestCollectArticlesDaily:
 
     @pytest.fixture()
     def client(self, http_client: MockHttpClient) -> SearchApiClient:
-        return SearchApiClient(
-            api_key="test-key", http_client=http_client
-        )
+        return SearchApiClient(api_key="test-key", http_client=http_client)
 
     async def test_full_daily_flow(
         self,
@@ -514,21 +520,13 @@ class TestCollectArticlesDaily:
         )
         by_url = {a.url: a for a in result.articles}
         # "3 days ago" from REF_DATE (2026-02-22) → 2026-02-19
-        assert by_url["https://example.com/agi-breakthrough"].publish_date == date(
-            2026, 2, 19
-        )
+        assert by_url["https://example.com/agi-breakthrough"].publish_date == date(2026, 2, 19)
         # "1 week ago" → 2026-02-15
-        assert by_url["https://example.com/agi-safety"].publish_date == date(
-            2026, 2, 15
-        )
+        assert by_url["https://example.com/agi-safety"].publish_date == date(2026, 2, 15)
         # "2 days ago" → 2026-02-20
-        assert by_url["https://example.com/automation-smb"].publish_date == date(
-            2026, 2, 20
-        )
+        assert by_url["https://example.com/automation-smb"].publish_date == date(2026, 2, 20)
         # "5 days ago" → 2026-02-17
-        assert by_url["https://example.com/ai-trends"].publish_date == date(
-            2026, 2, 17
-        )
+        assert by_url["https://example.com/ai-trends"].publish_date == date(2026, 2, 17)
 
     async def test_db_insertion(
         self,
@@ -587,9 +585,7 @@ class TestCollectArticlesEvery2Days:
 
     @pytest.fixture()
     def client(self, http_client: MockHttpClient) -> SearchApiClient:
-        return SearchApiClient(
-            api_key="test-key", http_client=http_client
-        )
+        return SearchApiClient(api_key="test-key", http_client=http_client)
 
     async def test_full_every_2_days_flow(
         self,
@@ -648,13 +644,9 @@ class TestCollectArticlesEvery2Days:
         )
         by_url = {a.url: a for a in result.articles}
         # "1 day ago" → 2026-02-21
-        assert by_url["https://example.com/ai-new-model"].publish_date == date(
-            2026, 2, 21
-        )
+        assert by_url["https://example.com/ai-new-model"].publish_date == date(2026, 2, 21)
         # "2 weeks ago" → 2026-02-08
-        assert by_url["https://example.com/ai-latest-news"].publish_date == date(
-            2026, 2, 8
-        )
+        assert by_url["https://example.com/ai-latest-news"].publish_date == date(2026, 2, 8)
 
     async def test_articles_have_default_origin(
         self,
@@ -697,9 +689,7 @@ class TestCollectArticlesEdgeCases:
         assert result.articles == []
         assert result.rows_affected == 0
 
-    async def test_all_duplicates_collapses_to_one(
-        self, repository: MockArticleRepository
-    ):
+    async def test_all_duplicates_collapses_to_one(self, repository: MockArticleRepository):
         http_client = MockHttpClient(
             responses={
                 kw: {
@@ -723,19 +713,13 @@ class TestCollectArticlesEdgeCases:
         assert len(result.articles) == 1
         assert result.rows_affected == 1
 
-    async def test_upsert_called_once_per_collection(
-        self, repository: MockArticleRepository
-    ):
+    async def test_upsert_called_once_per_collection(self, repository: MockArticleRepository):
         http_client = MockHttpClient(responses=_build_daily_responses())
         client = SearchApiClient(api_key="key", http_client=http_client)
-        await collect_articles(
-            client, repository, schedule="daily", reference_date=REF_DATE
-        )
+        await collect_articles(client, repository, schedule="daily", reference_date=REF_DATE)
         assert len(repository.upsert_calls) == 1
 
-    async def test_subsequent_runs_update_existing(
-        self, repository: MockArticleRepository
-    ):
+    async def test_subsequent_runs_update_existing(self, repository: MockArticleRepository):
         """Simulate two collection runs — second run should update existing articles."""
         http_client = MockHttpClient(responses=_build_daily_responses())
         client = SearchApiClient(api_key="key", http_client=http_client)
@@ -754,9 +738,7 @@ class TestCollectArticlesEdgeCases:
         assert len(repository.articles) == 4
         assert len(repository.upsert_calls) == 2
 
-    async def test_results_with_missing_dates(
-        self, repository: MockArticleRepository
-    ):
+    async def test_results_with_missing_dates(self, repository: MockArticleRepository):
         http_client = MockHttpClient(
             responses={
                 "Artificial General Intelligence": {
@@ -778,9 +760,7 @@ class TestCollectArticlesEdgeCases:
         # Missing date → falls back to reference date
         assert result.articles[0].publish_date == REF_DATE
 
-    async def test_results_with_empty_titles(
-        self, repository: MockArticleRepository
-    ):
+    async def test_results_with_empty_titles(self, repository: MockArticleRepository):
         http_client = MockHttpClient(
             responses={
                 "Artificial General Intelligence": {

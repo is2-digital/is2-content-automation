@@ -114,7 +114,11 @@ def validate_quick_highlights(raw: str) -> list[CharacterCountError]:
     if len(bullets) == 3:
         for i, bullet in enumerate(bullets):
             err = _range_check(
-                "Quick Highlights", f"Bullet {i + 1}", count_chars(bullet), 150, 190,
+                "Quick Highlights",
+                f"Bullet {i + 1}",
+                count_chars(bullet),
+                150,
+                190,
             )
             if err:
                 errors.append(err)
@@ -214,7 +218,11 @@ def validate_main_articles(raw: str) -> list[CharacterCountError]:
         paras = _split_paragraphs(body)
 
         callout = _find_callout(paras)
-        content = next((p for p in paras if p != callout), "") if callout else (paras[0] if paras else "")
+        content = (
+            next((p for p in paras if p != callout), "")
+            if callout
+            else (paras[0] if paras else "")
+        )
 
         section_name = f"Main Article {index}"
 

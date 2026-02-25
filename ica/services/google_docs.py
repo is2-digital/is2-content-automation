@@ -64,18 +64,16 @@ def _load_credentials(credentials_path: Path) -> ServiceAccountCredentials:
         raise ValueError(f"Invalid credentials file: {exc}") from exc
 
     if not isinstance(data, dict) or "type" not in data:
-        raise ValueError(
-            "Credentials file must be a JSON object with a 'type' field"
-        )
+        raise ValueError("Credentials file must be a JSON object with a 'type' field")
 
     if data["type"] != "service_account":
         raise ValueError(
-            f"Unsupported credential type: {data['type']!r}. "
-            "Only 'service_account' is supported."
+            f"Unsupported credential type: {data['type']!r}. Only 'service_account' is supported."
         )
 
     return ServiceAccountCredentials.from_service_account_info(
-        data, scopes=SCOPES,
+        data,
+        scopes=SCOPES,
     )
 
 
@@ -104,9 +102,7 @@ class GoogleDocsService:
             creds = _load_credentials(Path(credentials_path))
             self._service = _build_service(creds)
         else:
-            raise ValueError(
-                "Either credentials_path or service must be provided"
-            )
+            raise ValueError("Either credentials_path or service must be provided")
 
     # ------------------------------------------------------------------
     # Public API
@@ -124,9 +120,7 @@ class GoogleDocsService:
         logger.info("Creating document", extra={"title": title})
 
         result = await asyncio.to_thread(
-            self._service.documents()
-            .create(body={"title": title})
-            .execute,
+            self._service.documents().create(body={"title": title}).execute,
         )
 
         doc_id: str = result["documentId"]
@@ -193,9 +187,7 @@ class GoogleDocsService:
         )
 
         result = await asyncio.to_thread(
-            self._service.documents()
-            .get(documentId=document_id)
-            .execute,
+            self._service.documents().get(documentId=document_id).execute,
         )
 
         return _extract_text(result)

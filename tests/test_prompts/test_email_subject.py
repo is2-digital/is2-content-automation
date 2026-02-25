@@ -119,9 +119,7 @@ class TestFeedbackSectionTemplate:
         assert "without altering factual accuracy" in _FEEDBACK_SECTION_TEMPLATE
 
     def test_interpolation_works(self):
-        result = _FEEDBACK_SECTION_TEMPLATE.format(
-            aggregated_feedback="Use shorter subjects"
-        )
+        result = _FEEDBACK_SECTION_TEMPLATE.format(aggregated_feedback="Use shorter subjects")
         assert "Use shorter subjects" in result
 
 
@@ -166,9 +164,7 @@ class TestBuildEmailSubjectPrompt:
         assert "Use punchier subjects" in user_prompt
 
     def test_feedback_strips_whitespace(self):
-        _, user_prompt = build_email_subject_prompt(
-            "text", aggregated_feedback="  trimmed  "
-        )
+        _, user_prompt = build_email_subject_prompt("text", aggregated_feedback="  trimmed  ")
         assert "trimmed" in user_prompt
         # Leading/trailing spaces should be stripped
         assert "  trimmed  " not in user_prompt
@@ -180,9 +176,7 @@ class TestBuildEmailSubjectPrompt:
 
     def test_system_prompt_unchanged_with_feedback(self):
         sys_no_fb, _ = build_email_subject_prompt("text")
-        sys_with_fb, _ = build_email_subject_prompt(
-            "text", aggregated_feedback="feedback"
-        )
+        sys_with_fb, _ = build_email_subject_prompt("text", aggregated_feedback="feedback")
         assert sys_no_fb == sys_with_fb
 
     def test_different_newsletter_text_produces_different_user_prompt(self):

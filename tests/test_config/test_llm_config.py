@@ -67,9 +67,7 @@ class TestDefaults:
 
     def test_total_field_count_is_21(self) -> None:
         """Ensure all 21 n8n model mappings are represented."""
-        model_fields = [
-            f for f in LLMConfig.model_fields if f.startswith("llm_")
-        ]
+        model_fields = [f for f in LLMConfig.model_fields if f.startswith("llm_")]
         assert len(model_fields) == 21
 
 
@@ -150,9 +148,7 @@ class TestGetModel:
 
     def test_returns_overridden_model(self) -> None:
         get_llm_config.cache_clear()
-        with patch.dict(
-            "os.environ", {"LLM_SUMMARY_MODEL": "meta/llama-3"}, clear=False
-        ):
+        with patch.dict("os.environ", {"LLM_SUMMARY_MODEL": "meta/llama-3"}, clear=False):
             model = get_model(LLMPurpose.SUMMARY)
         assert model == "meta/llama-3"
 
@@ -284,9 +280,7 @@ class TestGetModelThreeTier:
         """Verify JSON works for freshness check (default is Gemini Flash)."""
         from ica.llm_configs import loader
 
-        _write_json_config(
-            tmp_path, "freshness-check", model="custom/fast-checker"
-        )
+        _write_json_config(tmp_path, "freshness-check", model="custom/fast-checker")
         loader._cache.clear()
 
         get_llm_config.cache_clear()
@@ -382,16 +376,20 @@ class TestPackageExport:
 
     def test_import_llm_config(self) -> None:
         from ica.config import LLMConfig as C
+
         assert C is LLMConfig
 
     def test_import_llm_purpose(self) -> None:
         from ica.config import LLMPurpose as P
+
         assert P is LLMPurpose
 
     def test_import_get_llm_config(self) -> None:
         from ica.config import get_llm_config as f
+
         assert f is get_llm_config
 
     def test_import_get_model(self) -> None:
         from ica.config import get_model as f
+
         assert f is get_model

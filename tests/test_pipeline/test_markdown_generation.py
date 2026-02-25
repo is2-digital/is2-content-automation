@@ -168,7 +168,10 @@ class TestMarkdownGenerationResult:
 
     def test_frozen(self):
         result = MarkdownGenerationResult(
-            markdown="x", markdown_doc_id="y", doc_url="z", model="m",
+            markdown="x",
+            markdown_doc_id="y",
+            doc_url="z",
+            model="m",
         )
         with pytest.raises(AttributeError):
             result.markdown = "new"  # type: ignore[misc]
@@ -252,9 +255,12 @@ class TestCallMarkdownLlm:
     @pytest.mark.asyncio
     async def test_basic_call(self):
         mock_resp = _mock_llm_response(SAMPLE_MARKDOWN)
-        with patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp) as mock_call:
+        with patch(
+            "ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp
+        ) as mock_call:
             result = await call_markdown_llm(
-                SAMPLE_FORMATTED_THEME, model="test-model",
+                SAMPLE_FORMATTED_THEME,
+                model="test-model",
             )
             assert "INTRODUCTION" in result
             mock_call.assert_called_once()
@@ -268,7 +274,9 @@ class TestCallMarkdownLlm:
     @pytest.mark.asyncio
     async def test_with_feedback(self):
         mock_resp = _mock_llm_response("# *INTRODUCTION*\nContent")
-        with patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp) as mock_call:
+        with patch(
+            "ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp
+        ) as mock_call:
             await call_markdown_llm(
                 SAMPLE_FORMATTED_THEME,
                 aggregated_feedback="• feedback note",
@@ -280,7 +288,9 @@ class TestCallMarkdownLlm:
     @pytest.mark.asyncio
     async def test_with_validator_errors(self):
         mock_resp = _mock_llm_response("# *INTRODUCTION*\nFixed")
-        with patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp) as mock_call:
+        with patch(
+            "ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp
+        ) as mock_call:
             await call_markdown_llm(
                 SAMPLE_FORMATTED_THEME,
                 previous_markdown="old markdown",
@@ -309,7 +319,9 @@ class TestCallMarkdownLlm:
     async def test_default_model(self):
         mock_resp = _mock_llm_response("markdown")
         with (
-            patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp) as mock_call,
+            patch(
+                "ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp
+            ) as mock_call,
             patch("ica.pipeline.markdown_generation.get_model", return_value="default-model"),
         ):
             await call_markdown_llm(SAMPLE_FORMATTED_THEME)
@@ -413,7 +425,9 @@ class TestRunStructuralValidation:
         mock_resp = _mock_llm_response(json.dumps(response_data))
         with patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp):
             is_valid, errors = await run_structural_validation(
-                SAMPLE_MARKDOWN, "[]", model="test",
+                SAMPLE_MARKDOWN,
+                "[]",
+                model="test",
             )
             assert is_valid is True
             assert errors == []
@@ -424,7 +438,9 @@ class TestRunStructuralValidation:
         mock_resp = _mock_llm_response(json.dumps(response_data))
         with patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp):
             is_valid, errors = await run_structural_validation(
-                SAMPLE_MARKDOWN, "[]", model="test",
+                SAMPLE_MARKDOWN,
+                "[]",
+                model="test",
             )
             assert is_valid is False
             assert "Missing CTA" in errors
@@ -433,7 +449,9 @@ class TestRunStructuralValidation:
     async def test_default_model(self):
         mock_resp = _mock_llm_response('{"output":{"isValid":true,"errors":[]}}')
         with (
-            patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp) as mock_call,
+            patch(
+                "ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp
+            ) as mock_call,
             patch("ica.pipeline.markdown_generation.get_model", return_value="default-validator"),
         ):
             await run_structural_validation(SAMPLE_MARKDOWN, "[]")
@@ -452,7 +470,9 @@ class TestRunVoiceValidation:
         mock_resp = _mock_llm_response(json.dumps(response_data))
         with patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp):
             is_valid, errors = await run_voice_validation(
-                SAMPLE_MARKDOWN, "[]", model="test",
+                SAMPLE_MARKDOWN,
+                "[]",
+                model="test",
             )
             assert is_valid is True
             assert errors == []
@@ -468,7 +488,8 @@ class TestRunVoiceValidation:
         mock_resp = _mock_llm_response(json.dumps(response_data))
         with patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp):
             is_valid, errors = await run_voice_validation(
-                SAMPLE_MARKDOWN, '{"output":{"isValid":false,"errors":["prior error"]}}',
+                SAMPLE_MARKDOWN,
+                '{"output":{"isValid":false,"errors":["prior error"]}}',
                 model="test",
             )
             assert is_valid is False
@@ -484,9 +505,7 @@ class TestRunVoiceValidation:
 class TestRunThreeLayerValidation:
     @pytest.mark.asyncio
     async def test_all_valid(self):
-        valid_resp = _mock_llm_response(
-            '{"output":{"isValid":true,"errors":[]}}'
-        )
+        valid_resp = _mock_llm_response('{"output":{"isValid":true,"errors":[]}}')
         with (
             patch(
                 "ica.pipeline.markdown_generation.validate_character_counts",
@@ -498,7 +517,8 @@ class TestRunThreeLayerValidation:
             ),
         ):
             result = await run_three_layer_validation(
-                SAMPLE_MARKDOWN, validator_model="test",
+                SAMPLE_MARKDOWN,
+                validator_model="test",
             )
             assert result.is_valid is True
             assert result.errors == []
@@ -523,16 +543,15 @@ class TestRunThreeLayerValidation:
             ),
         ):
             result = await run_three_layer_validation(
-                SAMPLE_MARKDOWN, validator_model="test",
+                SAMPLE_MARKDOWN,
+                validator_model="test",
             )
             assert result.is_valid is False
             assert len(result.errors) >= 1
 
     @pytest.mark.asyncio
     async def test_returns_char_errors_json(self):
-        valid_resp = _mock_llm_response(
-            '{"output":{"isValid":true,"errors":[]}}'
-        )
+        valid_resp = _mock_llm_response('{"output":{"isValid":true,"errors":[]}}')
         with (
             patch(
                 "ica.pipeline.markdown_generation.validate_character_counts",
@@ -544,7 +563,8 @@ class TestRunThreeLayerValidation:
             ),
         ):
             result = await run_three_layer_validation(
-                SAMPLE_MARKDOWN, validator_model="test",
+                SAMPLE_MARKDOWN,
+                validator_model="test",
             )
             assert result.char_errors_json == "[]"
 
@@ -559,9 +579,7 @@ class TestGenerateWithValidation:
     async def test_valid_on_first_try(self):
         """First generation passes validation → returned immediately."""
         gen_resp = _mock_llm_response(SAMPLE_MARKDOWN)
-        valid_resp = _mock_llm_response(
-            '{"output":{"isValid":true,"errors":[]}}'
-        )
+        valid_resp = _mock_llm_response('{"output":{"isValid":true,"errors":[]}}')
         with (
             patch(
                 "ica.pipeline.markdown_generation.litellm.acompletion",
@@ -584,22 +602,18 @@ class TestGenerateWithValidation:
         """First try invalid, second try valid → 2 generations."""
         gen_resp_1 = _mock_llm_response("bad markdown")
         gen_resp_2 = _mock_llm_response("fixed markdown")
-        invalid_resp = _mock_llm_response(
-            '{"output":{"isValid":false,"errors":["err"]}}'
-        )
-        valid_resp = _mock_llm_response(
-            '{"output":{"isValid":true,"errors":[]}}'
-        )
+        invalid_resp = _mock_llm_response('{"output":{"isValid":false,"errors":["err"]}}')
+        valid_resp = _mock_llm_response('{"output":{"isValid":true,"errors":[]}}')
         with (
             patch(
                 "ica.pipeline.markdown_generation.litellm.acompletion",
                 side_effect=[
-                    gen_resp_1,       # first generation
-                    invalid_resp,     # struct validation (invalid)
-                    invalid_resp,     # voice validation (invalid)
-                    gen_resp_2,       # second generation (regen with errors)
-                    valid_resp,       # struct validation (valid)
-                    valid_resp,       # voice validation (valid)
+                    gen_resp_1,  # first generation
+                    invalid_resp,  # struct validation (invalid)
+                    invalid_resp,  # voice validation (invalid)
+                    gen_resp_2,  # second generation (regen with errors)
+                    valid_resp,  # struct validation (valid)
+                    valid_resp,  # voice validation (valid)
                 ],
             ),
             patch(
@@ -629,15 +643,15 @@ class TestGenerateWithValidation:
             patch(
                 "ica.pipeline.markdown_generation.litellm.acompletion",
                 side_effect=[
-                    gen_resp,         # 1: first generation
-                    invalid_resp,     # 2: struct validation
-                    invalid_resp,     # 3: voice validation
-                    gen_resp,         # 4: regen after attempt 1
-                    invalid_resp,     # 5: struct validation
-                    invalid_resp,     # 6: voice validation
-                    gen_resp,         # 7: regen after attempt 2
-                    invalid_resp,     # 8: struct validation
-                    invalid_resp,     # 9: voice validation
+                    gen_resp,  # 1: first generation
+                    invalid_resp,  # 2: struct validation
+                    invalid_resp,  # 3: voice validation
+                    gen_resp,  # 4: regen after attempt 1
+                    invalid_resp,  # 5: struct validation
+                    invalid_resp,  # 6: voice validation
+                    gen_resp,  # 7: regen after attempt 2
+                    invalid_resp,  # 8: struct validation
+                    invalid_resp,  # 9: voice validation
                 ],
             ),
             patch(
@@ -656,9 +670,7 @@ class TestGenerateWithValidation:
     @pytest.mark.asyncio
     async def test_feedback_injected(self):
         gen_resp = _mock_llm_response("markdown")
-        valid_resp = _mock_llm_response(
-            '{"output":{"isValid":true,"errors":[]}}'
-        )
+        valid_resp = _mock_llm_response('{"output":{"isValid":true,"errors":[]}}')
         with (
             patch(
                 "ica.pipeline.markdown_generation.litellm.acompletion",
@@ -737,9 +749,13 @@ class TestCallUserFeedbackRegeneration:
     @pytest.mark.asyncio
     async def test_basic_call(self):
         mock_resp = _mock_llm_response("regenerated markdown")
-        with patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp) as mock_call:
+        with patch(
+            "ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp
+        ) as mock_call:
             result = await call_user_feedback_regeneration(
-                "original", "feedback", model="test-model",
+                "original",
+                "feedback",
+                model="test-model",
             )
             assert result == "regenerated markdown"
             assert mock_call.call_args.kwargs["model"] == "test-model"
@@ -755,7 +771,9 @@ class TestCallUserFeedbackRegeneration:
     async def test_default_model(self):
         mock_resp = _mock_llm_response("regen")
         with (
-            patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp) as mock_call,
+            patch(
+                "ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp
+            ) as mock_call,
             patch("ica.pipeline.markdown_generation.get_model", return_value="regen-model"),
         ):
             await call_user_feedback_regeneration("orig", "fb")
@@ -774,7 +792,10 @@ class TestExtractMarkdownLearningData:
         mock_resp = _mock_llm_response(learning)
         with patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp):
             result = await extract_markdown_learning_data(
-                "fb", "input", "output", model="m",
+                "fb",
+                "input",
+                "output",
+                model="m",
             )
             assert result == "Improve structure"
 
@@ -783,7 +804,10 @@ class TestExtractMarkdownLearningData:
         mock_resp = _mock_llm_response("plain text note")
         with patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp):
             result = await extract_markdown_learning_data(
-                "fb", "input", "output", model="m",
+                "fb",
+                "input",
+                "output",
+                model="m",
             )
             assert result == "plain text note"
 
@@ -799,7 +823,10 @@ class TestExtractMarkdownLearningData:
         mock_resp = _mock_llm_response("not json {bad")
         with patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp):
             result = await extract_markdown_learning_data(
-                "fb", "input", "output", model="m",
+                "fb",
+                "input",
+                "output",
+                model="m",
             )
             assert result == "not json {bad"
 
@@ -808,7 +835,10 @@ class TestExtractMarkdownLearningData:
         mock_resp = _mock_llm_response('{"other_key": "value"}')
         with patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp):
             result = await extract_markdown_learning_data(
-                "fb", "input", "output", model="m",
+                "fb",
+                "input",
+                "output",
+                model="m",
             )
             assert "other_key" in result
 
@@ -825,7 +855,9 @@ class TestStoreMarkdownFeedback:
         with patch("ica.pipeline.markdown_generation.add_note") as mock_add:
             await store_markdown_feedback(session, "learning note")
             mock_add.assert_called_once_with(
-                session, "user_markdowngenerator", "learning note",
+                session,
+                "user_markdowngenerator",
+                "learning note",
                 newsletter_id=None,
             )
 
@@ -834,10 +866,14 @@ class TestStoreMarkdownFeedback:
         session = AsyncMock()
         with patch("ica.pipeline.markdown_generation.add_note") as mock_add:
             await store_markdown_feedback(
-                session, "note", newsletter_id="NL-001",
+                session,
+                "note",
+                newsletter_id="NL-001",
             )
             mock_add.assert_called_once_with(
-                session, "user_markdowngenerator", "note",
+                session,
+                "user_markdowngenerator",
+                "note",
                 newsletter_id="NL-001",
             )
 
@@ -881,9 +917,11 @@ class TestRunMarkdownReview:
     @pytest.mark.asyncio
     async def test_approve_immediately(self):
         """User selects Yes → Google Doc created, result returned."""
-        slack = self._make_slack([
-            {NEXT_STEPS_FIELD_LABEL: "Yes"},
-        ])
+        slack = self._make_slack(
+            [
+                {NEXT_STEPS_FIELD_LABEL: "Yes"},
+            ]
+        )
         docs = AsyncMock()
         docs.create_document.return_value = "doc-final"
 
@@ -905,9 +943,11 @@ class TestRunMarkdownReview:
     @pytest.mark.asyncio
     async def test_approve_without_docs(self):
         """User selects Yes but no Google Docs writer → empty doc_id."""
-        slack = self._make_slack([
-            {NEXT_STEPS_FIELD_LABEL: "Yes"},
-        ])
+        slack = self._make_slack(
+            [
+                {NEXT_STEPS_FIELD_LABEL: "Yes"},
+            ]
+        )
 
         result = await run_markdown_review(
             SAMPLE_MARKDOWN,
@@ -977,7 +1017,9 @@ class TestRunMarkdownReview:
             )
 
             mock_store.assert_called_once_with(
-                session, "stored", newsletter_id="NL-001",
+                session,
+                "stored",
+                newsletter_id="NL-001",
             )
 
     @pytest.mark.asyncio
@@ -1001,9 +1043,11 @@ class TestRunMarkdownReview:
     @pytest.mark.asyncio
     async def test_slack_receives_correct_form_params(self):
         """Verify Slack form is called with correct labels."""
-        slack = self._make_slack([
-            {NEXT_STEPS_FIELD_LABEL: "Yes"},
-        ])
+        slack = self._make_slack(
+            [
+                {NEXT_STEPS_FIELD_LABEL: "Yes"},
+            ]
+        )
 
         await run_markdown_review(
             SAMPLE_MARKDOWN,
@@ -1094,8 +1138,10 @@ class TestRunMarkdownReview:
         with patch(
             "ica.pipeline.markdown_generation.litellm.acompletion",
             side_effect=[
-                regen_resp_1, learning_resp_1,
-                regen_resp_2, learning_resp_2,
+                regen_resp_1,
+                learning_resp_1,
+                regen_resp_2,
+                learning_resp_2,
             ],
         ):
             result = await run_markdown_review(

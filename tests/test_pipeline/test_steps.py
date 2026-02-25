@@ -773,7 +773,9 @@ class TestServiceFactories:
 class TestContextPropagation:
     @pytest.mark.asyncio
     async def test_curation_converts_articles_to_dicts(
-        self, mock_settings, mock_slack,
+        self,
+        mock_settings,
+        mock_slack,
     ):
         """Approved articles (dataclasses) are serialized to dicts in context."""
         from ica.pipeline.article_curation import ApprovalResult, ApprovedArticle
@@ -815,7 +817,9 @@ class TestContextPropagation:
 
     @pytest.mark.asyncio
     async def test_summarization_produces_valid_json(
-        self, mock_settings, mock_slack,
+        self,
+        mock_settings,
+        mock_slack,
     ):
         """summaries_json is valid JSON matching the articles list."""
         from ica.pipeline.steps import run_summarization_step
@@ -854,7 +858,10 @@ class TestContextPropagation:
 
     @pytest.mark.asyncio
     async def test_html_step_uses_extra_newsletter_date(
-        self, mock_settings, mock_slack, mock_docs,
+        self,
+        mock_settings,
+        mock_slack,
+        mock_docs,
     ):
         """HTML step reads newsletter_date from ctx.extra if available."""
         from ica.pipeline.steps import run_html_generation_step

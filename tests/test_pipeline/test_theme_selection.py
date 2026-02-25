@@ -877,9 +877,9 @@ class TestExtractLearningData:
 
     @pytest.mark.asyncio
     async def test_extracts_json_learning_feedback(self):
-        json_response = json.dumps({
-            "learning_feedback": "Future responses should be more concise."
-        })
+        json_response = json.dumps(
+            {"learning_feedback": "Future responses should be more concise."}
+        )
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = json_response
@@ -963,9 +963,7 @@ class TestExtractLearningData:
 
         with patch("ica.pipeline.theme_selection.litellm") as mock_litellm:
             mock_litellm.acompletion = AsyncMock(return_value=mock_response)
-            await extract_learning_data(
-                "my feedback", "my input", "my output"
-            )
+            await extract_learning_data("my feedback", "my input", "my output")
 
         call_args = mock_litellm.acompletion.call_args
         messages = call_args.kwargs["messages"]
@@ -1044,9 +1042,7 @@ class TestStoreThemeFeedback:
         with patch("ica.pipeline.theme_selection.add_note") as mock_add:
             mock_add.return_value = MagicMock()
             mock_session = AsyncMock()
-            await store_theme_feedback(
-                mock_session, "learning note", newsletter_id="nl-001"
-            )
+            await store_theme_feedback(mock_session, "learning note", newsletter_id="nl-001")
 
         mock_add.assert_awaited_once()
         call_args = mock_add.call_args
@@ -1175,9 +1171,7 @@ class TestEndToEndScenarios:
     @pytest.mark.asyncio
     async def test_feedback_learning_data_flow(self):
         """Feedback → extract learning data → store in DB."""
-        json_response = json.dumps({
-            "learning_feedback": "Use more diverse sources next time."
-        })
+        json_response = json.dumps({"learning_feedback": "Use more diverse sources next time."})
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
         mock_response.choices[0].message.content = json_response

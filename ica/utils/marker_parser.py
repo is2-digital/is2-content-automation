@@ -32,6 +32,7 @@ from dataclasses import dataclass, field
 # Data classes
 # ---------------------------------------------------------------------------
 
+
 @dataclass(frozen=True)
 class FeaturedArticle:
     """Extracted data for the Featured Article slot."""
@@ -139,6 +140,7 @@ class ThemeParseResult:
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 def _extract(pattern: str, text: str) -> str | None:
     """Extract the first capture group from *text* using *pattern*.
 
@@ -155,6 +157,7 @@ def _extract(pattern: str, text: str) -> str | None:
 # ---------------------------------------------------------------------------
 # Public API — theme splitting
 # ---------------------------------------------------------------------------
+
 
 def split_themes(raw_output: str) -> ThemeParseResult:
     """Split raw LLM output into theme blocks and a recommendation.
@@ -180,11 +183,13 @@ def split_themes(raw_output: str) -> ThemeParseResult:
     for block in theme_parts:
         name = _extract(r"THEME[ \t]*:[ \t]*(.+)", block)
         description = _extract(r"Theme Description[ \t]*:[ \t]*(.+)", block)
-        themes.append(ParsedThemeBlock(
-            theme_name=name,
-            theme_description=description,
-            theme_body=block,
-        ))
+        themes.append(
+            ParsedThemeBlock(
+                theme_name=name,
+                theme_description=description,
+                theme_body=block,
+            )
+        )
 
     recommendation = "\n-----\n".join(recommendation_parts)
 
@@ -194,6 +199,7 @@ def split_themes(raw_output: str) -> ThemeParseResult:
 # ---------------------------------------------------------------------------
 # Public API — marker extraction
 # ---------------------------------------------------------------------------
+
 
 def parse_markers(theme_body: str, theme_title: str | None = None) -> FormattedTheme:
     """Extract all ``%XX_`` markers from a single theme body.
@@ -286,12 +292,14 @@ def parse_markers(theme_body: str, theme_title: str | None = None) -> FormattedT
 
     rv = RequirementsVerified(
         distribution_achieved=_extract(
-            r"%RV_2-2-2 Distribution Achieved:%[ \t]*(.+)", t,
+            r"%RV_2-2-2 Distribution Achieved:%[ \t]*(.+)",
+            t,
         ),
         source_mix=_extract(r"%RV_Source mix:%[ \t]*(.+)", t),
         technical_complexity=_extract(r"%RV_Technical complexity:%[ \t]*(.+)", t),
         major_ai_player_coverage=_extract(
-            r"%RV_Major AI player coverage:%[ \t]*(.+)", t,
+            r"%RV_Major AI player coverage:%[ \t]*(.+)",
+            t,
         ),
     )
 

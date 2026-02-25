@@ -222,7 +222,8 @@ async def generate_themes(
     aggregated = None
     if session is not None:
         feedback_rows = await get_recent_notes(
-            session, "user_newsletter_themes",
+            session,
+            "user_newsletter_themes",
         )
         aggregated = aggregate_feedback(feedback_rows)
 

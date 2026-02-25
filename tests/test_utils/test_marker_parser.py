@@ -148,6 +148,7 @@ TWO_THEMES_RAW = (
 # Tests — parse_markers / Featured Article (FA)
 # ======================================================================
 
+
 class TestFeaturedArticle:
     """FA marker extraction."""
 
@@ -189,7 +190,7 @@ class TestFeaturedArticle:
         assert result.featured_article.url == "https://example.com/article?id=123&ref=ai"
 
     def test_fa_why_featured_with_special_chars(self) -> None:
-        body = '%FA_WHY FEATURED: It\'s the #1 article — very insightful!'
+        body = "%FA_WHY FEATURED: It's the #1 article — very insightful!"
         result = parse_markers(body)
         assert result.featured_article.why_featured == "It's the #1 article — very insightful!"
 
@@ -197,6 +198,7 @@ class TestFeaturedArticle:
 # ======================================================================
 # Tests — parse_markers / Main Articles (M1, M2)
 # ======================================================================
+
 
 class TestMainArticles:
     """M1 and M2 marker extraction."""
@@ -242,6 +244,7 @@ class TestMainArticles:
 # ======================================================================
 # Tests — parse_markers / Quick Hits (Q1, Q2, Q3)
 # ======================================================================
+
 
 class TestQuickHits:
     """Q1, Q2, Q3 marker extraction."""
@@ -294,6 +297,7 @@ class TestQuickHits:
 # Tests — parse_markers / Industry Developments (I1, I2)
 # ======================================================================
 
+
 class TestIndustryDevelopments:
     """I1, I2 marker extraction."""
 
@@ -340,6 +344,7 @@ class TestIndustryDevelopments:
 # Tests — parse_markers / Requirements Verified (RV)
 # ======================================================================
 
+
 class TestRequirementsVerified:
     """RV marker extraction (note the trailing % in field names)."""
 
@@ -375,6 +380,7 @@ class TestRequirementsVerified:
 # Tests — parse_markers / Theme title
 # ======================================================================
 
+
 class TestThemeTitle:
     """Theme title resolution."""
 
@@ -400,6 +406,7 @@ class TestThemeTitle:
 # ======================================================================
 # Tests — parse_markers / Edge cases
 # ======================================================================
+
 
 class TestEdgeCases:
     """Edge cases and LLM output format variations."""
@@ -497,6 +504,7 @@ class TestEdgeCases:
 # Tests — parse_markers / LLM format variations
 # ======================================================================
 
+
 class TestLlmFormatVariations:
     """Handle variations in how different LLMs format marker output."""
 
@@ -541,6 +549,7 @@ class TestLlmFormatVariations:
 # ======================================================================
 # Tests — split_themes
 # ======================================================================
+
 
 class TestSplitThemes:
     """Theme splitting from raw LLM output."""
@@ -625,6 +634,7 @@ class TestSplitThemes:
 # Tests — split_themes + parse_markers integration
 # ======================================================================
 
+
 class TestSplitAndParse:
     """End-to-end: split themes then parse markers for each."""
 
@@ -666,6 +676,7 @@ class TestSplitAndParse:
 # ======================================================================
 # Tests — dataclass integrity
 # ======================================================================
+
 
 class TestDataclasses:
     """Verify dataclass construction and immutability."""
@@ -712,6 +723,7 @@ class TestDataclasses:
 # Tests — parametrized marker extraction
 # ======================================================================
 
+
 @pytest.mark.parametrize(
     "marker_line, field, expected",
     [
@@ -757,7 +769,9 @@ class TestDataclasses:
     ids=lambda val: val if isinstance(val, str) and val.startswith("%") else "",
 )
 def test_individual_marker_extraction(
-    marker_line: str, field: str, expected: str,
+    marker_line: str,
+    field: str,
+    expected: str,
 ) -> None:
     """Parametrized test: each marker line extracts to the correct field."""
     result = parse_markers(marker_line)

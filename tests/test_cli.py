@@ -96,9 +96,17 @@ class TestServeCommand:
 
     def test_serve_custom_options(self) -> None:
         with patch("uvicorn.run") as mock_run:
-            result = runner.invoke(app, [
-                "serve", "--host", "127.0.0.1", "--port", "9000", "--reload",
-            ])
+            result = runner.invoke(
+                app,
+                [
+                    "serve",
+                    "--host",
+                    "127.0.0.1",
+                    "--port",
+                    "9000",
+                    "--reload",
+                ],
+            )
             assert result.exit_code == 0
             mock_run.assert_called_once_with(
                 "ica.app:create_app",
@@ -122,6 +130,7 @@ def _mock_httpx_post(status_code: int = 200, json_data: dict | None = None):
     mock_resp.text = str(json_data)
     if status_code >= 400:
         import httpx
+
         mock_resp.raise_for_status.side_effect = httpx.HTTPStatusError(
             "error", request=MagicMock(), response=mock_resp
         )
@@ -178,9 +187,14 @@ class TestRunCommand:
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
         with patch("httpx.AsyncClient", return_value=mock_client):
-            result = runner.invoke(app, [
-                "run", "--base-url", "http://localhost:9000",
-            ])
+            result = runner.invoke(
+                app,
+                [
+                    "run",
+                    "--base-url",
+                    "http://localhost:9000",
+                ],
+            )
 
         assert result.exit_code == 0
         call_args = mock_client.post.call_args
@@ -293,7 +307,9 @@ class TestStatusCommand:
         mock_resp.status_code = 404
         mock_resp.text = '{"detail":"Run not found"}'
         mock_resp.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "not found", request=MagicMock(), response=mock_resp,
+            "not found",
+            request=MagicMock(),
+            response=mock_resp,
         )
 
         mock_client = AsyncMock()
@@ -411,9 +427,14 @@ class TestCollectArticlesCommand:
                 mock_client.__aexit__ = AsyncMock(return_value=False)
 
                 with patch("httpx.AsyncClient", return_value=mock_client):
-                    result = runner.invoke(app, [
-                        "collect-articles", "--schedule", "bad",
-                    ])
+                    result = runner.invoke(
+                        app,
+                        [
+                            "collect-articles",
+                            "--schedule",
+                            "bad",
+                        ],
+                    )
 
         assert result.exit_code == 1
 
@@ -556,10 +577,12 @@ class TestEntryPoint:
 
     def test_main_callable(self) -> None:
         from ica.__main__ import main
+
         assert callable(main)
 
     def test_pyproject_script_target(self) -> None:
         """The pyproject.toml script entry matches our main function."""
         import importlib
+
         mod = importlib.import_module("ica.__main__")
         assert hasattr(mod, "main")

@@ -75,8 +75,7 @@ SAMPLE_THEME = json.dumps(
 )
 
 SAMPLE_FEEDBACK = (
-    "- Future responses should use shorter sentences\n"
-    "- Emphasize practical ROI numbers more"
+    "- Future responses should use shorter sentences\n- Emphasize practical ROI numbers more"
 )
 
 SAMPLE_PREVIOUS_MARKDOWN = "# *INTRODUCTION*\n\nSample intro paragraph."
@@ -116,9 +115,7 @@ class TestSystemPrompt:
 
     def test_contains_delta_instructions(self):
         assert "delta" in _GENERATION_SYSTEM
-        assert "EXACTLY the specified number of characters" in (
-            _GENERATION_SYSTEM
-        )
+        assert "EXACTLY the specified number of characters" in (_GENERATION_SYSTEM)
 
     def test_contains_fix_order(self):
         assert "FIX ORDER (MANDATORY)" in _GENERATION_SYSTEM
@@ -143,9 +140,7 @@ class TestSystemPrompt:
         assert "HARD CONSTRAINTS (NON-NEGOTIABLE)" in _GENERATION_SYSTEM
 
     def test_contains_url_invention_ban(self):
-        assert "MAY NOT invent, infer, autocomplete, or substitute URLs" in (
-            _GENERATION_SYSTEM
-        )
+        assert "MAY NOT invent, infer, autocomplete, or substitute URLs" in (_GENERATION_SYSTEM)
 
     # --- Voice calibration ---
 
@@ -285,8 +280,8 @@ class TestUserPromptTemplate:
 
     def test_featured_article_cta_rules(self):
         prompt = _GENERATION_INSTRUCTION
-        assert '2-4 words' in prompt
-        assert 'end with' in prompt
+        assert "2-4 words" in prompt
+        assert "end with" in prompt
 
     def test_main_article_rules(self):
         assert "max 750 chars" in _GENERATION_INSTRUCTION
@@ -311,9 +306,7 @@ class TestUserPromptTemplate:
 
     def test_final_instructions(self):
         assert "FINAL INSTRUCTIONS" in _GENERATION_INSTRUCTION
-        assert "only the final newsletter in valid Markdown" in (
-            _GENERATION_INSTRUCTION
-        )
+        assert "only the final newsletter in valid Markdown" in (_GENERATION_INSTRUCTION)
 
     def test_no_stray_placeholders(self):
         """Only the three expected placeholders should appear."""
@@ -321,7 +314,9 @@ class TestUserPromptTemplate:
         cleaned = _GENERATION_INSTRUCTION
         for p in known:
             cleaned = cleaned.replace(p, "")
-        assert "{" not in cleaned, f"Stray placeholder in user prompt: {cleaned[cleaned.index('{'):cleaned.index('{')+30]}"
+        assert "{" not in cleaned, (
+            f"Stray placeholder in user prompt: {cleaned[cleaned.index('{') : cleaned.index('{') + 30]}"
+        )
         assert "}" not in cleaned
 
 
@@ -340,9 +335,7 @@ class TestFeedbackSectionTemplate:
         assert "Editorial Improvement Context" in _FEEDBACK_SECTION_TEMPLATE
 
     def test_renders_feedback(self):
-        rendered = _FEEDBACK_SECTION_TEMPLATE.format(
-            aggregated_feedback="- Use shorter sentences"
-        )
+        rendered = _FEEDBACK_SECTION_TEMPLATE.format(aggregated_feedback="- Use shorter sentences")
         assert "- Use shorter sentences" in rendered
         assert "{" not in rendered
 
@@ -362,9 +355,7 @@ class TestValidatorErrorsSectionTemplate:
         assert "MUST BE RESOLVED" in _VALIDATOR_ERRORS_SECTION_TEMPLATE
 
     def test_renders_errors(self):
-        rendered = _VALIDATOR_ERRORS_SECTION_TEMPLATE.format(
-            validator_errors="[error1, error2]"
-        )
+        rendered = _VALIDATOR_ERRORS_SECTION_TEMPLATE.format(validator_errors="[error1, error2]")
         assert "[error1, error2]" in rendered
         assert "{" not in rendered
 
@@ -658,17 +649,13 @@ class TestEdgeCases:
 
     def test_multiline_feedback(self):
         feedback = "- Point one\n- Point two\n- Point three"
-        _, user = build_markdown_generation_prompt(
-            SAMPLE_THEME, aggregated_feedback=feedback
-        )
+        _, user = build_markdown_generation_prompt(SAMPLE_THEME, aggregated_feedback=feedback)
         assert "Point one" in user
         assert "Point three" in user
 
     def test_very_long_previous_markdown(self):
         long_md = "X" * 10000
-        system, _ = build_markdown_generation_prompt(
-            SAMPLE_THEME, previous_markdown=long_md
-        )
+        system, _ = build_markdown_generation_prompt(SAMPLE_THEME, previous_markdown=long_md)
         assert long_md in system
 
     def test_feedback_only_no_errors(self):
@@ -681,8 +668,6 @@ class TestEdgeCases:
 
     def test_errors_only_no_feedback(self):
         """Validator errors present but no feedback."""
-        _, user = build_markdown_generation_prompt(
-            SAMPLE_THEME, validator_errors="[some error]"
-        )
+        _, user = build_markdown_generation_prompt(SAMPLE_THEME, validator_errors="[some error]")
         assert "MUST BE RESOLVED" in user
         assert "Editorial Improvement Context" not in user

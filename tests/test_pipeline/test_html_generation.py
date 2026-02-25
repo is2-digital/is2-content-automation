@@ -162,14 +162,20 @@ class TestHtmlGenerationResult:
 
     def test_frozen(self):
         result = HtmlGenerationResult(
-            html="x", html_doc_id="y", doc_url="z", model="m",
+            html="x",
+            html_doc_id="y",
+            doc_url="z",
+            model="m",
         )
         with pytest.raises(AttributeError):
             result.html = "new"  # type: ignore[misc]
 
     def test_fields(self):
         result = HtmlGenerationResult(
-            html="h", html_doc_id="d", doc_url="u", model="m",
+            html="h",
+            html_doc_id="d",
+            doc_url="u",
+            model="m",
         )
         assert hasattr(result, "html")
         assert hasattr(result, "html_doc_id")
@@ -247,9 +253,13 @@ class TestCallHtmlLlm:
     @pytest.mark.asyncio
     async def test_basic_call(self):
         mock_resp = _mock_llm_response(SAMPLE_HTML)
-        with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp) as mock_call:
+        with patch(
+            "ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp
+        ) as mock_call:
             result = await call_html_llm(
-                SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+                SAMPLE_MARKDOWN,
+                SAMPLE_HTML_TEMPLATE,
+                SAMPLE_DATE,
                 model="test-model",
             )
             assert "<!DOCTYPE html>" in result
@@ -264,9 +274,13 @@ class TestCallHtmlLlm:
     @pytest.mark.asyncio
     async def test_passes_markdown_content(self):
         mock_resp = _mock_llm_response(SAMPLE_HTML)
-        with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp) as mock_call:
+        with patch(
+            "ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp
+        ) as mock_call:
             await call_html_llm(
-                SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+                SAMPLE_MARKDOWN,
+                SAMPLE_HTML_TEMPLATE,
+                SAMPLE_DATE,
                 model="test-model",
             )
             msgs = mock_call.call_args.kwargs["messages"]
@@ -275,9 +289,13 @@ class TestCallHtmlLlm:
     @pytest.mark.asyncio
     async def test_passes_html_template(self):
         mock_resp = _mock_llm_response(SAMPLE_HTML)
-        with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp) as mock_call:
+        with patch(
+            "ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp
+        ) as mock_call:
             await call_html_llm(
-                SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+                SAMPLE_MARKDOWN,
+                SAMPLE_HTML_TEMPLATE,
+                SAMPLE_DATE,
                 model="test-model",
             )
             msgs = mock_call.call_args.kwargs["messages"]
@@ -286,9 +304,13 @@ class TestCallHtmlLlm:
     @pytest.mark.asyncio
     async def test_passes_newsletter_date(self):
         mock_resp = _mock_llm_response(SAMPLE_HTML)
-        with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp) as mock_call:
+        with patch(
+            "ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp
+        ) as mock_call:
             await call_html_llm(
-                SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+                SAMPLE_MARKDOWN,
+                SAMPLE_HTML_TEMPLATE,
+                SAMPLE_DATE,
                 model="test-model",
             )
             msgs = mock_call.call_args.kwargs["messages"]
@@ -297,9 +319,13 @@ class TestCallHtmlLlm:
     @pytest.mark.asyncio
     async def test_with_feedback(self):
         mock_resp = _mock_llm_response(SAMPLE_HTML)
-        with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp) as mock_call:
+        with patch(
+            "ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp
+        ) as mock_call:
             await call_html_llm(
-                SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+                SAMPLE_MARKDOWN,
+                SAMPLE_HTML_TEMPLATE,
+                SAMPLE_DATE,
                 aggregated_feedback="\u2022 feedback note",
                 model="test-model",
             )
@@ -309,9 +335,13 @@ class TestCallHtmlLlm:
     @pytest.mark.asyncio
     async def test_without_feedback(self):
         mock_resp = _mock_llm_response(SAMPLE_HTML)
-        with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp) as mock_call:
+        with patch(
+            "ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp
+        ) as mock_call:
             await call_html_llm(
-                SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+                SAMPLE_MARKDOWN,
+                SAMPLE_HTML_TEMPLATE,
+                SAMPLE_DATE,
                 model="test-model",
             )
             msgs = mock_call.call_args.kwargs["messages"]
@@ -320,10 +350,19 @@ class TestCallHtmlLlm:
     @pytest.mark.asyncio
     async def test_default_model(self):
         mock_resp = _mock_llm_response(SAMPLE_HTML)
-        with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp) as mock_call, \
-             patch("ica.pipeline.html_generation.get_model", return_value="anthropic/claude-sonnet-4.5"):
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp
+            ) as mock_call,
+            patch(
+                "ica.pipeline.html_generation.get_model",
+                return_value="anthropic/claude-sonnet-4.5",
+            ),
+        ):
             await call_html_llm(
-                SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+                SAMPLE_MARKDOWN,
+                SAMPLE_HTML_TEMPLATE,
+                SAMPLE_DATE,
             )
             assert mock_call.call_args.kwargs["model"] == "anthropic/claude-sonnet-4.5"
 
@@ -333,7 +372,9 @@ class TestCallHtmlLlm:
         with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp):
             with pytest.raises(RuntimeError, match="empty response"):
                 await call_html_llm(
-                    SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+                    SAMPLE_MARKDOWN,
+                    SAMPLE_HTML_TEMPLATE,
+                    SAMPLE_DATE,
                     model="m",
                 )
 
@@ -343,7 +384,9 @@ class TestCallHtmlLlm:
         with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp):
             with pytest.raises(RuntimeError, match="empty response"):
                 await call_html_llm(
-                    SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+                    SAMPLE_MARKDOWN,
+                    SAMPLE_HTML_TEMPLATE,
+                    SAMPLE_DATE,
                     model="m",
                 )
 
@@ -353,7 +396,9 @@ class TestCallHtmlLlm:
         with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp):
             with pytest.raises(RuntimeError, match="empty response"):
                 await call_html_llm(
-                    SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+                    SAMPLE_MARKDOWN,
+                    SAMPLE_HTML_TEMPLATE,
+                    SAMPLE_DATE,
                     model="m",
                 )
 
@@ -362,7 +407,9 @@ class TestCallHtmlLlm:
         mock_resp = _mock_llm_response(f"  {SAMPLE_HTML}  \n")
         with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp):
             result = await call_html_llm(
-                SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+                SAMPLE_MARKDOWN,
+                SAMPLE_HTML_TEMPLATE,
+                SAMPLE_DATE,
                 model="m",
             )
             assert result == SAMPLE_HTML.strip()
@@ -377,7 +424,9 @@ class TestCallHtmlRegeneration:
     @pytest.mark.asyncio
     async def test_basic_call(self):
         mock_resp = _mock_llm_response(SAMPLE_HTML)
-        with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp) as mock_call:
+        with patch(
+            "ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp
+        ) as mock_call:
             result = await call_html_regeneration(
                 previous_html=SAMPLE_HTML,
                 markdown_content=SAMPLE_MARKDOWN,
@@ -396,7 +445,9 @@ class TestCallHtmlRegeneration:
     @pytest.mark.asyncio
     async def test_passes_previous_html(self):
         mock_resp = _mock_llm_response(SAMPLE_HTML)
-        with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp) as mock_call:
+        with patch(
+            "ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp
+        ) as mock_call:
             await call_html_regeneration(
                 previous_html="<html>OLD</html>",
                 markdown_content=SAMPLE_MARKDOWN,
@@ -411,7 +462,9 @@ class TestCallHtmlRegeneration:
     @pytest.mark.asyncio
     async def test_passes_user_feedback(self):
         mock_resp = _mock_llm_response(SAMPLE_HTML)
-        with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp) as mock_call:
+        with patch(
+            "ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp
+        ) as mock_call:
             await call_html_regeneration(
                 previous_html=SAMPLE_HTML,
                 markdown_content=SAMPLE_MARKDOWN,
@@ -426,7 +479,9 @@ class TestCallHtmlRegeneration:
     @pytest.mark.asyncio
     async def test_scoped_update_system_prompt(self):
         mock_resp = _mock_llm_response(SAMPLE_HTML)
-        with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp) as mock_call:
+        with patch(
+            "ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp
+        ) as mock_call:
             await call_html_regeneration(
                 previous_html=SAMPLE_HTML,
                 markdown_content=SAMPLE_MARKDOWN,
@@ -441,8 +496,15 @@ class TestCallHtmlRegeneration:
     @pytest.mark.asyncio
     async def test_default_model(self):
         mock_resp = _mock_llm_response(SAMPLE_HTML)
-        with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp) as mock_call, \
-             patch("ica.pipeline.html_generation.get_model", return_value="anthropic/claude-sonnet-4.5"):
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp
+            ) as mock_call,
+            patch(
+                "ica.pipeline.html_generation.get_model",
+                return_value="anthropic/claude-sonnet-4.5",
+            ),
+        ):
             await call_html_regeneration(
                 previous_html=SAMPLE_HTML,
                 markdown_content=SAMPLE_MARKDOWN,
@@ -489,9 +551,11 @@ class TestCallHtmlRegeneration:
 class TestExtractHtmlLearningData:
     @pytest.mark.asyncio
     async def test_json_extraction(self):
-        learning_json = json.dumps({
-            "learning_feedback": "Improve header styling in future.",
-        })
+        learning_json = json.dumps(
+            {
+                "learning_feedback": "Improve header styling in future.",
+            }
+        )
         mock_resp = _mock_llm_response(learning_json)
         with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp):
             result = await extract_html_learning_data(
@@ -541,8 +605,15 @@ class TestExtractHtmlLearningData:
     @pytest.mark.asyncio
     async def test_default_model(self):
         mock_resp = _mock_llm_response("note")
-        with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp) as mock_call, \
-             patch("ica.pipeline.html_generation.get_model", return_value="anthropic/claude-sonnet-4.5"):
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp
+            ) as mock_call,
+            patch(
+                "ica.pipeline.html_generation.get_model",
+                return_value="anthropic/claude-sonnet-4.5",
+            ),
+        ):
             await extract_html_learning_data(
                 feedback="f",
                 input_text="i",
@@ -553,7 +624,9 @@ class TestExtractHtmlLearningData:
     @pytest.mark.asyncio
     async def test_passes_correct_prompts(self):
         mock_resp = _mock_llm_response("note")
-        with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp) as mock_call:
+        with patch(
+            "ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp
+        ) as mock_call:
             await extract_html_learning_data(
                 feedback="user feedback text",
                 input_text="the input",
@@ -570,7 +643,10 @@ class TestExtractHtmlLearningData:
         mock_resp = _mock_llm_response("  learning note  \n")
         with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp):
             result = await extract_html_learning_data(
-                feedback="f", input_text="i", model_output="o", model="m",
+                feedback="f",
+                input_text="i",
+                model_output="o",
+                model="m",
             )
             assert result == "learning note"
 
@@ -657,7 +733,9 @@ class TestStoreHtmlFeedback:
         with patch("ica.pipeline.html_generation.add_note", new_callable=AsyncMock) as mock_add:
             session = AsyncMock()
             await store_html_feedback(
-                session, "text", newsletter_id="nl-42",
+                session,
+                "text",
+                newsletter_id="nl-42",
             )
             mock_add.assert_called_once_with(
                 session,
@@ -711,12 +789,21 @@ class TestRunHtmlGenerationYes:
         }
         docs = _make_docs_mock("html-doc-yes")
 
-        with patch("ica.pipeline.html_generation.litellm.acompletion",
-                    return_value=_mock_llm_response(SAMPLE_HTML)), \
-             patch("ica.pipeline.html_generation.get_model",
-                    return_value="anthropic/claude-sonnet-4.5"), \
-             patch("ica.pipeline.html_generation.get_recent_notes",
-                    new_callable=AsyncMock, return_value=[]):
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion",
+                return_value=_mock_llm_response(SAMPLE_HTML),
+            ),
+            patch(
+                "ica.pipeline.html_generation.get_model",
+                return_value="anthropic/claude-sonnet-4.5",
+            ),
+            patch(
+                "ica.pipeline.html_generation.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
             result = await run_html_generation(
                 SAMPLE_MARKDOWN,
                 SAMPLE_HTML_TEMPLATE,
@@ -738,12 +825,18 @@ class TestRunHtmlGenerationYes:
             NEXT_STEPS_FIELD_LABEL: "Yes",
         }
 
-        with patch("ica.pipeline.html_generation.litellm.acompletion",
-                    return_value=_mock_llm_response(SAMPLE_HTML)), \
-             patch("ica.pipeline.html_generation.get_model",
-                    return_value="test-model"), \
-             patch("ica.pipeline.html_generation.get_recent_notes",
-                    new_callable=AsyncMock, return_value=[]):
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion",
+                return_value=_mock_llm_response(SAMPLE_HTML),
+            ),
+            patch("ica.pipeline.html_generation.get_model", return_value="test-model"),
+            patch(
+                "ica.pipeline.html_generation.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
             await run_html_generation(
                 SAMPLE_MARKDOWN,
                 SAMPLE_HTML_TEMPLATE,
@@ -765,12 +858,18 @@ class TestRunHtmlGenerationYes:
         }
         docs = _make_docs_mock("html-doc-abc")
 
-        with patch("ica.pipeline.html_generation.litellm.acompletion",
-                    return_value=_mock_llm_response(SAMPLE_HTML)), \
-             patch("ica.pipeline.html_generation.get_model",
-                    return_value="test-model"), \
-             patch("ica.pipeline.html_generation.get_recent_notes",
-                    new_callable=AsyncMock, return_value=[]):
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion",
+                return_value=_mock_llm_response(SAMPLE_HTML),
+            ),
+            patch("ica.pipeline.html_generation.get_model", return_value="test-model"),
+            patch(
+                "ica.pipeline.html_generation.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
             await run_html_generation(
                 SAMPLE_MARKDOWN,
                 SAMPLE_HTML_TEMPLATE,
@@ -790,12 +889,18 @@ class TestRunHtmlGenerationYes:
             NEXT_STEPS_FIELD_LABEL: "Yes",
         }
 
-        with patch("ica.pipeline.html_generation.litellm.acompletion",
-                    return_value=_mock_llm_response(SAMPLE_HTML)), \
-             patch("ica.pipeline.html_generation.get_model",
-                    return_value="test-model"), \
-             patch("ica.pipeline.html_generation.get_recent_notes",
-                    new_callable=AsyncMock, return_value=[]):
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion",
+                return_value=_mock_llm_response(SAMPLE_HTML),
+            ),
+            patch("ica.pipeline.html_generation.get_model", return_value="test-model"),
+            patch(
+                "ica.pipeline.html_generation.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
             result = await run_html_generation(
                 SAMPLE_MARKDOWN,
                 SAMPLE_HTML_TEMPLATE,
@@ -836,14 +941,20 @@ class TestRunHtmlGenerationFeedback:
                 return _mock_llm_response(regen_html)  # regeneration
             return _mock_llm_response('{"learning_feedback": "note"}')  # learning
 
-        with patch("ica.pipeline.html_generation.litellm.acompletion",
-                    side_effect=mock_acompletion), \
-             patch("ica.pipeline.html_generation.get_model",
-                    return_value="test-model"), \
-             patch("ica.pipeline.html_generation.get_recent_notes",
-                    new_callable=AsyncMock, return_value=[]), \
-             patch("ica.pipeline.html_generation.add_note",
-                    new_callable=AsyncMock) as mock_add_note:
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion", side_effect=mock_acompletion
+            ),
+            patch("ica.pipeline.html_generation.get_model", return_value="test-model"),
+            patch(
+                "ica.pipeline.html_generation.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch(
+                "ica.pipeline.html_generation.add_note", new_callable=AsyncMock
+            ) as mock_add_note,
+        ):
             result = await run_html_generation(
                 SAMPLE_MARKDOWN,
                 SAMPLE_HTML_TEMPLATE,
@@ -879,14 +990,18 @@ class TestRunHtmlGenerationFeedback:
                 return _mock_llm_response(SAMPLE_HTML)
             return _mock_llm_response('{"learning_feedback": "x"}')
 
-        with patch("ica.pipeline.html_generation.litellm.acompletion",
-                    side_effect=mock_acompletion), \
-             patch("ica.pipeline.html_generation.get_model",
-                    return_value="m"), \
-             patch("ica.pipeline.html_generation.get_recent_notes",
-                    new_callable=AsyncMock, return_value=[]), \
-             patch("ica.pipeline.html_generation.add_note",
-                    new_callable=AsyncMock):
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion", side_effect=mock_acompletion
+            ),
+            patch("ica.pipeline.html_generation.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.html_generation.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch("ica.pipeline.html_generation.add_note", new_callable=AsyncMock),
+        ):
             await run_html_generation(
                 SAMPLE_MARKDOWN,
                 SAMPLE_HTML_TEMPLATE,
@@ -920,18 +1035,22 @@ class TestRunHtmlGenerationFeedback:
                 return _mock_llm_response(SAMPLE_HTML)
             if call_count == 2:
                 return _mock_llm_response(SAMPLE_HTML)
-            return _mock_llm_response(
-                '{"learning_feedback": "stored learning note"}'
-            )
+            return _mock_llm_response('{"learning_feedback": "stored learning note"}')
 
-        with patch("ica.pipeline.html_generation.litellm.acompletion",
-                    side_effect=mock_acompletion), \
-             patch("ica.pipeline.html_generation.get_model",
-                    return_value="m"), \
-             patch("ica.pipeline.html_generation.get_recent_notes",
-                    new_callable=AsyncMock, return_value=[]), \
-             patch("ica.pipeline.html_generation.add_note",
-                    new_callable=AsyncMock) as mock_add_note:
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion", side_effect=mock_acompletion
+            ),
+            patch("ica.pipeline.html_generation.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.html_generation.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch(
+                "ica.pipeline.html_generation.add_note", new_callable=AsyncMock
+            ) as mock_add_note,
+        ):
             await run_html_generation(
                 SAMPLE_MARKDOWN,
                 SAMPLE_HTML_TEMPLATE,
@@ -967,14 +1086,18 @@ class TestRunHtmlGenerationFeedback:
                 return _mock_llm_response(regen_html)
             return _mock_llm_response('{"learning_feedback": "x"}')
 
-        with patch("ica.pipeline.html_generation.litellm.acompletion",
-                    side_effect=mock_acompletion), \
-             patch("ica.pipeline.html_generation.get_model",
-                    return_value="m"), \
-             patch("ica.pipeline.html_generation.get_recent_notes",
-                    new_callable=AsyncMock, return_value=[]), \
-             patch("ica.pipeline.html_generation.add_note",
-                    new_callable=AsyncMock):
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion", side_effect=mock_acompletion
+            ),
+            patch("ica.pipeline.html_generation.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.html_generation.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch("ica.pipeline.html_generation.add_note", new_callable=AsyncMock),
+        ):
             await run_html_generation(
                 SAMPLE_MARKDOWN,
                 SAMPLE_HTML_TEMPLATE,
@@ -1017,14 +1140,20 @@ class TestRunHtmlGenerationFeedback:
                 return _mock_llm_response(SAMPLE_HTML)  # regen 2 + learning 2
             return _mock_llm_response('{"learning_feedback": "x"}')
 
-        with patch("ica.pipeline.html_generation.litellm.acompletion",
-                    side_effect=mock_acompletion), \
-             patch("ica.pipeline.html_generation.get_model",
-                    return_value="m"), \
-             patch("ica.pipeline.html_generation.get_recent_notes",
-                    new_callable=AsyncMock, return_value=[]), \
-             patch("ica.pipeline.html_generation.add_note",
-                    new_callable=AsyncMock) as mock_add_note:
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion", side_effect=mock_acompletion
+            ),
+            patch("ica.pipeline.html_generation.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.html_generation.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch(
+                "ica.pipeline.html_generation.add_note", new_callable=AsyncMock
+            ) as mock_add_note,
+        ):
             result = await run_html_generation(
                 SAMPLE_MARKDOWN,
                 SAMPLE_HTML_TEMPLATE,
@@ -1057,12 +1186,15 @@ class TestRunHtmlGenerationFeedback:
                 return _mock_llm_response(SAMPLE_HTML)
             return _mock_llm_response('{"learning_feedback": "x"}')
 
-        with patch("ica.pipeline.html_generation.litellm.acompletion",
-                    side_effect=mock_acompletion), \
-             patch("ica.pipeline.html_generation.get_model",
-                    return_value="m"), \
-             patch("ica.pipeline.html_generation.add_note",
-                    new_callable=AsyncMock) as mock_add_note:
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion", side_effect=mock_acompletion
+            ),
+            patch("ica.pipeline.html_generation.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.html_generation.add_note", new_callable=AsyncMock
+            ) as mock_add_note,
+        ):
             # No session passed
             result = await run_html_generation(
                 SAMPLE_MARKDOWN,
@@ -1090,12 +1222,18 @@ class TestRunHtmlGenerationLearningData:
 
         notes = [_make_note("Prior note 1"), _make_note("Prior note 2")]
 
-        with patch("ica.pipeline.html_generation.litellm.acompletion",
-                    return_value=_mock_llm_response(SAMPLE_HTML)) as mock_call, \
-             patch("ica.pipeline.html_generation.get_model",
-                    return_value="m"), \
-             patch("ica.pipeline.html_generation.get_recent_notes",
-                    new_callable=AsyncMock, return_value=notes):
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion",
+                return_value=_mock_llm_response(SAMPLE_HTML),
+            ) as mock_call,
+            patch("ica.pipeline.html_generation.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.html_generation.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=notes,
+            ),
+        ):
             await run_html_generation(
                 SAMPLE_MARKDOWN,
                 SAMPLE_HTML_TEMPLATE,
@@ -1116,12 +1254,18 @@ class TestRunHtmlGenerationLearningData:
             NEXT_STEPS_FIELD_LABEL: "Yes",
         }
 
-        with patch("ica.pipeline.html_generation.litellm.acompletion",
-                    return_value=_mock_llm_response(SAMPLE_HTML)) as mock_call, \
-             patch("ica.pipeline.html_generation.get_model",
-                    return_value="m"), \
-             patch("ica.pipeline.html_generation.get_recent_notes",
-                    new_callable=AsyncMock, return_value=[]):
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion",
+                return_value=_mock_llm_response(SAMPLE_HTML),
+            ) as mock_call,
+            patch("ica.pipeline.html_generation.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.html_generation.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
             await run_html_generation(
                 SAMPLE_MARKDOWN,
                 SAMPLE_HTML_TEMPLATE,
@@ -1140,12 +1284,16 @@ class TestRunHtmlGenerationLearningData:
             NEXT_STEPS_FIELD_LABEL: "Yes",
         }
 
-        with patch("ica.pipeline.html_generation.litellm.acompletion",
-                    return_value=_mock_llm_response(SAMPLE_HTML)), \
-             patch("ica.pipeline.html_generation.get_model",
-                    return_value="m"), \
-             patch("ica.pipeline.html_generation.get_recent_notes",
-                    new_callable=AsyncMock) as mock_notes:
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion",
+                return_value=_mock_llm_response(SAMPLE_HTML),
+            ),
+            patch("ica.pipeline.html_generation.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.html_generation.get_recent_notes", new_callable=AsyncMock
+            ) as mock_notes,
+        ):
             await run_html_generation(
                 SAMPLE_MARKDOWN,
                 SAMPLE_HTML_TEMPLATE,
@@ -1171,12 +1319,18 @@ class TestRunHtmlGenerationUnknownChoice:
             {NEXT_STEPS_FIELD_LABEL: "Yes"},
         ]
 
-        with patch("ica.pipeline.html_generation.litellm.acompletion",
-                    return_value=_mock_llm_response(SAMPLE_HTML)), \
-             patch("ica.pipeline.html_generation.get_model",
-                    return_value="m"), \
-             patch("ica.pipeline.html_generation.get_recent_notes",
-                    new_callable=AsyncMock, return_value=[]):
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion",
+                return_value=_mock_llm_response(SAMPLE_HTML),
+            ),
+            patch("ica.pipeline.html_generation.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.html_generation.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
             result = await run_html_generation(
                 SAMPLE_MARKDOWN,
                 SAMPLE_HTML_TEMPLATE,
@@ -1203,12 +1357,18 @@ class TestRunHtmlGenerationSlackMessages:
         }
         docs = _make_docs_mock("html-doc-link")
 
-        with patch("ica.pipeline.html_generation.litellm.acompletion",
-                    return_value=_mock_llm_response(SAMPLE_HTML)), \
-             patch("ica.pipeline.html_generation.get_model",
-                    return_value="m"), \
-             patch("ica.pipeline.html_generation.get_recent_notes",
-                    new_callable=AsyncMock, return_value=[]):
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion",
+                return_value=_mock_llm_response(SAMPLE_HTML),
+            ),
+            patch("ica.pipeline.html_generation.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.html_generation.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
             await run_html_generation(
                 SAMPLE_MARKDOWN,
                 SAMPLE_HTML_TEMPLATE,
@@ -1230,12 +1390,18 @@ class TestRunHtmlGenerationSlackMessages:
             NEXT_STEPS_FIELD_LABEL: "Yes",
         }
 
-        with patch("ica.pipeline.html_generation.litellm.acompletion",
-                    return_value=_mock_llm_response(SAMPLE_HTML)), \
-             patch("ica.pipeline.html_generation.get_model",
-                    return_value="m"), \
-             patch("ica.pipeline.html_generation.get_recent_notes",
-                    new_callable=AsyncMock, return_value=[]):
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion",
+                return_value=_mock_llm_response(SAMPLE_HTML),
+            ),
+            patch("ica.pipeline.html_generation.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.html_generation.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+        ):
             await run_html_generation(
                 SAMPLE_MARKDOWN,
                 SAMPLE_HTML_TEMPLATE,
@@ -1278,14 +1444,18 @@ class TestRunHtmlGenerationContentValidity:
                 return _mock_llm_response(invalid_regen)  # regen (invalid)
             return _mock_llm_response('{"learning_feedback": "x"}')
 
-        with patch("ica.pipeline.html_generation.litellm.acompletion",
-                    side_effect=mock_acompletion), \
-             patch("ica.pipeline.html_generation.get_model",
-                    return_value="m"), \
-             patch("ica.pipeline.html_generation.get_recent_notes",
-                    new_callable=AsyncMock, return_value=[]), \
-             patch("ica.pipeline.html_generation.add_note",
-                    new_callable=AsyncMock):
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion", side_effect=mock_acompletion
+            ),
+            patch("ica.pipeline.html_generation.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.html_generation.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch("ica.pipeline.html_generation.add_note", new_callable=AsyncMock),
+        ):
             result = await run_html_generation(
                 SAMPLE_MARKDOWN,
                 SAMPLE_HTML_TEMPLATE,
@@ -1319,14 +1489,18 @@ class TestRunHtmlGenerationContentValidity:
                 return _mock_llm_response(regen_html)
             return _mock_llm_response('{"learning_feedback": "x"}')
 
-        with patch("ica.pipeline.html_generation.litellm.acompletion",
-                    side_effect=mock_acompletion), \
-             patch("ica.pipeline.html_generation.get_model",
-                    return_value="m"), \
-             patch("ica.pipeline.html_generation.get_recent_notes",
-                    new_callable=AsyncMock, return_value=[]), \
-             patch("ica.pipeline.html_generation.add_note",
-                    new_callable=AsyncMock):
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion", side_effect=mock_acompletion
+            ),
+            patch("ica.pipeline.html_generation.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.html_generation.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch("ica.pipeline.html_generation.add_note", new_callable=AsyncMock),
+        ):
             result = await run_html_generation(
                 SAMPLE_MARKDOWN,
                 SAMPLE_HTML_TEMPLATE,
@@ -1364,14 +1538,20 @@ class TestRunHtmlGenerationNewsletterId:
                 return _mock_llm_response(SAMPLE_HTML)
             return _mock_llm_response('{"learning_feedback": "note"}')
 
-        with patch("ica.pipeline.html_generation.litellm.acompletion",
-                    side_effect=mock_acompletion), \
-             patch("ica.pipeline.html_generation.get_model",
-                    return_value="m"), \
-             patch("ica.pipeline.html_generation.get_recent_notes",
-                    new_callable=AsyncMock, return_value=[]), \
-             patch("ica.pipeline.html_generation.add_note",
-                    new_callable=AsyncMock) as mock_add_note:
+        with (
+            patch(
+                "ica.pipeline.html_generation.litellm.acompletion", side_effect=mock_acompletion
+            ),
+            patch("ica.pipeline.html_generation.get_model", return_value="m"),
+            patch(
+                "ica.pipeline.html_generation.get_recent_notes",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
+            patch(
+                "ica.pipeline.html_generation.add_note", new_callable=AsyncMock
+            ) as mock_add_note,
+        ):
             await run_html_generation(
                 SAMPLE_MARKDOWN,
                 SAMPLE_HTML_TEMPLATE,

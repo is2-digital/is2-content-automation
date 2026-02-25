@@ -42,6 +42,7 @@ DEFAULT_MAX_RETRIES = 3
 DEFAULT_RETRY_BASE_DELAY = 1.0  # seconds
 DEFAULT_RETRY_MAX_DELAY = 30.0  # seconds
 
+
 def _retryable_errors() -> tuple[type[Exception], ...]:
     """Return LiteLLM exception types that are safe to retry.
 
@@ -121,10 +122,7 @@ async def completion(
 
     # Prepend "openrouter/" so LiteLLM routes through OpenRouter when the
     # key is configured and the model isn't already prefixed.
-    if (
-        os.environ.get("OPENROUTER_API_KEY")
-        and not model_id.startswith("openrouter/")
-    ):
+    if os.environ.get("OPENROUTER_API_KEY") and not model_id.startswith("openrouter/"):
         model_id = f"openrouter/{model_id}"
 
     messages: list[dict[str, str]] = [
@@ -202,4 +200,6 @@ async def completion(
             logger.error("LLM call failed with non-retryable error: %s", exc)
             raise LLMError(step, str(exc)) from exc
 
-    raise LLMError(step, f"LLM call failed after {max_retries + 1} attempts: {last_error}") from last_error
+    raise LLMError(
+        step, f"LLM call failed after {max_retries + 1} attempts: {last_error}"
+    ) from last_error

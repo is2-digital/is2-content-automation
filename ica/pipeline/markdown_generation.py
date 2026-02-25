@@ -169,19 +169,13 @@ NEXT_STEPS_FIELD_LABEL = "Ready to proceed to next step ?"
 NEXT_STEPS_OPTIONS: list[str] = ["Yes", "Provide Feedback", "Restart Chat"]
 NEXT_STEPS_BUTTON_LABEL = "Proceed to Next Steps"
 NEXT_STEPS_FORM_TITLE = "Proceed to next step"
-NEXT_STEPS_FORM_DESCRIPTION = (
-    "Markdown newsletter has been generated and validated."
-)
+NEXT_STEPS_FORM_DESCRIPTION = "Markdown newsletter has been generated and validated."
 NEXT_STEPS_MESSAGE = "*Newsletter markdown has been generated and validated.*"
 
-FEEDBACK_MESSAGE = (
-    "*Please provide feedback to improve the newsletter markdown*"
-)
+FEEDBACK_MESSAGE = "*Please provide feedback to improve the newsletter markdown*"
 FEEDBACK_BUTTON_LABEL = "Add feedback"
 FEEDBACK_FORM_TITLE = "Feedback Form"
-FEEDBACK_FORM_DESCRIPTION = (
-    "Please provide feedback to improve newsletter markdown"
-)
+FEEDBACK_FORM_DESCRIPTION = "Please provide feedback to improve newsletter markdown"
 
 GOOGLE_DOC_TITLE = "Newsletter Markdown"
 """Default title for the Google Doc created on approval."""
@@ -255,9 +249,7 @@ async def call_markdown_llm(
 
     content = response.choices[0].message.content  # type: ignore[union-attr]
     if not content or not content.strip():
-        raise RuntimeError(
-            "LLM returned an empty response for markdown generation"
-        )
+        raise RuntimeError("LLM returned an empty response for markdown generation")
 
     return content.strip()
 
@@ -378,6 +370,7 @@ def _parse_validation_response(raw: str) -> tuple[bool, list[str]]:
     except json.JSONDecodeError:
         # Try to extract JSON from markdown code block
         import re
+
         match = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text)
         if match:
             try:
@@ -426,20 +419,26 @@ async def run_three_layer_validation(
 
     # Layer 2: Structural validation (LLM)
     struct_valid, struct_errors = await run_structural_validation(
-        markdown, char_errors_json, model=validator_model,
+        markdown,
+        char_errors_json,
+        model=validator_model,
     )
 
     # Build prior errors JSON for voice validator
-    prior_json = json.dumps({
-        "output": {
-            "isValid": struct_valid and len(char_errors) == 0,
-            "errors": struct_errors,
+    prior_json = json.dumps(
+        {
+            "output": {
+                "isValid": struct_valid and len(char_errors) == 0,
+                "errors": struct_errors,
+            }
         }
-    })
+    )
 
     # Layer 3: Voice validation (LLM)
     voice_valid, all_errors = await run_voice_validation(
-        markdown, prior_json, model=validator_model,
+        markdown,
+        prior_json,
+        model=validator_model,
     )
 
     # Voice validator merges all prior errors, so all_errors is the final set
@@ -494,7 +493,8 @@ async def generate_with_validation(
     while True:
         # Validate
         result = await run_three_layer_validation(
-            markdown, validator_model=validator_model,
+            markdown,
+            validator_model=validator_model,
         )
 
         if result.is_valid or counter.exhausted:
@@ -596,9 +596,7 @@ async def call_user_feedback_regeneration(
 
     content = response.choices[0].message.content  # type: ignore[union-attr]
     if not content or not content.strip():
-        raise RuntimeError(
-            "LLM returned an empty response for markdown regeneration"
-        )
+        raise RuntimeError("LLM returned an empty response for markdown regeneration")
 
     return content.strip()
 
@@ -644,9 +642,7 @@ async def extract_markdown_learning_data(
 
     content = response.choices[0].message.content  # type: ignore[union-attr]
     if not content or not content.strip():
-        raise RuntimeError(
-            "LLM returned an empty response for learning data extraction"
-        )
+        raise RuntimeError("LLM returned an empty response for learning data extraction")
 
     text = content.strip()
 
@@ -796,7 +792,8 @@ async def run_markdown_review(
             doc_url = ""
             if docs is not None:
                 doc_id, doc_url = await create_markdown_doc(
-                    docs, current_markdown,
+                    docs,
+                    current_markdown,
                 )
                 # Notify user with doc link
                 await slack.send_channel_message(

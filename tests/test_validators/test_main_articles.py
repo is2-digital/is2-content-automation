@@ -28,6 +28,7 @@ from ica.validators.character_count import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _text(length: int, char: str = "x") -> str:
     """Create a string of exactly *length* characters."""
     return char * length
@@ -85,29 +86,31 @@ def _make_both_main_articles(
     prefix_len = len(callout_prefix)
     filler1 = max(0, callout1_len - prefix_len)
     filler2 = max(0, callout2_len - prefix_len)
-    return "\n".join([
-        "# INTRODUCTION\nSome intro.\n",
-        "# FEATURED ARTICLE\nFeatured content.\n",
-        "# MAIN ARTICLE 1",
-        "## [First Article](https://example.com/1)",
-        "",
-        _text(content1_len),
-        "",
-        f"{callout_prefix}{_text(filler1)}",
-        "",
-        "[Source →](https://example.com/1)",
-        "",
-        "# MAIN ARTICLE 2",
-        "## [Second Article](https://example.com/2)",
-        "",
-        _text(content2_len),
-        "",
-        f"{callout_prefix}{_text(filler2)}",
-        "",
-        "[Source →](https://example.com/2)",
-        "",
-        "# INDUSTRY DEVELOPMENTS\nNext section.\n",
-    ])
+    return "\n".join(
+        [
+            "# INTRODUCTION\nSome intro.\n",
+            "# FEATURED ARTICLE\nFeatured content.\n",
+            "# MAIN ARTICLE 1",
+            "## [First Article](https://example.com/1)",
+            "",
+            _text(content1_len),
+            "",
+            f"{callout_prefix}{_text(filler1)}",
+            "",
+            "[Source →](https://example.com/1)",
+            "",
+            "# MAIN ARTICLE 2",
+            "## [Second Article](https://example.com/2)",
+            "",
+            _text(content2_len),
+            "",
+            f"{callout_prefix}{_text(filler2)}",
+            "",
+            "[Source →](https://example.com/2)",
+            "",
+            "# INDUSTRY DEVELOPMENTS\nNext section.\n",
+        ]
+    )
 
 
 # ===========================================================================
@@ -227,7 +230,9 @@ class TestValidateMainArticlesValid:
         """Content has no minimum, so even 1 char is valid."""
         raw = _make_main_article(callout_len=215, content_len=1)
         errors = validate_main_articles(raw)
-        content_errors = [e for e in errors if e.section == "Main Article 1" and e.field == "Content Paragraph"]
+        content_errors = [
+            e for e in errors if e.section == "Main Article 1" and e.field == "Content Paragraph"
+        ]
         assert content_errors == []
 
 
@@ -241,16 +246,20 @@ class TestValidateMainArticlesBothValid:
 
     def test_both_within_range(self) -> None:
         raw = _make_both_main_articles(
-            callout1_len=215, content1_len=500,
-            callout2_len=215, content2_len=500,
+            callout1_len=215,
+            content1_len=500,
+            callout2_len=215,
+            content2_len=500,
         )
         errors = validate_main_articles(raw)
         assert errors == []
 
     def test_both_at_bounds(self) -> None:
         raw = _make_both_main_articles(
-            callout1_len=180, content1_len=750,
-            callout2_len=250, content2_len=750,
+            callout1_len=180,
+            content1_len=750,
+            callout2_len=250,
+            content2_len=750,
         )
         errors = validate_main_articles(raw)
         assert errors == []
@@ -267,7 +276,9 @@ class TestValidateMainArticlesCallout:
     def test_callout_too_short(self) -> None:
         raw = _make_main_article(callout_len=100)
         errors = validate_main_articles(raw)
-        callout_errors = [e for e in errors if e.section == "Main Article 1" and e.field == "Callout Paragraph"]
+        callout_errors = [
+            e for e in errors if e.section == "Main Article 1" and e.field == "Callout Paragraph"
+        ]
         assert len(callout_errors) == 1
         assert callout_errors[0].current == 100
         assert callout_errors[0].target_min == 180
@@ -277,7 +288,9 @@ class TestValidateMainArticlesCallout:
     def test_callout_too_long(self) -> None:
         raw = _make_main_article(callout_len=300)
         errors = validate_main_articles(raw)
-        callout_errors = [e for e in errors if e.section == "Main Article 1" and e.field == "Callout Paragraph"]
+        callout_errors = [
+            e for e in errors if e.section == "Main Article 1" and e.field == "Callout Paragraph"
+        ]
         assert len(callout_errors) == 1
         assert callout_errors[0].current == 300
         assert callout_errors[0].delta == 50  # 300 - 250
@@ -285,21 +298,27 @@ class TestValidateMainArticlesCallout:
     def test_callout_at_179_just_under(self) -> None:
         raw = _make_main_article(callout_len=179)
         errors = validate_main_articles(raw)
-        callout_errors = [e for e in errors if e.section == "Main Article 1" and e.field == "Callout Paragraph"]
+        callout_errors = [
+            e for e in errors if e.section == "Main Article 1" and e.field == "Callout Paragraph"
+        ]
         assert len(callout_errors) == 1
         assert callout_errors[0].delta == -1
 
     def test_callout_at_251_just_over(self) -> None:
         raw = _make_main_article(callout_len=251)
         errors = validate_main_articles(raw)
-        callout_errors = [e for e in errors if e.section == "Main Article 1" and e.field == "Callout Paragraph"]
+        callout_errors = [
+            e for e in errors if e.section == "Main Article 1" and e.field == "Callout Paragraph"
+        ]
         assert len(callout_errors) == 1
         assert callout_errors[0].delta == 1
 
     def test_article_2_callout_too_short(self) -> None:
         raw = _make_main_article(index=2, callout_len=150)
         errors = validate_main_articles(raw)
-        callout_errors = [e for e in errors if e.section == "Main Article 2" and e.field == "Callout Paragraph"]
+        callout_errors = [
+            e for e in errors if e.section == "Main Article 2" and e.field == "Callout Paragraph"
+        ]
         assert len(callout_errors) == 1
         assert callout_errors[0].current == 150
         assert callout_errors[0].delta == -30
@@ -316,7 +335,9 @@ class TestValidateMainArticlesContent:
     def test_content_too_long(self) -> None:
         raw = _make_main_article(content_len=800)
         errors = validate_main_articles(raw)
-        content_errors = [e for e in errors if e.section == "Main Article 1" and e.field == "Content Paragraph"]
+        content_errors = [
+            e for e in errors if e.section == "Main Article 1" and e.field == "Content Paragraph"
+        ]
         assert len(content_errors) == 1
         assert content_errors[0].current == 800
         assert content_errors[0].delta == 50  # 800 - 750
@@ -324,21 +345,27 @@ class TestValidateMainArticlesContent:
     def test_content_at_751_just_over(self) -> None:
         raw = _make_main_article(content_len=751)
         errors = validate_main_articles(raw)
-        content_errors = [e for e in errors if e.section == "Main Article 1" and e.field == "Content Paragraph"]
+        content_errors = [
+            e for e in errors if e.section == "Main Article 1" and e.field == "Content Paragraph"
+        ]
         assert len(content_errors) == 1
         assert content_errors[0].delta == 1
 
     def test_content_way_over(self) -> None:
         raw = _make_main_article(content_len=1200)
         errors = validate_main_articles(raw)
-        content_errors = [e for e in errors if e.section == "Main Article 1" and e.field == "Content Paragraph"]
+        content_errors = [
+            e for e in errors if e.section == "Main Article 1" and e.field == "Content Paragraph"
+        ]
         assert len(content_errors) == 1
         assert content_errors[0].delta == 450  # 1200 - 750
 
     def test_article_2_content_too_long(self) -> None:
         raw = _make_main_article(index=2, content_len=900)
         errors = validate_main_articles(raw)
-        content_errors = [e for e in errors if e.section == "Main Article 2" and e.field == "Content Paragraph"]
+        content_errors = [
+            e for e in errors if e.section == "Main Article 2" and e.field == "Content Paragraph"
+        ]
         assert len(content_errors) == 1
         assert content_errors[0].current == 900
         assert content_errors[0].delta == 150
@@ -370,8 +397,10 @@ class TestValidateMainArticlesMultipleErrors:
 
     def test_article_1_ok_article_2_out(self) -> None:
         raw = _make_both_main_articles(
-            callout1_len=215, content1_len=500,
-            callout2_len=100, content2_len=900,
+            callout1_len=215,
+            content1_len=500,
+            callout2_len=100,
+            content2_len=900,
         )
         errors = validate_main_articles(raw)
         a1_errors = [e for e in errors if e.section == "Main Article 1"]
@@ -381,8 +410,10 @@ class TestValidateMainArticlesMultipleErrors:
 
     def test_all_four_fields_out(self) -> None:
         raw = _make_both_main_articles(
-            callout1_len=100, content1_len=900,
-            callout2_len=300, content2_len=800,
+            callout1_len=100,
+            content1_len=900,
+            callout2_len=300,
+            content2_len=800,
         )
         errors = validate_main_articles(raw)
         assert len(errors) == 4
@@ -436,7 +467,13 @@ class TestValidateMainArticlesEdgeCases:
 
     def test_missing_section_returns_callout_error(self) -> None:
         """When MAIN ARTICLE 1 section is absent, callout is empty → error."""
-        raw = "# QUICK HIGHLIGHTS\nSome bullets.\n# MAIN ARTICLE 2\n## [Title](https://x.com)\n\n" + _text(500) + "\n\n**Take:** " + _text(195) + "\n\n# INDUSTRY DEVELOPMENTS\nText.\n"
+        raw = (
+            "# QUICK HIGHLIGHTS\nSome bullets.\n# MAIN ARTICLE 2\n## [Title](https://x.com)\n\n"
+            + _text(500)
+            + "\n\n**Take:** "
+            + _text(195)
+            + "\n\n# INDUSTRY DEVELOPMENTS\nText.\n"
+        )
         errors = validate_main_articles(raw)
         a1_errors = [e for e in errors if e.section == "Main Article 1"]
         a1_callout = [e for e in a1_errors if e.field == "Callout Paragraph"]
@@ -459,20 +496,24 @@ class TestValidateMainArticlesEdgeCases:
 
     def test_no_callout_found(self) -> None:
         """When no paragraph matches bold-label pattern, callout is empty → error."""
-        raw = "\n".join([
-            "# MAIN ARTICLE 1",
-            "## [Title](https://example.com)",
-            "",
-            _text(500),
-            "",
-            "No bold pattern here: " + _text(200),
-            "",
-            "[Source →](https://example.com)",
-            "",
-            "# MAIN ARTICLE 2\nText.\n",
-        ])
+        raw = "\n".join(
+            [
+                "# MAIN ARTICLE 1",
+                "## [Title](https://example.com)",
+                "",
+                _text(500),
+                "",
+                "No bold pattern here: " + _text(200),
+                "",
+                "[Source →](https://example.com)",
+                "",
+                "# MAIN ARTICLE 2\nText.\n",
+            ]
+        )
         errors = validate_main_articles(raw)
-        callout_errors = [e for e in errors if e.section == "Main Article 1" and e.field == "Callout Paragraph"]
+        callout_errors = [
+            e for e in errors if e.section == "Main Article 1" and e.field == "Callout Paragraph"
+        ]
         assert len(callout_errors) == 1
         assert callout_errors[0].current == 0
 
@@ -487,16 +528,18 @@ class TestValidateMainArticlesEdgeCases:
         """Heading with ``# *MAIN ARTICLE 1*`` (italic asterisks) is found."""
         prefix = "**Insight:** "
         prefix_len = len(prefix)
-        raw = "\n".join([
-            "# *MAIN ARTICLE 1*",
-            "## [Title](https://example.com)",
-            "",
-            _text(500),
-            "",
-            f"{prefix}{_text(215 - prefix_len)}",
-            "",
-            "# *MAIN ARTICLE 2*\nText.\n",
-        ])
+        raw = "\n".join(
+            [
+                "# *MAIN ARTICLE 1*",
+                "## [Title](https://example.com)",
+                "",
+                _text(500),
+                "",
+                f"{prefix}{_text(215 - prefix_len)}",
+                "",
+                "# *MAIN ARTICLE 2*\nText.\n",
+            ]
+        )
         errors = validate_main_articles(raw)
         a1_errors = [e for e in errors if e.section == "Main Article 1"]
         assert a1_errors == []
@@ -505,30 +548,40 @@ class TestValidateMainArticlesEdgeCases:
         """Section with only a callout paragraph → content is empty (0 chars, valid)."""
         prefix = "**Take:** "
         prefix_len = len(prefix)
-        raw = "\n".join([
-            "# MAIN ARTICLE 1",
-            "",
-            f"{prefix}{_text(215 - prefix_len)}",
-            "",
-            "# MAIN ARTICLE 2\nText.\n",
-        ])
+        raw = "\n".join(
+            [
+                "# MAIN ARTICLE 1",
+                "",
+                f"{prefix}{_text(215 - prefix_len)}",
+                "",
+                "# MAIN ARTICLE 2\nText.\n",
+            ]
+        )
         errors = validate_main_articles(raw)
-        a1_content = [e for e in errors if e.section == "Main Article 1" and e.field == "Content Paragraph"]
+        a1_content = [
+            e for e in errors if e.section == "Main Article 1" and e.field == "Content Paragraph"
+        ]
         # Content is 0 chars, max 750, no error (no minimum)
         assert a1_content == []
 
     def test_only_content_no_callout(self) -> None:
         """Section with content but no callout → callout error, no content error."""
-        raw = "\n".join([
-            "# MAIN ARTICLE 1",
-            "",
-            _text(500),
-            "",
-            "# MAIN ARTICLE 2\nText.\n",
-        ])
+        raw = "\n".join(
+            [
+                "# MAIN ARTICLE 1",
+                "",
+                _text(500),
+                "",
+                "# MAIN ARTICLE 2\nText.\n",
+            ]
+        )
         errors = validate_main_articles(raw)
-        a1_callout = [e for e in errors if e.section == "Main Article 1" and e.field == "Callout Paragraph"]
-        a1_content = [e for e in errors if e.section == "Main Article 1" and e.field == "Content Paragraph"]
+        a1_callout = [
+            e for e in errors if e.section == "Main Article 1" and e.field == "Callout Paragraph"
+        ]
+        a1_content = [
+            e for e in errors if e.section == "Main Article 1" and e.field == "Content Paragraph"
+        ]
         assert len(a1_callout) == 1
         assert a1_callout[0].current == 0
         assert a1_content == []
@@ -546,18 +599,20 @@ class TestValidateMainArticlesSourceLinks:
         """Source link lines should be stripped before paragraph splitting."""
         prefix = "**Take:** "
         prefix_len = len(prefix)
-        raw = "\n".join([
-            "# MAIN ARTICLE 1",
-            "## [Title](https://example.com)",
-            "",
-            _text(500),
-            "",
-            f"{prefix}{_text(215 - prefix_len)}",
-            "",
-            "[Read the full story →](https://example.com/full)",
-            "",
-            "# MAIN ARTICLE 2\nNext.\n",
-        ])
+        raw = "\n".join(
+            [
+                "# MAIN ARTICLE 1",
+                "## [Title](https://example.com)",
+                "",
+                _text(500),
+                "",
+                f"{prefix}{_text(215 - prefix_len)}",
+                "",
+                "[Read the full story →](https://example.com/full)",
+                "",
+                "# MAIN ARTICLE 2\nNext.\n",
+            ]
+        )
         errors = validate_main_articles(raw)
         a1_errors = [e for e in errors if e.section == "Main Article 1"]
         assert a1_errors == []
@@ -566,18 +621,20 @@ class TestValidateMainArticlesSourceLinks:
         """Multiple source links are all removed."""
         prefix = "**Take:** "
         prefix_len = len(prefix)
-        raw = "\n".join([
-            "# MAIN ARTICLE 1",
-            "",
-            _text(500),
-            "",
-            f"{prefix}{_text(215 - prefix_len)}",
-            "",
-            "[First →](https://a.com)",
-            "[Second →](https://b.com)",
-            "",
-            "# MAIN ARTICLE 2\nNext.\n",
-        ])
+        raw = "\n".join(
+            [
+                "# MAIN ARTICLE 1",
+                "",
+                _text(500),
+                "",
+                f"{prefix}{_text(215 - prefix_len)}",
+                "",
+                "[First →](https://a.com)",
+                "[Second →](https://b.com)",
+                "",
+                "# MAIN ARTICLE 2\nNext.\n",
+            ]
+        )
         errors = validate_main_articles(raw)
         a1_errors = [e for e in errors if e.section == "Main Article 1"]
         assert a1_errors == []
@@ -631,8 +688,10 @@ class TestValidateCharacterCountsIncludesMainArticles:
 
     def test_valid_main_articles_no_errors_in_combined(self) -> None:
         raw = _make_both_main_articles(
-            callout1_len=215, content1_len=500,
-            callout2_len=215, content2_len=500,
+            callout1_len=215,
+            content1_len=500,
+            callout2_len=215,
+            content2_len=500,
         )
         errors = validate_character_counts(raw)
         main_errors = [e for e in errors if e.section.startswith("Main Article")]
@@ -650,29 +709,33 @@ class TestMainArticleDeltaAccuracy:
     @pytest.mark.parametrize(
         "callout_len,expected_delta",
         [
-            (50, -130),    # 50 - 180
-            (179, -1),     # 179 - 180
-            (251, 1),      # 251 - 250
-            (350, 100),    # 350 - 250
+            (50, -130),  # 50 - 180
+            (179, -1),  # 179 - 180
+            (251, 1),  # 251 - 250
+            (350, 100),  # 350 - 250
         ],
     )
     def test_callout_delta(self, callout_len: int, expected_delta: int) -> None:
         raw = _make_main_article(callout_len=callout_len)
         errors = validate_main_articles(raw)
-        callout = next(e for e in errors if e.section == "Main Article 1" and e.field == "Callout Paragraph")
+        callout = next(
+            e for e in errors if e.section == "Main Article 1" and e.field == "Callout Paragraph"
+        )
         assert callout.delta == expected_delta
 
     @pytest.mark.parametrize(
         "content_len,expected_delta",
         [
-            (751, 1),      # 751 - 750
-            (800, 50),     # 800 - 750
-            (1000, 250),   # 1000 - 750
-            (1500, 750),   # 1500 - 750
+            (751, 1),  # 751 - 750
+            (800, 50),  # 800 - 750
+            (1000, 250),  # 1000 - 750
+            (1500, 750),  # 1500 - 750
         ],
     )
     def test_content_delta(self, content_len: int, expected_delta: int) -> None:
         raw = _make_main_article(content_len=content_len)
         errors = validate_main_articles(raw)
-        content = next(e for e in errors if e.section == "Main Article 1" and e.field == "Content Paragraph")
+        content = next(
+            e for e in errors if e.section == "Main Article 1" and e.field == "Content Paragraph"
+        )
         assert content.delta == expected_delta

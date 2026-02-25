@@ -188,6 +188,7 @@ async def run_pipeline_trigger() -> dict[str, Any]:
         runs[run_id] = run
 
         import asyncio
+
         asyncio.create_task(_run_pipeline(run))  # noqa: RUF006
 
         logger.info("Scheduled pipeline run created: %s", run_id)
@@ -217,12 +218,14 @@ def get_scheduled_jobs(scheduler: AsyncIOScheduler) -> list[dict[str, Any]]:
     jobs = []
     for job in scheduler.get_jobs():
         next_run = getattr(job, "next_run_time", None)
-        jobs.append({
-            "id": job.id,
-            "name": job.name,
-            "next_run_time": next_run.isoformat() if next_run else None,
-            "trigger": str(job.trigger),
-        })
+        jobs.append(
+            {
+                "id": job.id,
+                "name": job.name,
+                "next_run_time": next_run.isoformat() if next_run else None,
+                "trigger": str(job.trigger),
+            }
+        )
     return jobs
 
 

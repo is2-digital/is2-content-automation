@@ -23,7 +23,9 @@ from ica.services.llm import (
 # ---------------------------------------------------------------------------
 
 
-def _make_response(content: str | None = "Hello world", usage: dict | None = None) -> SimpleNamespace:
+def _make_response(
+    content: str | None = "Hello world", usage: dict | None = None
+) -> SimpleNamespace:
     """Build a mock litellm response object."""
     msg = SimpleNamespace(content=content)
     choice = SimpleNamespace(message=msg)
@@ -146,9 +148,7 @@ class TestCompletionBasic:
     async def test_strips_whitespace(self) -> None:
         with _patch_litellm() as mock_litellm:
             _set_retryable_types(mock_litellm)
-            mock_litellm.acompletion = AsyncMock(
-                return_value=_make_response("  padded text  \n")
-            )
+            mock_litellm.acompletion = AsyncMock(return_value=_make_response("  padded text  \n"))
 
             result = await completion(
                 purpose=LLMPurpose.SUMMARY,
@@ -162,7 +162,9 @@ class TestCompletionBasic:
     async def test_uses_purpose_model(self) -> None:
         with (
             _patch_litellm() as mock_litellm,
-            patch("ica.services.llm.get_model", return_value="anthropic/claude-sonnet-4.5") as mock_get,
+            patch(
+                "ica.services.llm.get_model", return_value="anthropic/claude-sonnet-4.5"
+            ) as mock_get,
             patch.dict("os.environ", {"OPENROUTER_API_KEY": ""}, clear=False),
         ):
             _set_retryable_types(mock_litellm)
@@ -332,9 +334,7 @@ class TestCompletionUsage:
         usage = {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150}
         with _patch_litellm() as mock_litellm:
             _set_retryable_types(mock_litellm)
-            mock_litellm.acompletion = AsyncMock(
-                return_value=_make_response("ok", usage=usage)
-            )
+            mock_litellm.acompletion = AsyncMock(return_value=_make_response("ok", usage=usage))
 
             result = await completion(
                 model="test-model",
@@ -551,9 +551,7 @@ class TestCompletionRetry:
     async def test_exhausts_retries(self) -> None:
         with _patch_litellm() as mock_litellm:
             _set_retryable_types(mock_litellm)
-            mock_litellm.acompletion = AsyncMock(
-                side_effect=_RateLimitSentinel("rate limited")
-            )
+            mock_litellm.acompletion = AsyncMock(side_effect=_RateLimitSentinel("rate limited"))
 
             with pytest.raises(LLMError, match="failed after"):
                 await completion(
@@ -571,9 +569,7 @@ class TestCompletionRetry:
     async def test_no_retry_on_non_retryable(self) -> None:
         with _patch_litellm() as mock_litellm:
             _set_retryable_types(mock_litellm)
-            mock_litellm.acompletion = AsyncMock(
-                side_effect=_NonRetryableError("auth failed")
-            )
+            mock_litellm.acompletion = AsyncMock(side_effect=_NonRetryableError("auth failed"))
 
             with pytest.raises(LLMError, match="auth failed"):
                 await completion(
@@ -607,9 +603,7 @@ class TestCompletionRetry:
         """max_retries=0 means only 1 attempt, no retries."""
         with _patch_litellm() as mock_litellm:
             _set_retryable_types(mock_litellm)
-            mock_litellm.acompletion = AsyncMock(
-                side_effect=_RateLimitSentinel("rate limited")
-            )
+            mock_litellm.acompletion = AsyncMock(side_effect=_RateLimitSentinel("rate limited"))
 
             with pytest.raises(LLMError, match="failed after 1 attempts"):
                 await completion(
@@ -627,9 +621,7 @@ class TestCompletionRetry:
         with _patch_litellm() as mock_litellm:
             _set_retryable_types(mock_litellm)
             err = _RateLimitSentinel("rate limited")
-            mock_litellm.acompletion = AsyncMock(
-                side_effect=[err, err, _make_response("finally")]
-            )
+            mock_litellm.acompletion = AsyncMock(side_effect=[err, err, _make_response("finally")])
 
             result = await completion(
                 model="test-model",
@@ -725,9 +717,7 @@ class TestCompletionStepName:
     async def test_step_in_retry_exhausted_error(self) -> None:
         with _patch_litellm() as mock_litellm:
             _set_retryable_types(mock_litellm)
-            mock_litellm.acompletion = AsyncMock(
-                side_effect=_RateLimitSentinel("limit")
-            )
+            mock_litellm.acompletion = AsyncMock(side_effect=_RateLimitSentinel("limit"))
 
             with pytest.raises(LLMError) as exc_info:
                 await completion(
@@ -744,9 +734,7 @@ class TestCompletionStepName:
     async def test_step_in_non_retryable_error(self) -> None:
         with _patch_litellm() as mock_litellm:
             _set_retryable_types(mock_litellm)
-            mock_litellm.acompletion = AsyncMock(
-                side_effect=_NonRetryableError("forbidden")
-            )
+            mock_litellm.acompletion = AsyncMock(side_effect=_NonRetryableError("forbidden"))
 
             with pytest.raises(LLMError) as exc_info:
                 await completion(

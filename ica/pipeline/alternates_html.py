@@ -82,13 +82,9 @@ def filter_unused_articles(
             not a list.
     """
     if not isinstance(formatted_theme, dict):
-        raise TypeError(
-            f"formatted_theme must be a dict, got {type(formatted_theme).__name__}"
-        )
+        raise TypeError(f"formatted_theme must be a dict, got {type(formatted_theme).__name__}")
     if not isinstance(summaries, list):
-        raise TypeError(
-            f"summaries must be a list, got {type(summaries).__name__}"
-        )
+        raise TypeError(f"summaries must be a list, got {type(summaries).__name__}")
 
     used_urls = extract_urls_from_theme(formatted_theme)
 

@@ -178,8 +178,10 @@ class TestPackageExport:
 
     def test_import_validation_result(self) -> None:
         from ica.config import ValidationResult as VR
+
         assert VR is ValidationResult
 
     def test_import_validate_config(self) -> None:
         from ica.config import validate_config as vc
+
         assert vc is validate_config

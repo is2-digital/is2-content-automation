@@ -52,9 +52,7 @@ def validate_config() -> ValidationResult:
     try:
         zoneinfo.ZoneInfo(settings.timezone)
     except (KeyError, ValueError, zoneinfo.ZoneInfoNotFoundError):
-        errors.append(
-            f"TIMEZONE: '{settings.timezone}' is not a valid IANA timezone"
-        )
+        errors.append(f"TIMEZONE: '{settings.timezone}' is not a valid IANA timezone")
 
     # --- Validate LLM config ---
     try:
@@ -73,8 +71,6 @@ def validate_config() -> ValidationResult:
         if not model_id or not model_id.strip():
             errors.append(f"{purpose.value}: model identifier is empty")
         elif "/" not in model_id:
-            errors.append(
-                f"{purpose.value}: '{model_id}' missing provider/model separator '/'"
-            )
+            errors.append(f"{purpose.value}: '{model_id}' missing provider/model separator '/'")
 
     return ValidationResult(ok=len(errors) == 0, errors=tuple(errors))

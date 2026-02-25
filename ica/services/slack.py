@@ -144,10 +144,12 @@ def _build_modal_blocks(
             options = []
             for opt in options_raw:  # type: ignore[union-attr]
                 opt_text = str(opt.get("option", "")) if isinstance(opt, dict) else str(opt)
-                options.append({
-                    "text": {"type": "plain_text", "text": opt_text},
-                    "value": opt_text,
-                })
+                options.append(
+                    {
+                        "text": {"type": "plain_text", "text": opt_text},
+                        "value": opt_text,
+                    }
+                )
             element: dict[str, object] = {
                 "type": "static_select",
                 "action_id": action_id,
@@ -155,38 +157,44 @@ def _build_modal_blocks(
             }
             if options:
                 element["options"] = options
-            blocks.append({
-                "type": "input",
-                "block_id": block_id,
-                "optional": not required,
-                "label": {"type": "plain_text", "text": label},
-                "element": element,
-            })
+            blocks.append(
+                {
+                    "type": "input",
+                    "block_id": block_id,
+                    "optional": not required,
+                    "label": {"type": "plain_text", "text": label},
+                    "element": element,
+                }
+            )
         elif field_type == "textarea":
-            blocks.append({
-                "type": "input",
-                "block_id": block_id,
-                "optional": not required,
-                "label": {"type": "plain_text", "text": label},
-                "element": {
-                    "type": "plain_text_input",
-                    "action_id": action_id,
-                    "multiline": True,
-                },
-            })
+            blocks.append(
+                {
+                    "type": "input",
+                    "block_id": block_id,
+                    "optional": not required,
+                    "label": {"type": "plain_text", "text": label},
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": action_id,
+                        "multiline": True,
+                    },
+                }
+            )
         else:
             # Default: single-line text input
-            blocks.append({
-                "type": "input",
-                "block_id": block_id,
-                "optional": not required,
-                "label": {"type": "plain_text", "text": label},
-                "element": {
-                    "type": "plain_text_input",
-                    "action_id": action_id,
-                    "multiline": False,
-                },
-            })
+            blocks.append(
+                {
+                    "type": "input",
+                    "block_id": block_id,
+                    "optional": not required,
+                    "label": {"type": "plain_text", "text": label},
+                    "element": {
+                        "type": "plain_text_input",
+                        "action_id": action_id,
+                        "multiline": False,
+                    },
+                }
+            )
 
     return blocks
 
@@ -198,16 +206,18 @@ def _build_freetext_modal_blocks(
     blocks: list[dict[str, object]] = []
     if description:
         blocks.append(_text_block(description))
-    blocks.append({
-        "type": "input",
-        "block_id": "freetext_block",
-        "label": {"type": "plain_text", "text": "Your response"},
-        "element": {
-            "type": "plain_text_input",
-            "action_id": "freetext_action",
-            "multiline": True,
-        },
-    })
+    blocks.append(
+        {
+            "type": "input",
+            "block_id": "freetext_block",
+            "label": {"type": "plain_text", "text": "Your response"},
+            "element": {
+                "type": "plain_text_input",
+                "action_id": "freetext_action",
+                "multiline": True,
+            },
+        }
+    )
     return blocks
 
 
@@ -538,7 +548,9 @@ class SlackService:
         }
 
         await self._client.views_open(trigger_id=trigger_id, view=view)
-        logger.info("Opened modal for callback=%s (type=%s)", callback_id, pending.interaction_type)
+        logger.info(
+            "Opened modal for callback=%s (type=%s)", callback_id, pending.interaction_type
+        )
 
     async def _handle_view_submission(self, ack: Any, body: dict[str, Any]) -> None:
         """Handle a modal form submission — extract values and resolve event."""
@@ -560,9 +572,7 @@ class SlackService:
             pending.response["text"] = freetext_action.get("value", "")
         else:
             # Extract form field values
-            pending.response.update(
-                _extract_modal_values(state_values, pending.form_fields)
-            )
+            pending.response.update(_extract_modal_values(state_values, pending.form_fields))
 
         logger.info(
             "Modal submitted (callback=%s, type=%s, fields=%d)",

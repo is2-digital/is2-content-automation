@@ -104,6 +104,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application startup/shutdown lifecycle."""
     try:
         from ica.config.settings import get_settings
+
         settings = get_settings()
         configure_logging(level=settings.log_level, log_format=settings.log_format)
     except Exception:
@@ -219,9 +220,7 @@ def create_app(
     async def status_all() -> dict[str, Any]:
         """Return status of all pipeline runs."""
         return {
-            "runs": [
-                _serialize_run(r) for r in _runs.values()
-            ],
+            "runs": [_serialize_run(r) for r in _runs.values()],
         }
 
     @app.get("/status/{run_id}", response_model=None)
@@ -243,6 +242,7 @@ def create_app(
         if sched is None or not sched.running:
             return {"enabled": False, "jobs": []}
         from ica.scheduler import get_scheduled_jobs
+
         return {"enabled": True, "jobs": get_scheduled_jobs(sched)}
 
     # --- Slack events route ---

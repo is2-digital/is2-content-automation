@@ -158,8 +158,7 @@ class TestStructuralValidationPromptConstant:
         assert "Featured -> Main 1 -> Main 2" in _COMBINED
 
     def test_no_n8n_expression_syntax(self) -> None:
-        assert "{{" not in _COMBINED or \
-            _COMBINED.count("{{") == _COMBINED.count("}}")
+        assert "{{" not in _COMBINED or _COMBINED.count("{{") == _COMBINED.count("}}")
         # The only {{ }} should be the escaped JSON output format
         assert "$json" not in _COMBINED
         assert "$(" not in _COMBINED

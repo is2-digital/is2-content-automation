@@ -150,9 +150,7 @@ class ApprovalResult:
 # Constants
 # ---------------------------------------------------------------------------
 
-INITIAL_NOTIFICATION = (
-    "Looking into articles now and starting summarization..."
-)
+INITIAL_NOTIFICATION = "Looking into articles now and starting summarization..."
 
 #: Default limit matching n8n ``Fetch data`` Postgres node (limit: 30).
 DEFAULT_FETCH_LIMIT = 30
@@ -194,11 +192,7 @@ def format_article_for_sheet(article: Article) -> SheetArticle:
     - ``industry_news`` is converted to ``"yes"`` / ``""`` for display.
     - ``newsletter_id`` defaults to empty string when ``None``.
     """
-    publish_date = (
-        format_date_mmddyyyy(article.publish_date)
-        if article.publish_date
-        else ""
-    )
+    publish_date = format_date_mmddyyyy(article.publish_date) if article.publish_date else ""
 
     return SheetArticle(
         url=article.url,
@@ -369,11 +363,7 @@ async def prepare_curation_data(
 
     # 5. Append to sheet
     rows = articles_to_row_dicts(sheet_articles)
-    written = (
-        await sheets.append_rows(spreadsheet_id, sheet_name, rows)
-        if rows
-        else 0
-    )
+    written = await sheets.append_rows(spreadsheet_id, sheet_name, rows) if rows else 0
 
     return CurationDataResult(
         articles_fetched=len(articles),
@@ -425,7 +415,9 @@ async def run_approval_flow(
 
         # 6. Send Slack sendAndWait — blocks until user clicks
         await slack_approval.send_and_wait(
-            channel, message, approve_label=APPROVE_LABEL,
+            channel,
+            message,
+            approve_label=APPROVE_LABEL,
         )
 
         # 7. Fetch all rows from Google Sheet

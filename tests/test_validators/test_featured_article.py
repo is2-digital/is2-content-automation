@@ -28,6 +28,7 @@ from ica.validators.character_count import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _text(length: int, char: str = "x") -> str:
     """Create a string of exactly *length* characters."""
     return char * length
@@ -427,11 +428,7 @@ class TestValidateFeaturedArticleEdgeCases:
 
     def test_only_one_paragraph(self) -> None:
         """Section with only one paragraph → P2 and Key Insight produce errors."""
-        featured = (
-            "# FEATURED ARTICLE\n"
-            f"{_text(350)}\n"
-            "# MAIN ARTICLE 1\nText.\n"
-        )
+        featured = f"# FEATURED ARTICLE\n{_text(350)}\n# MAIN ARTICLE 1\nText.\n"
         errors = validate_featured_article(featured)
         fields = {e.field for e in errors}
         assert "Paragraph 2" in fields
@@ -524,10 +521,10 @@ class TestFeaturedArticleDeltaAccuracy:
     @pytest.mark.parametrize(
         "p1_len,expected_delta",
         [
-            (100, -200),   # 100 - 300
-            (299, -1),     # 299 - 300
-            (401, 1),      # 401 - 400
-            (500, 100),    # 500 - 400
+            (100, -200),  # 100 - 300
+            (299, -1),  # 299 - 300
+            (401, 1),  # 401 - 400
+            (500, 100),  # 500 - 400
         ],
     )
     def test_p1_delta(self, p1_len: int, expected_delta: int) -> None:

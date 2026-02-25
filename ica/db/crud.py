@@ -120,12 +120,7 @@ async def get_recent_notes(
     The default of 40 matches the "last 40 entries" pattern used by every
     feedback-injection prompt in the pipeline (PRD Sections 3–6).
     """
-    stmt = (
-        select(Note)
-        .where(Note.type == note_type)
-        .order_by(Note.created_at.desc())
-        .limit(limit)
-    )
+    stmt = select(Note).where(Note.type == note_type).order_by(Note.created_at.desc()).limit(limit)
     result = await session.execute(stmt)
     return list(result.scalars().all())
 

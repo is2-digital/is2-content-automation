@@ -83,7 +83,9 @@ def upgrade() -> None:
     )
     op.create_index("ix_notes_created_at", "notes", ["created_at"])
     op.create_index(
-        "ix_notes_type_created_at", "notes", ["type", "created_at"],
+        "ix_notes_type_created_at",
+        "notes",
+        ["type", "created_at"],
     )
 
 

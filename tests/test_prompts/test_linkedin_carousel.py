@@ -282,9 +282,7 @@ class TestBuildLinkedInCarouselPrompt:
         assert "None" in user_prompt
 
     def test_previous_output_included(self):
-        _, user_prompt = build_linkedin_carousel_prompt(
-            "theme", "content", "previous carousel"
-        )
+        _, user_prompt = build_linkedin_carousel_prompt("theme", "content", "previous carousel")
         assert "previous carousel" in user_prompt
         assert "None" not in user_prompt.split("Previously generated output")[1]
 
@@ -303,9 +301,7 @@ class TestBuildLinkedInRegenerationPrompt:
     """Verify the regeneration builder function."""
 
     def test_returns_tuple(self):
-        result = build_linkedin_regeneration_prompt(
-            "previous", "feedback", "theme", "content"
-        )
+        result = build_linkedin_regeneration_prompt("previous", "feedback", "theme", "content")
         assert isinstance(result, tuple)
         assert len(result) == 2
 
@@ -340,10 +336,6 @@ class TestBuildLinkedInRegenerationPrompt:
         assert "html newsletter" in user_prompt
 
     def test_different_feedback_produces_different_prompts(self):
-        _, prompt_a = build_linkedin_regeneration_prompt(
-            "prev", "fix A", "theme", "content"
-        )
-        _, prompt_b = build_linkedin_regeneration_prompt(
-            "prev", "fix B", "theme", "content"
-        )
+        _, prompt_a = build_linkedin_regeneration_prompt("prev", "fix A", "theme", "content")
+        _, prompt_b = build_linkedin_regeneration_prompt("prev", "fix B", "theme", "content")
         assert prompt_a != prompt_b

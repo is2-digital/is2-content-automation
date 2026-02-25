@@ -39,10 +39,12 @@ from typing import Any
 # ---------------------------------------------------------------------------
 
 run_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "run_id", default=None,
+    "run_id",
+    default=None,
 )
 step_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "step", default=None,
+    "step",
+    default=None,
 )
 
 
@@ -80,7 +82,8 @@ class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
         entry: dict[str, Any] = {
             "timestamp": datetime.fromtimestamp(
-                record.created, tz=timezone.utc,
+                record.created,
+                tz=timezone.utc,
             ).isoformat(),
             "level": record.levelname,
             "logger": record.name,

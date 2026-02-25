@@ -249,51 +249,67 @@ class TestBuildHtmlGenerationPrompt:
 
     def test_returns_tuple(self) -> None:
         result = build_html_generation_prompt(
-            SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_DATE,
         )
         assert isinstance(result, tuple)
         assert len(result) == 2
 
     def test_returns_strings(self) -> None:
         system, user = build_html_generation_prompt(
-            SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_DATE,
         )
         assert isinstance(system, str)
         assert isinstance(user, str)
 
     def test_system_prompt_contains_role(self) -> None:
         system, _ = build_html_generation_prompt(
-            SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_DATE,
         )
         assert "HTML rendering engine" in system
 
     def test_user_prompt_contains_markdown(self) -> None:
         _, user = build_html_generation_prompt(
-            SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_DATE,
         )
         assert SAMPLE_MARKDOWN in user
 
     def test_user_prompt_contains_template(self) -> None:
         _, user = build_html_generation_prompt(
-            SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_DATE,
         )
         assert SAMPLE_HTML_TEMPLATE in user
 
     def test_user_prompt_contains_date(self) -> None:
         _, user = build_html_generation_prompt(
-            SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_DATE,
         )
         assert SAMPLE_DATE in user
 
     def test_no_feedback_section_without_feedback(self) -> None:
         system, _ = build_html_generation_prompt(
-            SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_DATE,
         )
         assert "Editorial Improvement Context" not in system
 
     def test_feedback_section_with_feedback(self) -> None:
         system, _ = build_html_generation_prompt(
-            SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_DATE,
             aggregated_feedback=SAMPLE_AGGREGATED_FEEDBACK,
         )
         assert "Editorial Improvement Context" in system
@@ -301,28 +317,36 @@ class TestBuildHtmlGenerationPrompt:
 
     def test_feedback_section_none(self) -> None:
         system, _ = build_html_generation_prompt(
-            SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_DATE,
             aggregated_feedback=None,
         )
         assert "Editorial Improvement Context" not in system
 
     def test_feedback_section_empty_string(self) -> None:
         system, _ = build_html_generation_prompt(
-            SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_DATE,
             aggregated_feedback="",
         )
         assert "Editorial Improvement Context" not in system
 
     def test_feedback_section_whitespace_only(self) -> None:
         system, _ = build_html_generation_prompt(
-            SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_DATE,
             aggregated_feedback="   \n  ",
         )
         assert "Editorial Improvement Context" not in system
 
     def test_all_placeholders_replaced(self) -> None:
         system, user = build_html_generation_prompt(
-            SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_DATE,
             aggregated_feedback=SAMPLE_AGGREGATED_FEEDBACK,
         )
         assert "{feedback_section}" not in system
@@ -342,66 +366,93 @@ class TestBuildHtmlRegenerationPrompt:
 
     def test_returns_tuple(self) -> None:
         result = build_html_regeneration_prompt(
-            SAMPLE_PREVIOUS_HTML, SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE,
-            SAMPLE_FEEDBACK, SAMPLE_DATE,
+            SAMPLE_PREVIOUS_HTML,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_FEEDBACK,
+            SAMPLE_DATE,
         )
         assert isinstance(result, tuple)
         assert len(result) == 2
 
     def test_returns_strings(self) -> None:
         system, user = build_html_regeneration_prompt(
-            SAMPLE_PREVIOUS_HTML, SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE,
-            SAMPLE_FEEDBACK, SAMPLE_DATE,
+            SAMPLE_PREVIOUS_HTML,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_FEEDBACK,
+            SAMPLE_DATE,
         )
         assert isinstance(system, str)
         assert isinstance(user, str)
 
     def test_system_prompt_is_regeneration(self) -> None:
         system, _ = build_html_regeneration_prompt(
-            SAMPLE_PREVIOUS_HTML, SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE,
-            SAMPLE_FEEDBACK, SAMPLE_DATE,
+            SAMPLE_PREVIOUS_HTML,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_FEEDBACK,
+            SAMPLE_DATE,
         )
         assert system == _REGEN_SYSTEM
 
     def test_user_prompt_contains_previous_html(self) -> None:
         _, user = build_html_regeneration_prompt(
-            SAMPLE_PREVIOUS_HTML, SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE,
-            SAMPLE_FEEDBACK, SAMPLE_DATE,
+            SAMPLE_PREVIOUS_HTML,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_FEEDBACK,
+            SAMPLE_DATE,
         )
         assert SAMPLE_PREVIOUS_HTML in user
 
     def test_user_prompt_contains_markdown(self) -> None:
         _, user = build_html_regeneration_prompt(
-            SAMPLE_PREVIOUS_HTML, SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE,
-            SAMPLE_FEEDBACK, SAMPLE_DATE,
+            SAMPLE_PREVIOUS_HTML,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_FEEDBACK,
+            SAMPLE_DATE,
         )
         assert SAMPLE_MARKDOWN in user
 
     def test_user_prompt_contains_template(self) -> None:
         _, user = build_html_regeneration_prompt(
-            SAMPLE_PREVIOUS_HTML, SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE,
-            SAMPLE_FEEDBACK, SAMPLE_DATE,
+            SAMPLE_PREVIOUS_HTML,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_FEEDBACK,
+            SAMPLE_DATE,
         )
         assert SAMPLE_HTML_TEMPLATE in user
 
     def test_user_prompt_contains_feedback(self) -> None:
         _, user = build_html_regeneration_prompt(
-            SAMPLE_PREVIOUS_HTML, SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE,
-            SAMPLE_FEEDBACK, SAMPLE_DATE,
+            SAMPLE_PREVIOUS_HTML,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_FEEDBACK,
+            SAMPLE_DATE,
         )
         assert SAMPLE_FEEDBACK in user
 
     def test_user_prompt_contains_date(self) -> None:
         _, user = build_html_regeneration_prompt(
-            SAMPLE_PREVIOUS_HTML, SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE,
-            SAMPLE_FEEDBACK, SAMPLE_DATE,
+            SAMPLE_PREVIOUS_HTML,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_FEEDBACK,
+            SAMPLE_DATE,
         )
         assert SAMPLE_DATE in user
 
     def test_all_placeholders_replaced(self) -> None:
         _, user = build_html_regeneration_prompt(
-            SAMPLE_PREVIOUS_HTML, SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE,
-            SAMPLE_FEEDBACK, SAMPLE_DATE,
+            SAMPLE_PREVIOUS_HTML,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_FEEDBACK,
+            SAMPLE_DATE,
         )
         assert "{previous_html}" not in user
         assert "{markdown_content}" not in user
@@ -436,21 +487,27 @@ class TestHtmlGenerationEdgeCases:
         assert md in user
 
     def test_html_entities_in_template(self) -> None:
-        template = '<p>&amp; &lt; &gt; &quot;</p>'
+        template = "<p>&amp; &lt; &gt; &quot;</p>"
         _, user = build_html_generation_prompt(SAMPLE_MARKDOWN, template, SAMPLE_DATE)
         assert template in user
 
     def test_regeneration_empty_feedback(self) -> None:
         _, user = build_html_regeneration_prompt(
-            SAMPLE_PREVIOUS_HTML, SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE,
-            "", SAMPLE_DATE,
+            SAMPLE_PREVIOUS_HTML,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            "",
+            SAMPLE_DATE,
         )
         assert "### User Feedback:" in user
 
     def test_very_large_html(self) -> None:
         large_html = "<div>" * 1000 + "</div>" * 1000
         _, user = build_html_regeneration_prompt(
-            large_html, SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE,
-            SAMPLE_FEEDBACK, SAMPLE_DATE,
+            large_html,
+            SAMPLE_MARKDOWN,
+            SAMPLE_HTML_TEMPLATE,
+            SAMPLE_FEEDBACK,
+            SAMPLE_DATE,
         )
         assert large_html in user

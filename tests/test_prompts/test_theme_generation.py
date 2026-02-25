@@ -248,22 +248,24 @@ class TestFeedbackSectionTemplate:
 class TestBuildThemeGenerationPromptNoFeedback:
     """Test build_theme_generation_prompt without feedback."""
 
-    SAMPLE_SUMMARIES = json.dumps([
-        {
-            "Title": "AI Agents Transform Enterprise",
-            "Summary": "New platforms enable autonomous workflows.",
-            "BusinessRelevance": "Reduces operational costs by 30%.",
-            "Order": 1,
-            "industry_news": "false",
-        },
-        {
-            "Title": "OpenAI Launches GPT-5",
-            "Summary": "OpenAI releases next-gen model.",
-            "BusinessRelevance": "Major capability leap for businesses.",
-            "Order": 2,
-            "industry_news": "true",
-        },
-    ])
+    SAMPLE_SUMMARIES = json.dumps(
+        [
+            {
+                "Title": "AI Agents Transform Enterprise",
+                "Summary": "New platforms enable autonomous workflows.",
+                "BusinessRelevance": "Reduces operational costs by 30%.",
+                "Order": 1,
+                "industry_news": "false",
+            },
+            {
+                "Title": "OpenAI Launches GPT-5",
+                "Summary": "OpenAI releases next-gen model.",
+                "BusinessRelevance": "Major capability leap for businesses.",
+                "Order": 2,
+                "industry_news": "true",
+            },
+        ]
+    )
 
     def test_returns_tuple(self):
         result = build_theme_generation_prompt(self.SAMPLE_SUMMARIES)
@@ -338,20 +340,23 @@ class TestBuildThemeGenerationPromptWithFeedback:
 
     def test_feedback_section_injected(self):
         _, user = build_theme_generation_prompt(
-            self.SAMPLE_SUMMARIES, self.SAMPLE_FEEDBACK,
+            self.SAMPLE_SUMMARIES,
+            self.SAMPLE_FEEDBACK,
         )
         assert "Editorial Improvement Context" in user
 
     def test_feedback_text_present(self):
         _, user = build_theme_generation_prompt(
-            self.SAMPLE_SUMMARIES, self.SAMPLE_FEEDBACK,
+            self.SAMPLE_SUMMARIES,
+            self.SAMPLE_FEEDBACK,
         )
         assert "practical applications" in user
         assert "Avoid overly technical language" in user
 
     def test_feedback_before_output_format(self):
         _, user = build_theme_generation_prompt(
-            self.SAMPLE_SUMMARIES, self.SAMPLE_FEEDBACK,
+            self.SAMPLE_SUMMARIES,
+            self.SAMPLE_FEEDBACK,
         )
         fb_pos = user.index("Editorial Improvement Context")
         fmt_pos = user.index("Output Format (MANDATORY)")
@@ -359,7 +364,8 @@ class TestBuildThemeGenerationPromptWithFeedback:
 
     def test_feedback_stripped(self):
         _, user = build_theme_generation_prompt(
-            self.SAMPLE_SUMMARIES, "  leading and trailing whitespace  ",
+            self.SAMPLE_SUMMARIES,
+            "  leading and trailing whitespace  ",
         )
         assert "leading and trailing whitespace" in user
         # Should not have the extra whitespace around it
@@ -367,19 +373,22 @@ class TestBuildThemeGenerationPromptWithFeedback:
 
     def test_system_prompt_unchanged_with_feedback(self):
         system, _ = build_theme_generation_prompt(
-            self.SAMPLE_SUMMARIES, self.SAMPLE_FEEDBACK,
+            self.SAMPLE_SUMMARIES,
+            self.SAMPLE_FEEDBACK,
         )
         assert system == _SYSTEM
 
     def test_summaries_still_present_with_feedback(self):
         _, user = build_theme_generation_prompt(
-            self.SAMPLE_SUMMARIES, self.SAMPLE_FEEDBACK,
+            self.SAMPLE_SUMMARIES,
+            self.SAMPLE_FEEDBACK,
         )
         assert '"Title": "Test"' in user
 
     def test_no_unresolved_placeholders_with_feedback(self):
         _, user = build_theme_generation_prompt(
-            self.SAMPLE_SUMMARIES, self.SAMPLE_FEEDBACK,
+            self.SAMPLE_SUMMARIES,
+            self.SAMPLE_FEEDBACK,
         )
         assert "{feedback_section}" not in user
         assert "{summaries_json}" not in user

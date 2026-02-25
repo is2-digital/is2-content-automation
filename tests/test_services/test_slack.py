@@ -133,11 +133,13 @@ class TestBuildModalBlocks:
     """Tests for _build_modal_blocks()."""
 
     def test_dropdown_field(self) -> None:
-        fields = [{
-            "fieldLabel": "Pick one",
-            "fieldType": "dropdown",
-            "fieldOptions": [{"option": "A"}, {"option": "B"}],
-        }]
+        fields = [
+            {
+                "fieldLabel": "Pick one",
+                "fieldType": "dropdown",
+                "fieldOptions": [{"option": "A"}, {"option": "B"}],
+            }
+        ]
         blocks = _build_modal_blocks(fields)
         assert len(blocks) == 1
         block = blocks[0]
@@ -196,7 +198,9 @@ class TestBuildModalBlocks:
         assert "options" not in blocks[0]["element"]
 
     def test_dropdown_placeholder(self) -> None:
-        fields = [{"fieldLabel": "Color", "fieldType": "dropdown", "fieldOptions": [{"option": "Red"}]}]
+        fields = [
+            {"fieldLabel": "Color", "fieldType": "dropdown", "fieldOptions": [{"option": "Red"}]}
+        ]
         blocks = _build_modal_blocks(fields)
         placeholder = blocks[0]["element"]["placeholder"]
         assert placeholder["text"] == "Select Color"
@@ -327,12 +331,12 @@ class TestSendMessage:
     @pytest.mark.asyncio()
     async def test_posts_to_channel(self, service: SlackService, mock_client: AsyncMock) -> None:
         await service.send_message("#general", "Hello!")
-        mock_client.chat_postMessage.assert_awaited_once_with(
-            channel="#general", text="Hello!"
-        )
+        mock_client.chat_postMessage.assert_awaited_once_with(channel="#general", text="Hello!")
 
     @pytest.mark.asyncio()
-    async def test_uses_explicit_channel(self, service: SlackService, mock_client: AsyncMock) -> None:
+    async def test_uses_explicit_channel(
+        self, service: SlackService, mock_client: AsyncMock
+    ) -> None:
         await service.send_message("#other", "Hi")
         call_kwargs = mock_client.chat_postMessage.call_args.kwargs
         assert call_kwargs["channel"] == "#other"
@@ -347,7 +351,9 @@ class TestSendChannelMessage:
     """Tests for SlackService.send_channel_message()."""
 
     @pytest.mark.asyncio()
-    async def test_uses_default_channel(self, service: SlackService, mock_client: AsyncMock) -> None:
+    async def test_uses_default_channel(
+        self, service: SlackService, mock_client: AsyncMock
+    ) -> None:
         await service.send_channel_message("Hello!")
         call_kwargs = mock_client.chat_postMessage.call_args.kwargs
         assert call_kwargs["channel"] == "#test-channel"
@@ -376,7 +382,9 @@ class TestSendError:
     """Tests for SlackService.send_error()."""
 
     @pytest.mark.asyncio()
-    async def test_posts_to_default_channel(self, service: SlackService, mock_client: AsyncMock) -> None:
+    async def test_posts_to_default_channel(
+        self, service: SlackService, mock_client: AsyncMock
+    ) -> None:
         await service.send_error("Something broke")
         mock_client.chat_postMessage.assert_awaited_once_with(
             channel="#test-channel", text="Something broke"
@@ -392,7 +400,9 @@ class TestSendAndWait:
     """Tests for SlackService.send_and_wait()."""
 
     @pytest.mark.asyncio()
-    async def test_posts_approval_blocks(self, service: SlackService, mock_client: AsyncMock) -> None:
+    async def test_posts_approval_blocks(
+        self, service: SlackService, mock_client: AsyncMock
+    ) -> None:
         # Pre-set the event so it doesn't block
         original_post = mock_client.chat_postMessage
 
@@ -419,7 +429,9 @@ class TestSendAndWait:
         assert btn["action_id"].startswith(_PREFIX_APPROVE)
 
     @pytest.mark.asyncio()
-    async def test_blocks_until_event_set(self, service: SlackService, mock_client: AsyncMock) -> None:
+    async def test_blocks_until_event_set(
+        self, service: SlackService, mock_client: AsyncMock
+    ) -> None:
         resolved = False
 
         async def set_after_delay() -> None:
@@ -446,7 +458,9 @@ class TestSendAndWait:
         assert len(service.pending) == 0
 
     @pytest.mark.asyncio()
-    async def test_default_approve_label(self, service: SlackService, mock_client: AsyncMock) -> None:
+    async def test_default_approve_label(
+        self, service: SlackService, mock_client: AsyncMock
+    ) -> None:
         async def resolve(**kwargs: Any) -> dict[str, bool]:
             for p in service.pending.values():
                 p.event.set()
@@ -468,7 +482,9 @@ class TestSendAndWaitForm:
     """Tests for SlackService.send_and_wait_form()."""
 
     @pytest.mark.asyncio()
-    async def test_posts_trigger_blocks(self, service: SlackService, mock_client: AsyncMock) -> None:
+    async def test_posts_trigger_blocks(
+        self, service: SlackService, mock_client: AsyncMock
+    ) -> None:
         async def resolve(**kwargs: Any) -> dict[str, bool]:
             for p in service.pending.values():
                 p.response["Choice"] = "Yes"
@@ -477,7 +493,9 @@ class TestSendAndWaitForm:
 
         mock_client.chat_postMessage = AsyncMock(side_effect=resolve)
 
-        fields = [{"fieldLabel": "Choice", "fieldType": "dropdown", "fieldOptions": [{"option": "Yes"}]}]
+        fields = [
+            {"fieldLabel": "Choice", "fieldType": "dropdown", "fieldOptions": [{"option": "Yes"}]}
+        ]
         result = await service.send_and_wait_form("Pick", form_fields=fields)
 
         call_kwargs = mock_client.chat_postMessage.call_args.kwargs
@@ -488,7 +506,9 @@ class TestSendAndWaitForm:
         assert result == {"Choice": "Yes"}
 
     @pytest.mark.asyncio()
-    async def test_stores_form_metadata(self, service: SlackService, mock_client: AsyncMock) -> None:
+    async def test_stores_form_metadata(
+        self, service: SlackService, mock_client: AsyncMock
+    ) -> None:
         async def check_and_resolve(**kwargs: Any) -> dict[str, bool]:
             for p in service.pending.values():
                 assert p.interaction_type == "form"
@@ -520,7 +540,9 @@ class TestSendAndWaitForm:
         assert len(service.pending) == 0
 
     @pytest.mark.asyncio()
-    async def test_default_button_label(self, service: SlackService, mock_client: AsyncMock) -> None:
+    async def test_default_button_label(
+        self, service: SlackService, mock_client: AsyncMock
+    ) -> None:
         async def resolve(**kwargs: Any) -> dict[str, bool]:
             for p in service.pending.values():
                 p.event.set()
@@ -542,7 +564,9 @@ class TestSendAndWaitFreetext:
     """Tests for SlackService.send_and_wait_freetext()."""
 
     @pytest.mark.asyncio()
-    async def test_posts_trigger_blocks(self, service: SlackService, mock_client: AsyncMock) -> None:
+    async def test_posts_trigger_blocks(
+        self, service: SlackService, mock_client: AsyncMock
+    ) -> None:
         async def resolve(**kwargs: Any) -> dict[str, bool]:
             for p in service.pending.values():
                 p.response["text"] = "User feedback here"
@@ -555,7 +579,9 @@ class TestSendAndWaitFreetext:
         assert result == "User feedback here"
 
     @pytest.mark.asyncio()
-    async def test_stores_freetext_metadata(self, service: SlackService, mock_client: AsyncMock) -> None:
+    async def test_stores_freetext_metadata(
+        self, service: SlackService, mock_client: AsyncMock
+    ) -> None:
         async def check_and_resolve(**kwargs: Any) -> dict[str, bool]:
             for p in service.pending.values():
                 assert p.interaction_type == "freetext"
@@ -573,7 +599,9 @@ class TestSendAndWaitFreetext:
         )
 
     @pytest.mark.asyncio()
-    async def test_returns_empty_string_when_no_text(self, service: SlackService, mock_client: AsyncMock) -> None:
+    async def test_returns_empty_string_when_no_text(
+        self, service: SlackService, mock_client: AsyncMock
+    ) -> None:
         async def resolve(**kwargs: Any) -> dict[str, bool]:
             for p in service.pending.values():
                 p.event.set()
@@ -595,7 +623,9 @@ class TestSendAndWaitFreetext:
         assert len(service.pending) == 0
 
     @pytest.mark.asyncio()
-    async def test_default_button_label(self, service: SlackService, mock_client: AsyncMock) -> None:
+    async def test_default_button_label(
+        self, service: SlackService, mock_client: AsyncMock
+    ) -> None:
         async def resolve(**kwargs: Any) -> dict[str, bool]:
             for p in service.pending.values():
                 p.event.set()
@@ -680,7 +710,9 @@ class TestHandleTrigger:
         assert len(view["blocks"]) == 1
 
     @pytest.mark.asyncio()
-    async def test_opens_freetext_modal(self, service: SlackService, mock_client: AsyncMock) -> None:
+    async def test_opens_freetext_modal(
+        self, service: SlackService, mock_client: AsyncMock
+    ) -> None:
         pending = _PendingInteraction(
             interaction_type="freetext",
             form_title="Feedback",
@@ -703,7 +735,9 @@ class TestHandleTrigger:
         assert view["blocks"][1]["block_id"] == "freetext_block"
 
     @pytest.mark.asyncio()
-    async def test_truncates_long_title(self, service: SlackService, mock_client: AsyncMock) -> None:
+    async def test_truncates_long_title(
+        self, service: SlackService, mock_client: AsyncMock
+    ) -> None:
         pending = _PendingInteraction(
             interaction_type="freetext",
             form_title="A" * 50,
@@ -721,7 +755,9 @@ class TestHandleTrigger:
         assert len(view["title"]["text"]) <= 24
 
     @pytest.mark.asyncio()
-    async def test_ignores_unknown_callback(self, service: SlackService, mock_client: AsyncMock) -> None:
+    async def test_ignores_unknown_callback(
+        self, service: SlackService, mock_client: AsyncMock
+    ) -> None:
         ack = AsyncMock()
         body = {
             "actions": [{"action_id": f"{_PREFIX_TRIGGER}unknown"}],
@@ -732,7 +768,9 @@ class TestHandleTrigger:
         mock_client.views_open.assert_not_awaited()
 
     @pytest.mark.asyncio()
-    async def test_freetext_without_description(self, service: SlackService, mock_client: AsyncMock) -> None:
+    async def test_freetext_without_description(
+        self, service: SlackService, mock_client: AsyncMock
+    ) -> None:
         pending = _PendingInteraction(
             interaction_type="freetext",
             form_title="Title",
@@ -905,8 +943,14 @@ class TestRegisterHandlers:
         # Check that patterns match our prefixes
         action_calls = bolt_app.action.call_args_list
         patterns = [str(call.args[0].pattern) for call in action_calls]
-        assert any(_PREFIX_APPROVE.replace("_", r"\_").rstrip("\\") in p or _PREFIX_APPROVE in p for p in patterns)
-        assert any(_PREFIX_TRIGGER.replace("_", r"\_").rstrip("\\") in p or _PREFIX_TRIGGER in p for p in patterns)
+        assert any(
+            _PREFIX_APPROVE.replace("_", r"\_").rstrip("\\") in p or _PREFIX_APPROVE in p
+            for p in patterns
+        )
+        assert any(
+            _PREFIX_TRIGGER.replace("_", r"\_").rstrip("\\") in p or _PREFIX_TRIGGER in p
+            for p in patterns
+        )
 
 
 # ===========================================================================
@@ -960,12 +1004,14 @@ class TestApprovalE2E:
                     action_id = block["elements"][0]["action_id"]
                     cb_id = action_id.removeprefix(_PREFIX_APPROVE)
                     callback_id_holder.append(cb_id)
+
                     # Schedule the approval handler to fire after a tick
                     async def _click() -> None:
                         await asyncio.sleep(0.01)
                         ack = AsyncMock()
                         body = {"actions": [{"action_id": action_id}]}
                         await service._handle_approve(ack, body)
+
                     asyncio.create_task(_click())
             return {"ok": True}
 
@@ -1036,7 +1082,9 @@ class TestFormE2E:
 
         mock_client.chat_postMessage = AsyncMock(side_effect=capture_trigger)
 
-        fields = [{"fieldLabel": "Choice", "fieldType": "dropdown", "fieldOptions": [{"option": "Yes"}]}]
+        fields = [
+            {"fieldLabel": "Choice", "fieldType": "dropdown", "fieldOptions": [{"option": "Yes"}]}
+        ]
         result = await asyncio.wait_for(
             service.send_and_wait_form("Pick one", form_fields=fields),
             timeout=2.0,
@@ -1059,6 +1107,7 @@ class TestFreetextE2E:
     @pytest.mark.asyncio()
     async def test_full_freetext_flow(self, service: SlackService, mock_client: AsyncMock) -> None:
         """Post freetext trigger, simulate button click + modal + submit."""
+
         async def capture_trigger(**kwargs: Any) -> dict[str, bool]:
             blocks = kwargs.get("blocks", [])
             for block in blocks:

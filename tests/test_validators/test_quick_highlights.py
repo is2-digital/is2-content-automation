@@ -26,6 +26,7 @@ from ica.validators.character_count import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_bullet(length: int, char: str = "x") -> str:
     """Create a bullet string of exactly *length* characters."""
     return char * length
@@ -236,15 +237,13 @@ class TestCharacterCountErrorFormat:
     def test_below_range_format(self) -> None:
         err = CharacterCountError("Quick Highlights", "Bullet 1", 120, 150, 190, -30)
         assert err.format() == (
-            "Quick Highlights – Bullet 1 – current=120"
-            " – target=150–190 – delta=-30"
+            "Quick Highlights – Bullet 1 – current=120 – target=150–190 – delta=-30"
         )
 
     def test_above_range_format(self) -> None:
         err = CharacterCountError("Quick Highlights", "Bullet 2", 210, 150, 190, 20)
         assert err.format() == (
-            "Quick Highlights – Bullet 2 – current=210"
-            " – target=150–190 – delta=+20"
+            "Quick Highlights – Bullet 2 – current=210 – target=150–190 – delta=+20"
         )
 
     def test_frozen_dataclass(self) -> None:
@@ -330,9 +329,9 @@ class TestValidateQuickHighlightsErrors:
         raw = _make_quick_highlights(200, 210, 250)
         errors = validate_quick_highlights(raw)
         assert len(errors) == 3
-        assert errors[0].delta == 10   # 200 - 190
-        assert errors[1].delta == 20   # 210 - 190
-        assert errors[2].delta == 60   # 250 - 190
+        assert errors[0].delta == 10  # 200 - 190
+        assert errors[1].delta == 20  # 210 - 190
+        assert errors[2].delta == 60  # 250 - 190
 
     def test_mixed_errors(self) -> None:
         raw = _make_quick_highlights(100, 170, 250)
@@ -418,9 +417,9 @@ class TestDeltaCalculation:
             (50, -100),
             (100, -50),
             (149, -1),
-            (150, None),    # valid, no error
-            (170, None),    # valid, no error
-            (190, None),    # valid, no error
+            (150, None),  # valid, no error
+            (170, None),  # valid, no error
+            (190, None),  # valid, no error
             (191, 1),
             (200, 10),
             (250, 60),
@@ -428,7 +427,9 @@ class TestDeltaCalculation:
         ],
     )
     def test_delta_for_single_bullet(
-        self, length: int, expected_delta: int | None,
+        self,
+        length: int,
+        expected_delta: int | None,
     ) -> None:
         raw = _make_quick_highlights(length, 170, 170)
         errors = validate_quick_highlights(raw)
@@ -449,7 +450,9 @@ class TestDeltaCalculation:
         ],
     )
     def test_delta_for_third_bullet(
-        self, length: int, expected_delta: int,
+        self,
+        length: int,
+        expected_delta: int,
     ) -> None:
         raw = _make_quick_highlights(170, 170, length)
         errors = validate_quick_highlights(raw)

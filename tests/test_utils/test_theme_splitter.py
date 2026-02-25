@@ -56,6 +56,7 @@ TWO_THEMES_WITH_RECOMMENDATION = (
 # Basic splitting behavior
 # ======================================================================
 
+
 class TestBasicSplitting:
     """Core splitting on ``-----`` delimiters."""
 
@@ -76,9 +77,14 @@ class TestBasicSplitting:
         assert result.themes[2].theme_name == "Third Option"
 
     def test_four_themes(self) -> None:
-        raw = "\n-----\n".join([
-            "THEME: One", "THEME: Two", "THEME: Three", "THEME: Four",
-        ])
+        raw = "\n-----\n".join(
+            [
+                "THEME: One",
+                "THEME: Two",
+                "THEME: Three",
+                "THEME: Four",
+            ]
+        )
         result = split_themes(raw)
         assert len(result.themes) == 4
 
@@ -92,6 +98,7 @@ class TestBasicSplitting:
 # ======================================================================
 # RECOMMENDATION routing
 # ======================================================================
+
 
 class TestRecommendationRouting:
     """Blocks containing ``RECOMMENDATION:`` go to the recommendation field."""
@@ -161,6 +168,7 @@ class TestRecommendationRouting:
 # ParsedThemeBlock field extraction
 # ======================================================================
 
+
 class TestThemeBlockFields:
     """Verify theme_name and theme_description extraction."""
 
@@ -221,6 +229,7 @@ class TestThemeBlockFields:
 # ======================================================================
 # Separator format variations
 # ======================================================================
+
 
 class TestSeparatorVariations:
     """Test how the ``-----`` split handles format variations."""
@@ -293,6 +302,7 @@ class TestSeparatorVariations:
 # Empty / whitespace-only input
 # ======================================================================
 
+
 class TestEmptyInput:
     """Handle empty, whitespace-only, and separator-only inputs."""
 
@@ -324,6 +334,7 @@ class TestEmptyInput:
 # Line ending variations
 # ======================================================================
 
+
 class TestLineEndings:
     """Handle Windows (\\r\\n) and mixed line endings."""
 
@@ -349,6 +360,7 @@ class TestLineEndings:
 # ======================================================================
 # Content preservation
 # ======================================================================
+
 
 class TestContentPreservation:
     """Verify theme body content is preserved correctly after splitting."""
@@ -395,6 +407,7 @@ class TestContentPreservation:
 # Return type contracts
 # ======================================================================
 
+
 class TestReturnTypes:
     """Verify the return type structure."""
 
@@ -433,6 +446,7 @@ class TestReturnTypes:
 # ======================================================================
 # Realistic LLM output patterns
 # ======================================================================
+
 
 class TestRealisticLlmOutput:
     """Patterns observed in real LLM responses from the theme generation prompt."""
@@ -524,6 +538,7 @@ class TestRealisticLlmOutput:
 # RECOMMENDATION: keyword edge cases
 # ======================================================================
 
+
 class TestRecommendationKeyword:
     """Edge cases around RECOMMENDATION: substring matching."""
 
@@ -562,6 +577,7 @@ class TestRecommendationKeyword:
 # Parametrized: separator counting
 # ======================================================================
 
+
 @pytest.mark.parametrize(
     "n_themes, n_separators",
     [
@@ -573,7 +589,8 @@ class TestRecommendationKeyword:
     ids=["1-theme-0-sep", "2-themes-1-sep", "3-themes-2-sep", "5-themes-4-sep"],
 )
 def test_n_themes_require_n_minus_1_separators(
-    n_themes: int, n_separators: int,
+    n_themes: int,
+    n_separators: int,
 ) -> None:
     """N themes with N-1 separators produce exactly N ParsedThemeBlocks."""
     blocks = [f"THEME: Theme {i + 1}" for i in range(n_themes)]
@@ -585,6 +602,7 @@ def test_n_themes_require_n_minus_1_separators(
 # ======================================================================
 # Parametrized: theme name extraction
 # ======================================================================
+
 
 @pytest.mark.parametrize(
     "raw, expected_name",
@@ -598,8 +616,13 @@ def test_n_themes_require_n_minus_1_separators(
         ("THEME: One-Word", "One-Word"),
     ],
     ids=[
-        "simple", "no-space", "extra-spaces", "tabbed",
-        "colons", "numeric-start", "hyphenated",
+        "simple",
+        "no-space",
+        "extra-spaces",
+        "tabbed",
+        "colons",
+        "numeric-start",
+        "hyphenated",
     ],
 )
 def test_theme_name_extraction_variants(raw: str, expected_name: str) -> None:
@@ -610,6 +633,7 @@ def test_theme_name_extraction_variants(raw: str, expected_name: str) -> None:
 # ======================================================================
 # Parametrized: description extraction
 # ======================================================================
+
 
 @pytest.mark.parametrize(
     "raw, expected_desc",
@@ -623,7 +647,8 @@ def test_theme_name_extraction_variants(raw: str, expected_name: str) -> None:
     ids=["simple", "no-space", "padded", "tabbed", "colons"],
 )
 def test_theme_description_extraction_variants(
-    raw: str, expected_desc: str,
+    raw: str,
+    expected_desc: str,
 ) -> None:
     result = split_themes(raw)
     assert result.themes[0].theme_description == expected_desc
