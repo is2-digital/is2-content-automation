@@ -1673,3 +1673,19 @@ After completing each task, add an entry below in this format:
 
 **Blockers:**
 - None
+
+---
+
+### 2026-02-24 — ica-c1i.2: Add Makefile convenience targets for Docker workflow
+
+**Done:**
+- Added 8 new Makefile targets using `$(COMPOSE) exec app` pattern: test, lint, format, typecheck, shell, run-pipeline, pipeline-status, collect
+- Added `ARGS ?=` variable for passing extra arguments (e.g., `make test ARGS="-k test_name"`)
+- Widened help column from 12 to 18 chars to accommodate longer target names
+- Updated `.PHONY` with all new targets
+
+**Next:**
+- Next available task from `bd ready` (ica-c1i.3 and ica-c1i.4 are now unblocked)
+
+**Blockers:**
+- None

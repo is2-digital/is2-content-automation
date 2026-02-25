@@ -1,6 +1,8 @@
-.PHONY: dev stage prod build down logs db-shell ps restart clean migrate migration
+.PHONY: dev stage prod build down logs db-shell ps restart clean migrate migration \
+       test lint format typecheck shell run-pipeline pipeline-status collect
 
 COMPOSE = docker compose -f docker-compose.yml
+ARGS ?=
 
 dev: ## Start development environment
 	$(COMPOSE) -f docker-compose.dev.yml up --build
@@ -38,7 +40,31 @@ migrate: ## Run database migrations to latest
 migration: ## Create a new migration (usage: make migration msg="description")
 	$(COMPOSE) exec app alembic -c alembic.ini revision --autogenerate -m "$(msg)"
 
+test: ## Run tests (usage: make test ARGS="-k test_name")
+	$(COMPOSE) exec app pytest $(ARGS)
+
+lint: ## Run ruff linter
+	$(COMPOSE) exec app ruff check . $(ARGS)
+
+format: ## Run ruff formatter
+	$(COMPOSE) exec app ruff format . $(ARGS)
+
+typecheck: ## Run mypy type checker
+	$(COMPOSE) exec app mypy ica $(ARGS)
+
+shell: ## Open a bash shell in the app container
+	$(COMPOSE) exec app bash
+
+run-pipeline: ## Trigger the pipeline via API
+	$(COMPOSE) exec app python -m ica run $(ARGS)
+
+pipeline-status: ## Show pipeline run status
+	$(COMPOSE) exec app python -m ica status $(ARGS)
+
+collect: ## Run manual article collection
+	$(COMPOSE) exec app python -m ica collect-articles $(ARGS)
+
 help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
 .DEFAULT_GOAL := help
