@@ -100,12 +100,7 @@ All commands run inside Docker containers via `make` targets. There is no local/
 | `make logs` | Tail container logs |
 | `make down` | Stop all containers |
 
-For direct CLI access inside the container, use `docker compose exec`:
-
-```bash
-docker compose exec app python -m ica serve --reload
-docker compose exec app python -m ica status
-```
+For direct CLI access inside the container, use `make shell` to open a bash session in the app container.
 
 ### External Services
 

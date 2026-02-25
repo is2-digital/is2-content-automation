@@ -1,5 +1,5 @@
 .PHONY: dev stage prod build down logs db-shell ps restart clean migrate migration \
-       test lint format typecheck shell run-pipeline pipeline-status collect
+       test lint format typecheck shell run-pipeline pipeline-status collect help
 
 COMPOSE = docker compose -f docker-compose.yml
 ARGS ?=
