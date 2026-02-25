@@ -6,18 +6,13 @@ All credentials are loaded via environment variables (or `.env` file in the proj
 
 | Env Var | Default |
 |---|---|
-| `POSTGRES_HOST` | `localhost` |
+| `POSTGRES_HOST` | `postgres` |
 | `POSTGRES_PORT` | `5432` |
 | `POSTGRES_DB` | `n8n_custom_data` |
 | `POSTGRES_USER` | `ica` |
 | `POSTGRES_PASSWORD` | *(required)* |
 
-**Setup:** Create a dedicated user with permissions scoped to the `n8n_custom_data` database only.
-
-```sql
-CREATE USER ica WITH PASSWORD 'your-strong-password';
-CREATE DATABASE n8n_custom_data OWNER ica;
-```
+**Setup:** Docker provisions the database automatically — the `postgres` service in `docker-compose.yml` creates the user and database from the `POSTGRES_*` env vars on first start. No manual SQL required.
 
 **Security notes:**
 - Use a strong, unique password (not shared with other services).
@@ -101,7 +96,7 @@ You can use one service account for both, pointing both env vars to the same fil
 ```bash
 # PostgreSQL
 POSTGRES_PASSWORD=
-# POSTGRES_HOST=localhost
+# POSTGRES_HOST=postgres
 # POSTGRES_PORT=5432
 
 # LLM

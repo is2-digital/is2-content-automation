@@ -86,17 +86,26 @@ Every time you provide feedback, ICA:
 
 ## Running the Application
 
+All commands run inside Docker containers via `make` targets. There is no local/bare-metal install path.
+
 ### Commands
 
-* `python -m ica serve`: Starts the FastAPI server, Slack Bolt (Socket Mode), and the scheduler.
-* `python -m ica run`: Manually triggers a pipeline run.
-* `python -m ica status`: Shows the current status of the pipeline.
-* `python -m ica collect-articles`: Manually triggers article discovery.
+| Command | What It Does |
+|---|---|
+| `make dev` | Start the dev environment (app + PostgreSQL + Redis) |
+| `make run-pipeline` | Trigger a pipeline run via the API |
+| `make pipeline-status` | Show pipeline run status |
+| `make collect` | Manually trigger article collection |
+| `make migrate` | Run database migrations to latest |
+| `make logs` | Tail container logs |
+| `make down` | Stop all containers |
 
-### Docker & Dev
+For direct CLI access inside the container, use `docker compose exec`:
 
-* `make dev`: Starts the app, PostgreSQL, and Redis.
-* `make migrate`: Runs database migrations.
+```bash
+docker compose exec app python -m ica serve --reload
+docker compose exec app python -m ica status
+```
 
 ### External Services
 
