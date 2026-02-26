@@ -79,17 +79,30 @@ You can use one service account for both, pointing both env vars to the same fil
 - Scope access by only sharing specific Sheets/Docs with the service account — it can't access anything else in your Google Drive.
 - Consider using Workload Identity Federation instead of key files in cloud deployments (eliminates long-lived keys entirely).
 
-## 5. SearchApi
+## 5. Google Custom Search (Article Collection)
 
-| Env Var |
-|---|
-| `SEARCHAPI_API_KEY` |
+| Env Var | Value |
+|---|---|
+| `GOOGLE_CSE_API_KEY` | API key from Google Cloud Console |
+| `GOOGLE_CSE_CX` | Search Engine ID from Programmable Search Engine |
 
-**Setup:** [searchapi.io](https://www.searchapi.io/) → sign up → copy API key from dashboard.
+**Setup:**
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com) → use the same project as your Sheets/Docs service account.
+2. **APIs & Services** → **Library** → search for **Custom Search API** → **Enable**.
+3. **Credentials** → **Create Credentials** → **API Key**. Copy the key — this is `GOOGLE_CSE_API_KEY`.
+4. (Recommended) Click **Restrict Key** → under **API restrictions**, select **Custom Search API** only.
+5. Go to [programmablesearchengine.google.com/controlpanel/all](https://programmablesearchengine.google.com/controlpanel/all) → **Add** a new search engine.
+6. Under **What to search**, select **Search the entire web**.
+7. Give it a name (e.g., `ica-news`) → **Create**.
+8. On the **Overview** page, copy the **Search engine ID** — this is `GOOGLE_CSE_CX`.
+
+**Pricing:** 100 free queries/day (we use ~8). Additional queries cost $5/1,000 if billing is enabled.
 
 **Security notes:**
-- SearchApi charges per query. Set billing alerts to catch unexpected usage.
-- The key only provides read access to search results — low blast radius if leaked, but still costs money.
+- Restrict the API key to the Custom Search API only — this limits blast radius if leaked.
+- The key provides read-only search access. Low risk, but still costs money if billing is enabled.
+- Set billing alerts in Google Cloud Console to catch unexpected usage.
 
 ## `.env` Template
 
@@ -112,13 +125,14 @@ GOOGLE_SHEETS_CREDENTIALS_PATH=./credentials/google-service-account.json
 GOOGLE_DOCS_CREDENTIALS_PATH=./credentials/google-service-account.json
 GOOGLE_SHEETS_SPREADSHEET_ID=
 
-# SearchApi
-SEARCHAPI_API_KEY=
+# Google Custom Search
+GOOGLE_CSE_API_KEY=
+GOOGLE_CSE_CX=
 ```
 
 ## General Security Practices
 
 - **Never commit `.env` or credential JSON files.** Verify `.gitignore` includes both.
-- **Rotate keys** if you suspect a leak. OpenRouter and SearchApi keys can be regenerated instantly; Slack tokens require re-install; Google service account keys can be added/revoked without re-sharing.
+- **Rotate keys** if you suspect a leak. OpenRouter and Google CSE keys can be regenerated instantly; Slack tokens require re-install; Google service account keys can be added/revoked without re-sharing.
 - **Least privilege:** every credential above is scoped to exactly what the app needs — keep it that way.
 - **In production:** use a secrets manager (e.g., AWS Secrets Manager, GCP Secret Manager, HashiCorp Vault) instead of `.env` files.
