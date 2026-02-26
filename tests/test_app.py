@@ -358,9 +358,16 @@ class TestCreateApp:
 class TestSlackIntegration:
     def test_slack_env_missing_disables_integration(self):
         """When Slack env vars are missing, the app still starts."""
-        app = create_app(include_slack=True, include_scheduler=False)
-        # Should not have slack_bolt on state (env vars missing → exception caught)
-        assert not hasattr(app.state, "slack_bolt")
+        from ica.config.settings import get_settings
+
+        get_settings.cache_clear()
+        try:
+            with patch.dict("os.environ", {}, clear=True):
+                app = create_app(include_slack=True, include_scheduler=False)
+                # Should not have slack_bolt on state (env vars missing → exception caught)
+                assert not hasattr(app.state, "slack_bolt")
+        finally:
+            get_settings.cache_clear()
 
     def test_slack_bolt_mounted_when_configured(self):
         """When Slack is configured, the Bolt app is stored on state."""

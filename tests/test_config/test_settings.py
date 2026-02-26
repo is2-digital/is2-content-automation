@@ -73,7 +73,7 @@ class TestRequiredFields:
     @pytest.mark.parametrize("field", list(REQUIRED_ENV.keys()))
     def test_missing_required_field_raises(self, field: str) -> None:
         env = {k: v for k, v in REQUIRED_ENV.items() if k != field}
-        with patch.dict("os.environ", env, clear=False):
+        with patch.dict("os.environ", env, clear=True):
             with pytest.raises(ValidationError):
                 Settings(_env_file=None)  # type: ignore[call-arg]
 

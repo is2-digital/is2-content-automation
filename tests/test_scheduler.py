@@ -470,10 +470,16 @@ class TestSchedulerFastAPIIntegration:
     def test_scheduler_enabled_fallback_on_missing_settings(self):
         """When settings are missing, scheduler gracefully degrades to None."""
         from ica.app import create_app
+        from ica.config.settings import get_settings
 
         # include_scheduler=True but Settings will fail (no env vars)
-        app = create_app(include_slack=False, include_scheduler=True)
-        assert app.state.scheduler is None
+        get_settings.cache_clear()
+        try:
+            with patch.dict("os.environ", {}, clear=True):
+                app = create_app(include_slack=False, include_scheduler=True)
+                assert app.state.scheduler is None
+        finally:
+            get_settings.cache_clear()
 
     def test_scheduler_enabled_with_mocked_settings(self):
         """When settings are available, scheduler is created."""
