@@ -10,6 +10,10 @@ Python rewrite of an n8n-based AI newsletter generation system (IS2-News → is2
 
 All commands run inside Docker containers via `make` targets. Run `make help` for the full list.
 
+**IMPORTANT: Never run Python, pytest, ruff, mypy, or any project tooling directly on the host machine.** Nothing is installed locally. Always use `make` targets, which execute inside Docker. If a `make` target fails because containers are not running, start them first with `make dev` — do not fall back to local commands.
+
+**Git commands must be single-line with no `$()`, `|`, `<`, `>`, heredocs, or other shell substitutions/redirections.** Multi-`-m` flags are fine for multi-paragraph commit messages. This ensures git operations can run without manual approval.
+
 ```bash
 # Start / stop
 make dev                                  # Start dev environment (app + postgres + redis)
