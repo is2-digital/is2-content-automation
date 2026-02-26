@@ -45,8 +45,9 @@ class Settings(BaseSettings):
     google_sheets_credentials_path: Path
     google_docs_credentials_path: Path
 
-    # --- SearchApi ---
-    searchapi_api_key: str
+    # --- Google Custom Search ---
+    google_cse_api_key: str
+    google_cse_cx: str
 
     # --- Google Sheets ---
     google_sheets_spreadsheet_id: str = ""
