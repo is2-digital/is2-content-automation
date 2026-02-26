@@ -5,7 +5,7 @@ COMPOSE = docker compose -f docker-compose.yml
 ARGS ?=
 
 dev: ## Start development environment
-	$(COMPOSE) -f docker-compose.dev.yml up --build
+	$(COMPOSE) -f docker-compose.dev.yml --env-file .env.dev up --build
 
 stage: ## Start staging environment (detached)
 	$(COMPOSE) -f docker-compose.stage.yml up -d --build
