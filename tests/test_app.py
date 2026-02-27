@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -16,7 +15,6 @@ from ica.app import (
     create_app,
     get_runs,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -77,7 +75,7 @@ class TestPipelineRun:
         assert run.error is None
 
     def test_custom_values(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         run = PipelineRun(
             run_id="xyz",
             status=RunStatus.RUNNING,
@@ -116,7 +114,7 @@ class TestSerializeRun:
         datetime.fromisoformat(data["started_at"])
 
     def test_completed_run(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         run = PipelineRun(
             run_id="s2",
             status=RunStatus.COMPLETED,
@@ -358,16 +356,13 @@ class TestCreateApp:
 class TestSlackIntegration:
     def test_slack_env_missing_disables_integration(self):
         """When Slack env vars are missing, the app still starts."""
-        from ica.config.settings import get_settings
-
-        get_settings.cache_clear()
-        try:
-            with patch.dict("os.environ", {}, clear=True):
-                app = create_app(include_slack=True, include_scheduler=False)
-                # Should not have slack_bolt on state (env vars missing → exception caught)
-                assert not hasattr(app.state, "slack_bolt")
-        finally:
-            get_settings.cache_clear()
+        with patch(
+            "ica.app._create_slack_app",
+            return_value=(None, None),
+        ):
+            app = create_app(include_slack=True, include_scheduler=False)
+            # Should not have slack_bolt on state (env vars missing → exception caught)
+            assert not hasattr(app.state, "slack_bolt")
 
     def test_slack_bolt_mounted_when_configured(self):
         """When Slack is configured, the Bolt app is stored on state."""

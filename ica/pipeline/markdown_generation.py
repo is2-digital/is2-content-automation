@@ -36,7 +36,7 @@ import litellm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ica.config.llm_config import LLMPurpose, get_model
-from ica.db.crud import add_note, get_recent_notes
+from ica.db.crud import add_note
 from ica.db.models import Note
 from ica.errors import ValidationLoopCounter
 from ica.prompts.learning_data_extraction import build_learning_data_extraction_prompt
@@ -49,7 +49,6 @@ from ica.prompts.markdown_structural_validation import (
 )
 from ica.prompts.markdown_voice_validation import build_voice_validation_prompt
 from ica.utils.output_router import (
-    RouterResult,
     UserChoice,
     conditional_output_router,
     normalize_switch_value,
@@ -58,7 +57,6 @@ from ica.validators.character_count import (
     CharacterCountError,
     validate_character_counts,
 )
-
 
 # ---------------------------------------------------------------------------
 # Protocols
@@ -247,7 +245,7 @@ async def call_markdown_llm(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for markdown generation")
 
@@ -305,7 +303,7 @@ async def run_structural_validation(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     return _parse_validation_response(content or "")
 
 
@@ -344,7 +342,7 @@ async def run_voice_validation(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     return _parse_validation_response(content or "")
 
 
@@ -594,7 +592,7 @@ async def call_user_feedback_regeneration(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for markdown regeneration")
 
@@ -640,7 +638,7 @@ async def extract_markdown_learning_data(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for learning data extraction")
 

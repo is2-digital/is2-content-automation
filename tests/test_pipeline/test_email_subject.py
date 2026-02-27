@@ -66,7 +66,6 @@ from ica.pipeline.email_subject import (
     strip_html_to_text,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -332,7 +331,7 @@ class TestCallEmailSubjectLlm:
 
 class TestParseSubjects:
     def test_basic_parsing(self) -> None:
-        subjects, recommendation = parse_subjects(SAMPLE_LLM_OUTPUT)
+        subjects, _recommendation = parse_subjects(SAMPLE_LLM_OUTPUT)
         assert len(subjects) == 3
         assert subjects[0].subject == "AI Revolution Hits Reality Check"
         assert subjects[0].subject_id == "1"

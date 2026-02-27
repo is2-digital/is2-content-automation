@@ -13,11 +13,23 @@ These are consumed by :func:`~ica.pipeline.orchestrator.build_default_steps`.
 from __future__ import annotations
 
 import json
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from ica.logging import get_logger
 from ica.pipeline.orchestrator import PipelineContext
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from ica.config.settings import Settings
+    from ica.services.google_docs import GoogleDocsService
+    from ica.services.google_sheets import GoogleSheetsService
+    from ica.services.slack import SlackService
+    from ica.services.web_fetcher import WebFetcherService
 
 logger = get_logger(__name__)
 
@@ -27,44 +39,46 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def _get_settings():
+def _get_settings() -> Settings:
     from ica.config.settings import get_settings
 
     return get_settings()
 
 
-def _make_slack():
+def _make_slack() -> SlackService:
     from ica.services.slack import SlackService
 
     s = _get_settings()
     return SlackService(token=s.slack_bot_token, channel=s.slack_channel)
 
 
-def _make_sheets():
+def _make_sheets() -> GoogleSheetsService:
     from ica.services.google_sheets import GoogleSheetsService
 
     s = _get_settings()
     return GoogleSheetsService(credentials_path=s.google_service_account_credentials_path)
 
 
-def _make_docs():
+def _make_docs() -> GoogleDocsService:
     from ica.services.google_docs import GoogleDocsService
 
     s = _get_settings()
     return GoogleDocsService(credentials_path=s.google_service_account_credentials_path)
 
 
-def _make_http():
+def _make_http() -> WebFetcherService:
     from ica.services.web_fetcher import WebFetcherService
 
     return WebFetcherService()
 
 
-async def _session():
+@asynccontextmanager
+async def _session() -> AsyncGenerator[AsyncSession, None]:
     """Yield an async database session context manager."""
     from ica.db.session import get_session
 
-    return get_session()
+    async with get_session() as session:
+        yield session
 
 
 # ---------------------------------------------------------------------------
@@ -87,7 +101,7 @@ async def run_curation_step(ctx: PipelineContext) -> PipelineContext:
     channel = settings.slack_channel
 
     # Phase 1: prepare curation data (DB → Sheet)
-    async with await _session() as session:
+    async with _session() as session:
         await prepare_curation_data(
             session,
             slack,
@@ -142,7 +156,7 @@ async def run_summarization_step(ctx: PipelineContext) -> PipelineContext:
     spreadsheet_id = settings.google_sheets_spreadsheet_id
 
     # Phase 1: data preparation (Sheet → DB upsert → normalized articles)
-    async with await _session() as session:
+    async with _session() as session:
         prep = await prepare_summarization_data(
             session,
             sheets,
@@ -150,7 +164,7 @@ async def run_summarization_step(ctx: PipelineContext) -> PipelineContext:
         )
 
     # Phase 2: per-article summarization loop
-    async with await _session() as session:
+    async with _session() as session:
         loop_result = await summarize_articles(
             prep.articles,
             http=http,
@@ -160,7 +174,7 @@ async def run_summarization_step(ctx: PipelineContext) -> PipelineContext:
         )
 
     # Phase 3: Slack output and feedback loop
-    async with await _session() as session:
+    async with _session() as session:
         output = await run_summarization_output(
             loop_result.summaries,
             slack=slack,
@@ -169,7 +183,7 @@ async def run_summarization_step(ctx: PipelineContext) -> PipelineContext:
         )
 
     # Store summaries in context for downstream steps
-    ctx.summaries = output.articles  # type: ignore[assignment]
+    ctx.summaries = output.articles
     ctx.summaries_json = json.dumps(output.articles, default=str)
     logger.info("Summarization complete: %d summaries", len(output.articles))
     return ctx
@@ -188,8 +202,10 @@ async def run_theme_generation_step(ctx: PipelineContext) -> PipelineContext:
     """
     from ica.pipeline.theme_generation import generate_themes
     from ica.pipeline.theme_selection import (
+        APPROVAL_FIELD_LABEL,
+        FEEDBACK_TEXTAREA_LABEL,
+        SELECTION_FIELD_LABEL,
         ApprovalChoice,
-        ThemeSelectionResult,
         build_approval_form,
         build_theme_selection_form,
         extract_learning_data,
@@ -202,9 +218,6 @@ async def run_theme_generation_step(ctx: PipelineContext) -> PipelineContext:
         run_freshness_check,
         save_approved_theme,
         store_theme_feedback,
-        SELECTION_FIELD_LABEL,
-        FEEDBACK_TEXTAREA_LABEL,
-        APPROVAL_FIELD_LABEL,
     )
     from ica.utils.marker_parser import parse_markers
 
@@ -213,7 +226,7 @@ async def run_theme_generation_step(ctx: PipelineContext) -> PipelineContext:
     # --- Outer loop: theme generation → selection → approval ---
     while True:
         # 1. Generate themes
-        async with await _session() as session:
+        async with _session() as session:
             gen_result = await generate_themes(
                 ctx.summaries_json,
                 session=session,
@@ -238,7 +251,7 @@ async def run_theme_generation_step(ctx: PipelineContext) -> PipelineContext:
             # 4a. Feedback → extract learning data, store, regenerate
             if is_feedback_selection(selection_value):
                 if feedback_text.strip():
-                    async with await _session() as session:
+                    async with _session() as session:
                         learning_note = await extract_learning_data(
                             feedback=feedback_text,
                             input_text=ctx.summaries_json,
@@ -296,7 +309,7 @@ async def run_theme_generation_step(ctx: PipelineContext) -> PipelineContext:
 
                 if choice == ApprovalChoice.APPROVE:
                     # Save theme and return
-                    async with await _session() as session:
+                    async with _session() as session:
                         await save_approved_theme(
                             session,
                             selected_theme,
@@ -320,7 +333,7 @@ async def run_theme_generation_step(ctx: PipelineContext) -> PipelineContext:
 
                 if choice == ApprovalChoice.FEEDBACK:
                     if approval_feedback.strip():
-                        async with await _session() as session:
+                        async with _session() as session:
                             learning_note = await extract_learning_data(
                                 feedback=approval_feedback,
                                 input_text=ctx.summaries_json,
@@ -367,7 +380,7 @@ async def run_markdown_generation_step(ctx: PipelineContext) -> PipelineContext:
 
     # Fetch learning data for generation
     aggregated = None
-    async with await _session() as session:
+    async with _session() as session:
         notes = await get_recent_notes(session, "user_markdowngenerator")
         aggregated = aggregate_feedback(notes)
 
@@ -378,7 +391,7 @@ async def run_markdown_generation_step(ctx: PipelineContext) -> PipelineContext:
     )
 
     # User review loop (Slack feedback)
-    async with await _session() as session:
+    async with _session() as session:
         result = await run_markdown_review(
             markdown,
             formatted_theme_str,
@@ -426,10 +439,10 @@ async def run_html_generation_step(ctx: PipelineContext) -> PipelineContext:
     # Compute newsletter date
     newsletter_date = ctx.extra.get(
         "newsletter_date",
-        datetime.now(timezone.utc).strftime("%m/%d/%Y"),
+        datetime.now(UTC).strftime("%m/%d/%Y"),
     )
 
-    async with await _session() as session:
+    async with _session() as session:
         result = await run_html_generation(
             markdown_content,
             html_template,
@@ -482,7 +495,7 @@ async def run_email_subject_step(ctx: PipelineContext) -> PipelineContext:
     slack = _make_slack()
     docs = _make_docs()
 
-    async with await _session() as session:
+    async with _session() as session:
         result = await run_email_subject_generation(
             ctx.html_doc_id or "",
             slack=slack,
@@ -516,7 +529,7 @@ async def run_social_media_step(ctx: PipelineContext) -> PipelineContext:
     result = await run_social_media_generation(
         ctx.html_doc_id or "",
         ctx.formatted_theme,
-        slack=slack,
+        slack=slack,  # type: ignore[arg-type]
         docs=docs,
     )
 
@@ -543,7 +556,7 @@ async def run_linkedin_carousel_step(ctx: PipelineContext) -> PipelineContext:
     result = await run_linkedin_carousel_generation(
         ctx.html_doc_id or "",
         ctx.formatted_theme,
-        slack=slack,
+        slack=slack,  # type: ignore[arg-type]
         docs=docs,
     )
 

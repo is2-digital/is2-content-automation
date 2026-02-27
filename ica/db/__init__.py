@@ -15,16 +15,12 @@ from ica.db.repository import SqlArticleRepository
 from ica.db.session import get_engine, get_session, get_session_factory
 
 __all__ = [
-    # Base
-    "Base",
-    # Models
     "Article",
+    "Base",
     "Note",
+    "SqlArticleRepository",
     "Theme",
-    # Session
     "get_engine",
     "get_session",
     "get_session_factory",
-    # Repository
-    "SqlArticleRepository",
 ]

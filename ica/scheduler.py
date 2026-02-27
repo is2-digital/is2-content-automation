@@ -15,12 +15,11 @@ PRD Section 11.4: ``ica/scheduler.py`` — APScheduler for timed triggers.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.schedulers.asyncio import AsyncIOScheduler  # type: ignore[import-untyped]
+from apscheduler.triggers.cron import CronTrigger  # type: ignore[import-untyped]
+from apscheduler.triggers.interval import IntervalTrigger  # type: ignore[import-untyped]
 
 from ica.logging import get_logger
 
@@ -129,15 +128,15 @@ async def run_article_collection(*, schedule: str = "daily") -> dict[str, Any]:
         import httpx
 
         from ica.config.settings import get_settings
-        from ica.services.search_api import SearchApiClient
         from ica.pipeline.article_collection import collect_articles
+        from ica.services.search_api import SearchApiClient
 
         settings = get_settings()
 
         async with httpx.AsyncClient() as http_client:
             search_client = SearchApiClient(
-                api_key=settings.searchapi_api_key,
-                http_client=http_client,
+                api_key=settings.google_cse_api_key,
+                http_client=http_client,  # type: ignore[arg-type]
             )
             # Use the stub repository for now — real DB integration will use
             # the SQLAlchemy repository once service integration tasks land.
@@ -179,8 +178,9 @@ async def run_pipeline_trigger() -> dict[str, Any]:
     logger.info("Scheduled pipeline trigger starting")
 
     try:
-        from ica.app import PipelineRun, RunStatus, get_runs, _run_pipeline
         import uuid
+
+        from ica.app import PipelineRun, _run_pipeline, get_runs
 
         run_id = uuid.uuid4().hex[:12]
         run = PipelineRun(run_id=run_id, trigger="scheduler")
@@ -236,6 +236,6 @@ class _SchedulerStubRepository:
     is complete.
     """
 
-    async def upsert_articles(self, articles: list) -> int:
+    async def upsert_articles(self, articles: list[Any]) -> int:
         """Return count without persisting."""
         return len(articles)

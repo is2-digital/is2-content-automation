@@ -18,7 +18,6 @@ from html import unescape
 
 import httpx
 
-
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -91,9 +90,7 @@ def is_fetch_failure(result: FetchResult, url: str) -> bool:
         return True
     if result.content is not None and CAPTCHA_MARKER in result.content:
         return True
-    if YOUTUBE_DOMAIN in url.lower():
-        return True
-    return False
+    return YOUTUBE_DOMAIN in url.lower()
 
 
 def strip_html_tags(html: str) -> str:

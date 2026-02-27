@@ -30,7 +30,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ica.db.models import Article
 from ica.utils.date_parser import format_date_mmddyyyy
 
-
 # ---------------------------------------------------------------------------
 # Protocol dependencies (concrete implementations provided by caller)
 # ---------------------------------------------------------------------------

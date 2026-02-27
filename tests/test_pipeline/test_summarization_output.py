@@ -49,7 +49,6 @@ from ica.pipeline.summarization import (
 )
 from ica.utils.output_router import UserChoice
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

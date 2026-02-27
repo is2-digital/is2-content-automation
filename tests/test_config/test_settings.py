@@ -72,9 +72,8 @@ class TestRequiredFields:
     @pytest.mark.parametrize("field", list(REQUIRED_ENV.keys()))
     def test_missing_required_field_raises(self, field: str) -> None:
         env = {k: v for k, v in REQUIRED_ENV.items() if k != field}
-        with patch.dict("os.environ", env, clear=True):
-            with pytest.raises(ValidationError):
-                Settings(_env_file=None)  # type: ignore[call-arg]
+        with patch.dict("os.environ", env, clear=True), pytest.raises(ValidationError):
+            Settings(_env_file=None)  # type: ignore[call-arg]
 
 
 # ---------------------------------------------------------------------------
@@ -269,9 +268,9 @@ class TestPackageExport:
     """ica.config should re-export Settings and get_settings."""
 
     def test_import_settings_from_config(self) -> None:
-        from ica.config import Settings as S
+        from ica.config import Settings as SettingsAlias
 
-        assert S is Settings
+        assert SettingsAlias is Settings
 
     def test_import_get_settings_from_config(self) -> None:
         from ica.config import get_settings as gs

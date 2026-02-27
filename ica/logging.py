@@ -30,9 +30,8 @@ import contextvars
 import json
 import logging
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
-
 
 # ---------------------------------------------------------------------------
 # Async-safe context variables
@@ -62,8 +61,8 @@ class ContextFilter(logging.Filter):
     """
 
     def filter(self, record: logging.LogRecord) -> bool:
-        record.run_id = run_id_var.get()  # type: ignore[attr-defined]
-        record.step = step_var.get()  # type: ignore[attr-defined]
+        record.run_id = run_id_var.get()
+        record.step = step_var.get()
         return True
 
 
@@ -83,7 +82,7 @@ class JsonFormatter(logging.Formatter):
         entry: dict[str, Any] = {
             "timestamp": datetime.fromtimestamp(
                 record.created,
-                tz=timezone.utc,
+                tz=UTC,
             ).isoformat(),
             "level": record.levelname,
             "logger": record.name,
@@ -209,7 +208,7 @@ def get_logger(name: str) -> logging.Logger:
 # ---------------------------------------------------------------------------
 
 
-class bind_context:
+class bind_context:  # noqa: N801
     """Context manager that sets logging context variables.
 
     On entry, sets the specified context vars.  On exit, restores the

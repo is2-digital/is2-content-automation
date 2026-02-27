@@ -13,8 +13,7 @@ PRD Section 11.1: Secondary CLI interface for on-demand interaction and debuggin
 from __future__ import annotations
 
 import asyncio
-import sys
-from typing import Optional
+from typing import Any
 
 import typer
 from rich.console import Console
@@ -67,21 +66,21 @@ async def _trigger_run(trigger: str, base_url: str) -> None:
             resp = await client.post(url, json={"trigger": trigger})
             resp.raise_for_status()
             data = resp.json()
-            console.print(f"[green]Pipeline run started[/green]")
+            console.print("[green]Pipeline run started[/green]")
             console.print(f"  run_id: {data['run_id']}")
             console.print(f"  status: {data['status']}")
     except httpx.ConnectError:
         err_console.print(f"[red]Error:[/red] Cannot connect to {base_url}")
         err_console.print("Is the server running? Start it with: ica serve")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
     except httpx.HTTPStatusError as exc:
         err_console.print(f"[red]Error:[/red] {exc.response.status_code} {exc.response.text}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
 
 @app.command()
 def status(
-    run_id: Optional[str] = typer.Argument(None, help="Specific run ID to check."),
+    run_id: str | None = typer.Argument(None, help="Specific run ID to check."),
     base_url: str = typer.Option("http://localhost:8000", help="FastAPI server base URL."),
 ) -> None:
     """Show pipeline run status from the /status API endpoint."""
@@ -102,13 +101,13 @@ async def _show_status(run_id: str | None, base_url: str) -> None:
     except httpx.ConnectError:
         err_console.print(f"[red]Error:[/red] Cannot connect to {base_url}")
         err_console.print("Is the server running? Start it with: ica serve")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
     except httpx.HTTPStatusError as exc:
         if exc.response.status_code == 404:
             err_console.print(f"[yellow]Run not found:[/yellow] {run_id}")
-            raise typer.Exit(code=1)
+            raise typer.Exit(code=1) from None
         err_console.print(f"[red]Error:[/red] {exc.response.status_code} {exc.response.text}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
     if run_id:
         # Single run display
@@ -122,7 +121,7 @@ async def _show_status(run_id: str | None, base_url: str) -> None:
         _print_runs_table(runs)
 
 
-def _print_single_run(data: dict) -> None:
+def _print_single_run(data: dict[str, Any]) -> None:
     """Pretty-print a single pipeline run."""
     status_color = _status_color(data.get("status", ""))
     console.print(f"[bold]Run {data['run_id']}[/bold]")
@@ -135,7 +134,7 @@ def _print_single_run(data: dict) -> None:
         console.print(f"  [red]error: {data['error']}[/red]")
 
 
-def _print_runs_table(runs: list[dict]) -> None:
+def _print_runs_table(runs: list[dict[str, Any]]) -> None:
     """Render pipeline runs as a Rich table."""
     table = Table(title="Pipeline Runs")
     table.add_column("Run ID", style="bold")
@@ -170,13 +169,13 @@ def _status_color(status: str) -> str:
 def collect_articles(
     schedule: str = typer.Option(
         "daily",
-        help="Schedule type: 'daily' (google_news, 3 keywords) or 'every_2_days' (default, 5 keywords).",
+        help="Schedule type: 'daily' (google_news, 3 keywords) or 'every_2_days' (5 keywords).",
     ),
 ) -> None:
     """Run article collection manually.
 
-    Queries SearchApi for keywords, deduplicates by URL, and upserts into
-    the articles table. Requires SEARCHAPI_API_KEY and database credentials.
+    Queries Google CSE for keywords, deduplicates by URL, and upserts into
+    the articles table. Requires GOOGLE_CSE_API_KEY and database credentials.
     """
     asyncio.run(_collect_articles(schedule))
 
@@ -185,14 +184,14 @@ async def _collect_articles(schedule: str) -> None:
     """Execute article collection and display results."""
     try:
         from ica.config.settings import get_settings
-        from ica.services.search_api import SearchApiClient
         from ica.pipeline.article_collection import collect_articles as _collect
+        from ica.services.search_api import SearchApiClient
 
         settings = get_settings()
     except Exception as exc:
         err_console.print(f"[red]Configuration error:[/red] {exc}")
         err_console.print("Ensure required environment variables are set (see .env.example).")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
     console.print(f"Collecting articles (schedule={schedule})...")
 
@@ -201,8 +200,8 @@ async def _collect_articles(schedule: str) -> None:
 
         async with httpx.AsyncClient() as http_client:
             search_client = SearchApiClient(
-                api_key=settings.searchapi_api_key,
-                http_client=http_client,
+                api_key=settings.google_cse_api_key,
+                http_client=http_client,  # type: ignore[arg-type]
             )
             # Article collection requires a repository — create a simple
             # reporting-only stub when running from CLI without a full DB.
@@ -213,7 +212,7 @@ async def _collect_articles(schedule: str) -> None:
                 schedule=schedule,
             )
 
-        console.print(f"[green]Collection complete[/green]")
+        console.print("[green]Collection complete[/green]")
         console.print(f"  raw results:    {len(result.raw_results)}")
         console.print(f"  deduplicated:   {len(result.deduplicated)}")
         console.print(f"  articles:       {len(result.articles)}")
@@ -232,16 +231,16 @@ async def _collect_articles(schedule: str) -> None:
 
     except ValueError as exc:
         err_console.print(f"[red]Error:[/red] {exc}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
     except Exception as exc:
         err_console.print(f"[red]Collection failed:[/red] {exc}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
 
 class _StubRepository:
     """No-op article repository for CLI dry-run mode."""
 
-    async def upsert_articles(self, articles: list) -> int:
+    async def upsert_articles(self, articles: list[Any]) -> int:
         """Return count without persisting (no DB required for CLI preview)."""
         return len(articles)
 

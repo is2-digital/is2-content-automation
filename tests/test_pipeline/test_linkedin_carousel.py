@@ -46,7 +46,6 @@ from ica.pipeline.linkedin_carousel import (
     validate_slide_bodies,
 )
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -614,7 +613,7 @@ class TestGenerateWithValidation:
             "ica.pipeline.linkedin_carousel.call_carousel_llm",
             side_effect=fake_llm,
         ):
-            output, errors = await generate_with_validation(
+            _output, errors = await generate_with_validation(
                 formatted_theme="{}",
                 newsletter_content="html",
             )
@@ -631,7 +630,7 @@ class TestGenerateWithValidation:
             new_callable=AsyncMock,
             return_value=short_output,
         ) as mock_llm:
-            output, errors = await generate_with_validation(
+            _output, errors = await generate_with_validation(
                 formatted_theme="{}",
                 newsletter_content="html",
                 max_attempts=2,
@@ -680,7 +679,7 @@ class TestGenerateWithValidation:
             new_callable=AsyncMock,
             return_value=short_output,
         ) as mock_llm:
-            output, errors = await generate_with_validation(
+            _output, errors = await generate_with_validation(
                 formatted_theme="{}",
                 newsletter_content="html",
                 max_attempts=1,
@@ -696,7 +695,7 @@ class TestGenerateWithValidation:
             new_callable=AsyncMock,
             return_value="Post copy only, no slides",
         ):
-            output, errors = await generate_with_validation(
+            _output, errors = await generate_with_validation(
                 formatted_theme="{}",
                 newsletter_content="html",
             )
@@ -844,7 +843,7 @@ class TestRunLinkedInCarouselGeneration:
                 "ica.pipeline.linkedin_carousel.generate_with_validation",
                 new_callable=AsyncMock,
                 return_value=(valid_output, []),
-            ) as mock_gen,
+            ),
             patch("ica.pipeline.linkedin_carousel.get_model", return_value="m"),
         ):
             await run_linkedin_carousel_generation(
@@ -978,7 +977,7 @@ class TestRunLinkedInCarouselGeneration:
             ) as mock_gen,
             patch("ica.pipeline.linkedin_carousel.get_model", return_value="m"),
         ):
-            result = await run_linkedin_carousel_generation(
+            await run_linkedin_carousel_generation(
                 html_doc_id="doc-1",
                 formatted_theme=SAMPLE_FORMATTED_THEME,
                 slack=slack,

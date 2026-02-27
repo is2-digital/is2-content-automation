@@ -23,8 +23,6 @@ import pytest
 
 from ica.pipeline.summarization import (
     BROWSER_HEADERS,
-    CAPTCHA_MARKER,
-    YOUTUBE_DOMAIN,
     ArticleSummary,
     CuratedArticle,
     FetchResult,
@@ -39,7 +37,7 @@ from ica.pipeline.summarization import (
     summarize_articles,
     summarize_single_article,
 )
-
+from ica.services.web_fetcher import CAPTCHA_MARKER, YOUTUBE_DOMAIN
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -84,8 +82,8 @@ def _make_note(text: str) -> MagicMock:
 _SAMPLE_LLM_OUTPUT = """\
 URL: https://example.com/article
 Title: AI Advances in 2026
-Summary: Researchers have made significant progress in AI. New models show improved performance. The results are promising for practical applications. Testing continues across multiple domains.
-Business Relevance: These advances could transform business operations. Companies should prepare for integration. Strategic planning is essential for competitive advantage."""
+Summary: Researchers have made significant progress in AI. New models show improved performance.
+Business Relevance: These advances could transform business operations. Prepare for integration."""
 
 
 class FakeHttpFetcher:
@@ -384,7 +382,7 @@ class TestStripHtmlTags:
 
     def test_entity_unescaping(self) -> None:
         result = strip_html_tags("&amp; &lt; &gt; &quot;")
-        assert '& < > "' == result
+        assert result == '& < > "'
 
     def test_br_tags(self) -> None:
         result = strip_html_tags("Line 1<br>Line 2<br/>Line 3")

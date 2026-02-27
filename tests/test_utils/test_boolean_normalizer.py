@@ -13,7 +13,6 @@ import pytest
 
 from ica.utils.boolean_normalizer import normalize_boolean
 
-
 # ---------------------------------------------------------------------------
 # Truthy cases — only "yes" (case-insensitive) maps to True
 # ---------------------------------------------------------------------------

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -15,7 +13,6 @@ from ica.scheduler import (
     run_article_collection,
     run_pipeline_trigger,
 )
-
 
 # ---------------------------------------------------------------------------
 # create_scheduler — factory
@@ -175,7 +172,7 @@ class TestRunArticleCollection:
 
         with (
             patch("ica.config.settings.get_settings") as mock_settings,
-            patch("ica.services.search_api.SearchApiClient") as mock_client_cls,
+            patch("ica.services.search_api.SearchApiClient"),
             patch("ica.pipeline.article_collection.collect_articles", mock_collect),
             patch("httpx.AsyncClient") as mock_httpx,
         ):
@@ -201,7 +198,7 @@ class TestRunArticleCollection:
 
         with (
             patch("ica.config.settings.get_settings") as mock_settings,
-            patch("ica.services.search_api.SearchApiClient") as mock_client_cls,
+            patch("ica.services.search_api.SearchApiClient"),
             patch("ica.pipeline.article_collection.collect_articles", mock_collect),
             patch("httpx.AsyncClient") as mock_httpx,
         ):
@@ -291,7 +288,7 @@ class TestRunPipelineTrigger:
         with (
             patch("ica.app.get_runs", return_value=mock_runs),
             patch("ica.app._run_pipeline", mock_run_pipeline),
-            patch("asyncio.create_task") as mock_task,
+            patch("asyncio.create_task"),
         ):
             result = await run_pipeline_trigger()
 
@@ -449,8 +446,9 @@ class TestSchedulerFastAPIIntegration:
         assert app.state.scheduler is None
 
     def test_scheduler_endpoint_disabled(self):
-        from ica.app import create_app
         from fastapi.testclient import TestClient
+
+        from ica.app import create_app
 
         app = create_app(include_slack=False, include_scheduler=False)
         client = TestClient(app, raise_server_exceptions=False)
@@ -470,16 +468,14 @@ class TestSchedulerFastAPIIntegration:
     def test_scheduler_enabled_fallback_on_missing_settings(self):
         """When settings are missing, scheduler gracefully degrades to None."""
         from ica.app import create_app
-        from ica.config.settings import get_settings
 
-        # include_scheduler=True but Settings will fail (no env vars)
-        get_settings.cache_clear()
-        try:
-            with patch.dict("os.environ", {}, clear=True):
-                app = create_app(include_slack=False, include_scheduler=True)
-                assert app.state.scheduler is None
-        finally:
-            get_settings.cache_clear()
+        # include_scheduler=True but get_settings raises → scheduler falls back to None
+        with patch(
+            "ica.config.settings.get_settings",
+            side_effect=RuntimeError("missing env vars"),
+        ):
+            app = create_app(include_slack=False, include_scheduler=True)
+            assert app.state.scheduler is None
 
     def test_scheduler_enabled_with_mocked_settings(self):
         """When settings are available, scheduler is created."""

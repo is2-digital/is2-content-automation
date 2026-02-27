@@ -25,9 +25,10 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import Any
 
 from google.oauth2.service_account import Credentials as ServiceAccountCredentials
-from googleapiclient.discovery import Resource, build
+from googleapiclient.discovery import Resource, build  # type: ignore[import-untyped]
 
 from ica.logging import get_logger
 from ica.services.google_auth import load_credentials
@@ -157,7 +158,7 @@ class GoogleDocsService:
         return _extract_text(result)
 
 
-def _extract_text(document: dict) -> str:
+def _extract_text(document: dict[str, Any]) -> str:
     """Extract plain text from a Google Docs API document response.
 
     Traverses ``body.content[].paragraph.elements[].textRun.content``

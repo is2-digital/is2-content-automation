@@ -35,12 +35,10 @@ from ica.prompts.html_generation import (
 )
 from ica.prompts.learning_data_extraction import build_learning_data_extraction_prompt
 from ica.utils.output_router import (
-    RouterResult,
     UserChoice,
     conditional_output_router,
     normalize_switch_value,
 )
-
 
 # ---------------------------------------------------------------------------
 # Protocols
@@ -222,7 +220,7 @@ async def call_html_llm(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for HTML generation")
 
@@ -274,7 +272,7 @@ async def call_html_regeneration(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for HTML regeneration")
 
@@ -325,7 +323,7 @@ async def extract_html_learning_data(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for learning data extraction")
 

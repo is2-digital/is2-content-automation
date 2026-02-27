@@ -10,7 +10,6 @@ import pytest
 
 from ica.pipeline.orchestrator import PipelineContext
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -499,6 +498,7 @@ class TestThemeGenerationStep:
     @pytest.mark.asyncio
     async def test_approve_first_theme(self, mock_settings, mock_slack):
         """Approval on first attempt: generate -> select -> approve."""
+        from ica.pipeline.steps import run_theme_generation_step
         from ica.pipeline.theme_generation import GeneratedTheme, ThemeGenerationResult
         from ica.pipeline.theme_selection import (
             APPROVAL_FIELD_LABEL,
@@ -507,7 +507,6 @@ class TestThemeGenerationStep:
             SELECTION_FIELD_LABEL,
             THEME_OPTION_PREFIX,
         )
-        from ica.pipeline.steps import run_theme_generation_step
         from ica.utils.marker_parser import FormattedTheme
 
         formatted = FormattedTheme(theme="AI Future")
@@ -576,6 +575,7 @@ class TestThemeGenerationStep:
     @pytest.mark.asyncio
     async def test_feedback_then_approve(self, mock_settings, mock_slack):
         """Feedback on selection form -> regenerate -> then approve."""
+        from ica.pipeline.steps import run_theme_generation_step
         from ica.pipeline.theme_generation import GeneratedTheme, ThemeGenerationResult
         from ica.pipeline.theme_selection import (
             APPROVAL_FIELD_LABEL,
@@ -585,7 +585,6 @@ class TestThemeGenerationStep:
             SELECTION_FIELD_LABEL,
             THEME_OPTION_PREFIX,
         )
-        from ica.pipeline.steps import run_theme_generation_step
         from ica.utils.marker_parser import FormattedTheme
 
         formatted = FormattedTheme(theme="AI Future")
@@ -698,7 +697,7 @@ class TestBuildDefaultStepsIntegration:
         """Sequential steps are curation->summarization->theme->markdown->html."""
         from ica.pipeline.orchestrator import StepName, build_default_steps
 
-        seq, par = build_default_steps()
+        seq, _par = build_default_steps()
         seq_names = [n for n, _ in seq]
         assert seq_names == [
             StepName.CURATION,
@@ -726,42 +725,42 @@ class TestServiceFactories:
 
     def test_make_slack_creates_service(self, mock_settings):
         """_make_slack creates a SlackService with settings values."""
-        with patch("ica.services.slack.SlackService") as MockSlack:
+        with patch("ica.services.slack.SlackService") as mock_slack_cls:
             from ica.pipeline.steps import _make_slack
 
             _make_slack()
-            MockSlack.assert_called_once_with(
+            mock_slack_cls.assert_called_once_with(
                 token="xoxb-fake",
                 channel="C-TEST",
             )
 
     def test_make_sheets_creates_service(self, mock_settings):
         """_make_sheets creates a GoogleSheetsService with credentials path."""
-        with patch("ica.services.google_sheets.GoogleSheetsService") as MockSheets:
+        with patch("ica.services.google_sheets.GoogleSheetsService") as mock_sheets_cls:
             from ica.pipeline.steps import _make_sheets
 
             _make_sheets()
-            MockSheets.assert_called_once_with(
+            mock_sheets_cls.assert_called_once_with(
                 credentials_path="/tmp/google-sa.json",
             )
 
     def test_make_docs_creates_service(self, mock_settings):
         """_make_docs creates a GoogleDocsService with credentials path."""
-        with patch("ica.services.google_docs.GoogleDocsService") as MockDocs:
+        with patch("ica.services.google_docs.GoogleDocsService") as mock_docs_cls:
             from ica.pipeline.steps import _make_docs
 
             _make_docs()
-            MockDocs.assert_called_once_with(
+            mock_docs_cls.assert_called_once_with(
                 credentials_path="/tmp/google-sa.json",
             )
 
     def test_make_http_creates_service(self):
         """_make_http creates a WebFetcherService."""
-        with patch("ica.services.web_fetcher.WebFetcherService") as MockHttp:
+        with patch("ica.services.web_fetcher.WebFetcherService") as mock_http_cls:
             from ica.pipeline.steps import _make_http
 
             _make_http()
-            MockHttp.assert_called_once()
+            mock_http_cls.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -883,7 +882,7 @@ class TestContextPropagation:
                 markdown_doc_id="doc-md",
                 extra={"newsletter_date": "03/01/2026"},
             )
-            result = await run_html_generation_step(ctx)
+            await run_html_generation_step(ctx)
 
         # The newsletter_date should have been passed to run_html_generation
         call_args = mock_gen.call_args

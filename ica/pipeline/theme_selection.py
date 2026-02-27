@@ -25,8 +25,8 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, field
-from enum import Enum
+from dataclasses import dataclass
+from enum import StrEnum
 
 import litellm
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,7 +39,6 @@ from ica.prompts.learning_data_extraction import (
     build_learning_data_extraction_prompt,
 )
 from ica.utils.marker_parser import FormattedTheme
-
 
 # ---------------------------------------------------------------------------
 # Constants — Slack form field labels and option values
@@ -62,7 +61,7 @@ THEME_OPTION_PREFIX = "THEME: "
 # ---------------------------------------------------------------------------
 
 
-class ApprovalChoice(str, Enum):
+class ApprovalChoice(StrEnum):
     """Possible user selections from the final approval form."""
 
     APPROVE = "approve"
@@ -564,7 +563,7 @@ async def run_freshness_check(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for freshness check")
 
@@ -614,7 +613,7 @@ async def extract_learning_data(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for learning data extraction")
 

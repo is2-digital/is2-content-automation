@@ -12,7 +12,6 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -26,7 +25,6 @@ from ica.pipeline.theme_generation import (
     parse_theme_output,
 )
 from ica.utils.marker_parser import FormattedTheme
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -128,15 +126,15 @@ Source mix:
 %SM_major_ai_player_coverage:% GPT-5 reasoning (Source 1)
 
 REQUIREMENTS VERIFIED,
-%RV_2-2-2 Distribution Achieved:% SMB adoption (Source 2), Marketing tools (Source 4), Ethics (Source 3), ChatGPT (Source 5), GPT-5 (Source 1), DeepMind (Source 8)
+%RV_2-2-2 Distribution Achieved:% SMB (S2), Tools (S4), Ethics (S3), GPT-5 (S1)
 %RV_Source mix:% (Source 4) HubSpot, (Source 7) SEJ
-%RV_Technical complexity:% (Source 1) GPT-5 architecture, (Source 8) DeepMind research
+%RV_Technical complexity:% (Source 1) GPT-5 architecture
 %RV_Major AI player coverage:% (Source 1) OpenAI GPT-5
 
 -----
 
 THEME: The Ethics and Impact of Next-Gen AI
-Theme Description: Exploring how new AI models raise ethical questions and reshape industries.
+Theme Description: Exploring how new AI models raise ethical questions.
 
 Articles that fit.
 FEATURED ARTICLE:
@@ -201,7 +199,7 @@ Source mix:
 %SM_major_ai_player_coverage:% GPT-5 reasoning (Source 1)
 
 REQUIREMENTS VERIFIED,
-%RV_2-2-2 Distribution Achieved:% SMB adoption (Source 2), Regulation (Source 9), Ethics (Source 3), Safety (Source 10), GPT-5 (Source 1), EU AI Act (Source 11)
+%RV_2-2-2 Distribution Achieved:% SMB (S2), Regulation (S9), Ethics (S3), GPT-5 (S1)
 %RV_Source mix:% (Source 10) Anthropic, (Source 11) EuroNews
 %RV_Technical complexity:% (Source 1) GPT-5 architecture
 %RV_Major AI player coverage:% (Source 1) OpenAI GPT-5
@@ -211,13 +209,13 @@ REQUIREMENTS VERIFIED,
 RECOMMENDATION: Theme 1 - AI Revolution in Small Business
 Rationale:
 
-1. Featured Article: Small Business AI Adoption Surges is directly relevant to our solopreneur audience
-2. Main Articles: Ethics and marketing AI provide practical context for business decisions
-3. Quick Hits: Balanced mix of product updates, investment trends, and search innovation
-4. Industry Developments: OpenAI GPT-5 and Google DeepMind provide major player coverage
-5. Source Mix: Diverse publishers from HubSpot Blog to Search Engine Journal
+1. Featured Article: AI Adoption Surges is relevant to our audience
+2. Main Articles: Ethics and marketing AI provide practical context
+3. Quick Hits: Balanced mix of updates, trends, and innovation
+4. Industry Developments: OpenAI GPT-5 and DeepMind coverage
+5. Source Mix: Diverse publishers from HubSpot to SEJ
 
-This theme speaks directly to our core audience of solopreneurs and SMB professionals. The featured article on SMB AI adoption provides an immediate hook, while the supporting articles offer both practical tools and important context. The balance of tactical, educational, and forward-thinking content ensures comprehensive coverage.\
+This theme speaks directly to our core audience of solopreneurs.\
 """
 
 
@@ -439,7 +437,7 @@ class TestCallThemeLlm:
         with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
             mock_litellm.acompletion = AsyncMock(return_value=mock_response)
 
-            text, model = await call_theme_llm(SAMPLE_SUMMARIES_JSON, model="test-model")
+            _text, _model = await call_theme_llm(SAMPLE_SUMMARIES_JSON, model="test-model")
 
             mock_litellm.acompletion.assert_called_once()
             call_kwargs = mock_litellm.acompletion.call_args

@@ -18,9 +18,7 @@ See PRD Section 3.3.
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
-from typing import Any
 
 import litellm
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,11 +29,9 @@ from ica.db.models import Note
 from ica.prompts.theme_generation import build_theme_generation_prompt
 from ica.utils.marker_parser import (
     FormattedTheme,
-    ThemeParseResult,
     parse_markers,
     split_themes,
 )
-
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -143,7 +139,7 @@ async def call_theme_llm(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for theme generation")
 

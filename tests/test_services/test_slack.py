@@ -3,25 +3,25 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from ica.services.slack import (
-    SlackService,
-    _PendingInteraction,
     _PREFIX_APPROVE,
     _PREFIX_MODAL,
     _PREFIX_TRIGGER,
+    SlackService,
     _build_approval_blocks,
     _build_freetext_modal_blocks,
     _build_modal_blocks,
     _build_trigger_blocks,
     _button_block,
     _extract_modal_values,
+    _PendingInteraction,
     _text_block,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -441,9 +441,10 @@ class TestSendAndWait:
                 pending.event.set()
                 resolved = True
 
-        asyncio.create_task(set_after_delay())
+        task = asyncio.create_task(set_after_delay())
         await service.send_and_wait("#ch", "msg")
         assert resolved
+        assert task.done()
 
     @pytest.mark.asyncio()
     async def test_cleans_up_pending(self, service: SlackService, mock_client: AsyncMock) -> None:
@@ -974,7 +975,7 @@ class TestProtocolSatisfaction:
         assert callable(getattr(service, "send_and_wait_freetext", None))
 
     def test_slack_summary_review(self, service: SlackService) -> None:
-        """SlackSummaryReview requires send_channel_message, send_and_wait_form, send_and_wait_freetext."""
+        """SlackSummaryReview requires multiple messaging methods."""
         assert callable(getattr(service, "send_channel_message", None))
         assert callable(getattr(service, "send_and_wait_form", None))
         assert callable(getattr(service, "send_and_wait_freetext", None))
@@ -996,6 +997,7 @@ class TestApprovalE2E:
     async def test_full_approval_flow(self, service: SlackService, mock_client: AsyncMock) -> None:
         """Post approval, simulate button click, verify unblocked."""
         callback_id_holder: list[str] = []
+        background_tasks: list[asyncio.Task[None]] = []
 
         async def capture_and_schedule_click(**kwargs: Any) -> dict[str, bool]:
             blocks = kwargs.get("blocks", [])
@@ -1006,13 +1008,15 @@ class TestApprovalE2E:
                     callback_id_holder.append(cb_id)
 
                     # Schedule the approval handler to fire after a tick
-                    async def _click() -> None:
+                    async def _click(
+                        _action_id: str = action_id,
+                    ) -> None:
                         await asyncio.sleep(0.01)
                         ack = AsyncMock()
-                        body = {"actions": [{"action_id": action_id}]}
+                        body = {"actions": [{"action_id": _action_id}]}
                         await service._handle_approve(ack, body)
 
-                    asyncio.create_task(_click())
+                    background_tasks.append(asyncio.create_task(_click()))
             return {"ok": True}
 
         mock_client.chat_postMessage = AsyncMock(side_effect=capture_and_schedule_click)
@@ -1038,6 +1042,7 @@ class TestFormE2E:
     async def test_full_form_flow(self, service: SlackService, mock_client: AsyncMock) -> None:
         """Post form trigger, simulate button click + modal open + submit."""
         callback_id_holder: list[str] = []
+        background_tasks: list[asyncio.Task[None]] = []
 
         async def capture_trigger(**kwargs: Any) -> dict[str, bool]:
             blocks = kwargs.get("blocks", [])
@@ -1047,12 +1052,15 @@ class TestFormE2E:
                     cb_id = action_id.removeprefix(_PREFIX_TRIGGER)
                     callback_id_holder.append(cb_id)
 
-                    async def _simulate_click() -> None:
+                    async def _simulate_click(
+                        _action_id: str = action_id,
+                        _cb_id: str = cb_id,
+                    ) -> None:
                         await asyncio.sleep(0.01)
                         # Simulate button click → opens modal
                         ack = AsyncMock()
                         body = {
-                            "actions": [{"action_id": action_id}],
+                            "actions": [{"action_id": _action_id}],
                             "trigger_id": "trig_test",
                         }
                         await service._handle_trigger(ack, body)
@@ -1062,7 +1070,7 @@ class TestFormE2E:
                         submit_ack = AsyncMock()
                         submit_body = {
                             "view": {
-                                "private_metadata": cb_id,
+                                "private_metadata": _cb_id,
                                 "state": {
                                     "values": {
                                         "field_0": {
@@ -1077,7 +1085,7 @@ class TestFormE2E:
                         }
                         await service._handle_view_submission(submit_ack, submit_body)
 
-                    asyncio.create_task(_simulate_click())
+                    background_tasks.append(asyncio.create_task(_simulate_click()))
             return {"ok": True}
 
         mock_client.chat_postMessage = AsyncMock(side_effect=capture_trigger)
@@ -1107,6 +1115,7 @@ class TestFreetextE2E:
     @pytest.mark.asyncio()
     async def test_full_freetext_flow(self, service: SlackService, mock_client: AsyncMock) -> None:
         """Post freetext trigger, simulate button click + modal + submit."""
+        background_tasks: list[asyncio.Task[None]] = []
 
         async def capture_trigger(**kwargs: Any) -> dict[str, bool]:
             blocks = kwargs.get("blocks", [])
@@ -1115,12 +1124,15 @@ class TestFreetextE2E:
                     action_id = block["elements"][0]["action_id"]
                     cb_id = action_id.removeprefix(_PREFIX_TRIGGER)
 
-                    async def _simulate() -> None:
+                    async def _simulate(
+                        _action_id: str = action_id,
+                        _cb_id: str = cb_id,
+                    ) -> None:
                         await asyncio.sleep(0.01)
                         # Button click
                         await service._handle_trigger(
                             AsyncMock(),
-                            {"actions": [{"action_id": action_id}], "trigger_id": "t"},
+                            {"actions": [{"action_id": _action_id}], "trigger_id": "t"},
                         )
                         # Modal submit
                         await asyncio.sleep(0.01)
@@ -1128,7 +1140,7 @@ class TestFreetextE2E:
                             AsyncMock(),
                             {
                                 "view": {
-                                    "private_metadata": cb_id,
+                                    "private_metadata": _cb_id,
                                     "state": {
                                         "values": {
                                             "freetext_block": {
@@ -1140,7 +1152,7 @@ class TestFreetextE2E:
                             },
                         )
 
-                    asyncio.create_task(_simulate())
+                    background_tasks.append(asyncio.create_task(_simulate()))
             return {"ok": True}
 
         mock_client.chat_postMessage = AsyncMock(side_effect=capture_trigger)

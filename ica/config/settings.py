@@ -89,4 +89,4 @@ def get_settings() -> Settings:
     Use this as a FastAPI dependency or call directly. The instance
     is created once and reused for the lifetime of the process.
     """
-    return Settings()  # type: ignore[call-arg]
+    return Settings()

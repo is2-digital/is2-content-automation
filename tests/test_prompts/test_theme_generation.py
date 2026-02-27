@@ -452,7 +452,7 @@ class TestEdgeCases:
     def test_large_summaries_json(self):
         """Prompt should handle large JSON inputs without error."""
         large = json.dumps([{"Title": f"Article {i}", "Order": i} for i in range(50)])
-        system, user = build_theme_generation_prompt(large)
+        _system, user = build_theme_generation_prompt(large)
         assert "Article 49" in user
 
     def test_summaries_with_special_characters(self):

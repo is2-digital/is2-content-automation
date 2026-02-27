@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any
 
 from google.oauth2.service_account import Credentials as ServiceAccountCredentials
-from googleapiclient.discovery import build, Resource
+from googleapiclient.discovery import Resource, build  # type: ignore[import-untyped]
 
 from ica.logging import get_logger
 from ica.services.google_auth import load_credentials

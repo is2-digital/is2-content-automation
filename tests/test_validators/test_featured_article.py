@@ -15,14 +15,12 @@ from __future__ import annotations
 import pytest
 
 from ica.validators.character_count import (
-    CharacterCountError,
     _extract_cta,
     _split_paragraphs,
     _strip_subheading,
     validate_character_counts,
     validate_featured_article,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -133,7 +131,7 @@ class TestExtractCta:
 
     def test_arrow_in_middle_of_line(self) -> None:
         text = "Some text → and more text"
-        cta, remaining = _extract_cta(text)
+        cta, _remaining = _extract_cta(text)
         assert cta == "Some text → and more text"
 
 

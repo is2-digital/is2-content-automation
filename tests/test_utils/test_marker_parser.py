@@ -12,16 +12,12 @@ import pytest
 from ica.utils.marker_parser import (
     FeaturedArticle,
     FormattedTheme,
-    IndustryDevelopment,
     MainArticle,
     ParsedThemeBlock,
-    QuickHit,
-    RequirementsVerified,
     ThemeParseResult,
     parse_markers,
     split_themes,
 )
-
 
 # ======================================================================
 # Fixtures — realistic LLM output samples
@@ -29,7 +25,7 @@ from ica.utils.marker_parser import (
 
 THEME_BODY_COMPLETE = """\
 THEME: AI Reshaping Enterprise Workflows
-Theme Description: How artificial intelligence is transforming daily business operations across industries.
+Theme Description: How AI is transforming daily business operations.
 
 Articles that fit.
 FEATURED ARTICLE:
@@ -94,7 +90,7 @@ Source mix:
 %SM_major_ai_player_coverage:% Microsoft Copilot integration (Source 6)
 
 REQUIREMENTS VERIFIED,
-%RV_2-2-2 Distribution Achieved:% SMB LLMs Source(1), AI Agents Source(3), Gemini Source(2), EU AI Act Source(7), Dev Tools Source(5), Anthropic Source(4)
+%RV_2-2-2 Distribution Achieved:% SMB LLMs Source(1), Gemini Source(2), AI Agents Source(3)
 %RV_Source mix:% (Source 2) Ars Technica, (Source 6) Microsoft Blog
 %RV_Technical complexity:% (Source 5) OpenAI developer platform
 %RV_Major AI player coverage:% (Source 6) Microsoft Copilot
@@ -571,7 +567,7 @@ class TestSplitThemes:
         result = split_themes(TWO_THEMES_RAW)
         desc = result.themes[0].theme_description
         assert desc is not None
-        assert "artificial intelligence" in desc
+        assert "AI is transforming" in desc
 
     def test_second_theme_no_description(self) -> None:
         """Minimal theme body has no Theme Description line."""

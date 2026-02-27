@@ -10,12 +10,13 @@ background task workers, and REST API for triggering/monitoring pipeline runs.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import uuid
-from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 from fastapi import FastAPI, Request, Response
@@ -35,7 +36,7 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 
-class RunStatus(str, Enum):
+class RunStatus(StrEnum):
     """Status of a pipeline run."""
 
     PENDING = "pending"
@@ -51,7 +52,7 @@ class PipelineRun:
     run_id: str
     status: RunStatus = RunStatus.PENDING
     trigger: str = "manual"
-    started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    started_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     completed_at: datetime | None = None
     current_step: str | None = None
     error: str | None = None
@@ -78,8 +79,9 @@ def _create_slack_app() -> Any:
     The Bolt app is mounted as an ASGI sub-application on ``/slack/events``.
     """
     try:
-        from slack_bolt.async_app import AsyncApp
         from slack_bolt.adapter.fastapi.async_handler import AsyncSlackRequestHandler
+        from slack_bolt.async_app import AsyncApp
+
         from ica.config.settings import get_settings
 
         settings = get_settings()
@@ -201,10 +203,8 @@ def create_app(
         """
         body: dict[str, Any] = {}
         if request.headers.get("content-type", "").startswith("application/json"):
-            try:
+            with contextlib.suppress(Exception):
                 body = await request.json()
-            except Exception:
-                pass
 
         trigger_label = body.get("trigger", "api")
         run_id = uuid.uuid4().hex[:12]
@@ -251,7 +251,7 @@ def create_app(
         @app.post("/slack/events")
         async def slack_events(req: Request) -> Response:
             """Forward Slack events to the Bolt handler."""
-            return await slack_handler.handle(req)
+            return await slack_handler.handle(req)  # type: ignore[no-any-return]
 
     return app
 
@@ -287,12 +287,12 @@ async def _run_pipeline(run: PipelineRun) -> None:
             )
         run.current_step = "completed"
         run.status = RunStatus.COMPLETED
-        run.completed_at = datetime.now(timezone.utc)
+        run.completed_at = datetime.now(UTC)
         logger.info("Pipeline run %s completed", run.run_id)
     except Exception as exc:
         run.status = RunStatus.FAILED
         run.error = str(exc)
-        run.completed_at = datetime.now(timezone.utc)
+        run.completed_at = datetime.now(UTC)
         logger.exception("Pipeline run %s failed", run.run_id)
 
 

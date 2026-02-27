@@ -50,11 +50,11 @@ def _retryable_errors() -> tuple[type[Exception], ...]:
     ``litellm`` module (important for test patching).
     """
     return (
-        litellm.RateLimitError,
-        litellm.ServiceUnavailableError,
-        litellm.Timeout,
-        litellm.InternalServerError,
-        litellm.APIConnectionError,
+        litellm.RateLimitError,  # type: ignore[attr-defined]
+        litellm.ServiceUnavailableError,  # type: ignore[attr-defined]
+        litellm.Timeout,  # type: ignore[attr-defined]
+        litellm.InternalServerError,  # type: ignore[attr-defined]
+        litellm.APIConnectionError,  # type: ignore[attr-defined]
     )
 
 
@@ -147,7 +147,7 @@ async def completion(
                 **litellm_kwargs,
             )
 
-            content = response.choices[0].message.content  # type: ignore[union-attr]
+            content = response.choices[0].message.content
             if not content or not content.strip():
                 raise LLMError(step, f"LLM returned an empty response (model={model_id})")
 

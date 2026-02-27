@@ -176,9 +176,9 @@ class TestPackageExport:
     """ica.config should re-export validation items."""
 
     def test_import_validation_result(self) -> None:
-        from ica.config import ValidationResult as VR
+        from ica.config import ValidationResult as ValidationResultAlias
 
-        assert VR is ValidationResult
+        assert ValidationResultAlias is ValidationResult
 
     def test_import_validate_config(self) -> None:
         from ica.config import validate_config as vc

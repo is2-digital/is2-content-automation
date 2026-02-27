@@ -17,7 +17,6 @@ from ica.db.models import (
 )
 from ica.pipeline.article_collection import ArticleRecord
 
-
 # ---------------------------------------------------------------------------
 # articles
 # ---------------------------------------------------------------------------
@@ -59,7 +58,7 @@ async def upsert_articles(
     )
 
     result = await session.execute(stmt)
-    return result.rowcount  # type: ignore[return-value]
+    return result.rowcount  # type: ignore[no-any-return, attr-defined]
 
 
 async def get_articles(

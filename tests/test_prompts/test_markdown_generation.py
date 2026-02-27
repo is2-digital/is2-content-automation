@@ -314,8 +314,9 @@ class TestUserPromptTemplate:
         cleaned = _GENERATION_INSTRUCTION
         for p in known:
             cleaned = cleaned.replace(p, "")
+        open_idx = cleaned.index("{") if "{" in cleaned else -1
         assert "{" not in cleaned, (
-            f"Stray placeholder in user prompt: {cleaned[cleaned.index('{') : cleaned.index('{') + 30]}"
+            f"Stray placeholder in user prompt: {cleaned[open_idx : open_idx + 30]}"
         )
         assert "}" not in cleaned
 
@@ -607,7 +608,7 @@ class TestBuildRegenerationPrompt:
         assert user == "Make the intro shorter."
 
     def test_no_unresolved_placeholders(self):
-        system, user = build_markdown_regeneration_prompt(
+        system, _user = build_markdown_regeneration_prompt(
             "Some markdown.",
             "Some feedback.",
         )
@@ -644,7 +645,7 @@ class TestEdgeCases:
         """Theme data containing braces should not break formatting."""
         theme_with_braces = json.dumps({"title": "Test {with} braces"})
         # This would raise KeyError if there were stray placeholders
-        system, user = build_markdown_generation_prompt(theme_with_braces)
+        _system, user = build_markdown_generation_prompt(theme_with_braces)
         assert "Test {with} braces" in user
 
     def test_multiline_feedback(self):

@@ -21,11 +21,10 @@ from ica.pipeline.summarization import (
     SummarizationPrepResult,
     filter_approved_rows,
     normalize_article_row,
-    upsert_curated_articles,
     prepare_summarization_data,
+    upsert_curated_articles,
 )
 from ica.utils.date_parser import parse_date_mmddyyyy
-
 
 # ---------------------------------------------------------------------------
 # Helpers — fake sheet data

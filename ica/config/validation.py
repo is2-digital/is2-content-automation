@@ -41,7 +41,7 @@ def validate_config() -> ValidationResult:
     try:
         from ica.config.settings import Settings
 
-        settings = Settings(_env_file=None)  # type: ignore[call-arg]
+        settings = Settings(_env_file=None)
     except ValidationError as exc:
         for err in exc.errors():
             loc = ".".join(str(p) for p in err["loc"])
@@ -58,7 +58,7 @@ def validate_config() -> ValidationResult:
     try:
         from ica.config.llm_config import LLMConfig, LLMPurpose
 
-        llm_config = LLMConfig(_env_file=None)  # type: ignore[call-arg]
+        llm_config = LLMConfig(_env_file=None)
     except ValidationError as exc:
         for err in exc.errors():
             loc = ".".join(str(p) for p in err["loc"])

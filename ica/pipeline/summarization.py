@@ -54,8 +54,6 @@ from ica.prompts.summarization import (
 )
 from ica.services.web_fetcher import (
     BROWSER_HEADERS,
-    CAPTCHA_MARKER,
-    YOUTUBE_DOMAIN,
     FetchResult,
     is_fetch_failure,
     strip_html_tags,
@@ -67,7 +65,6 @@ from ica.utils.output_router import (
     conditional_output_router,
     normalize_switch_value,
 )
-
 
 # ---------------------------------------------------------------------------
 # Protocol dependencies
@@ -283,7 +280,7 @@ async def upsert_curated_articles(
     )
 
     result = await session.execute(stmt)
-    return result.rowcount  # type: ignore[return-value]
+    return result.rowcount  # type: ignore[no-any-return, attr-defined]
 
 
 # ---------------------------------------------------------------------------
@@ -431,7 +428,7 @@ async def call_summary_llm(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for summarization")
 
@@ -922,7 +919,7 @@ async def call_regeneration_llm(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for summarization regeneration")
 
@@ -973,7 +970,7 @@ async def extract_summary_learning_data(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for learning data extraction")
 

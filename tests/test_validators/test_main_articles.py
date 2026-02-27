@@ -4,7 +4,7 @@ Covers:
 - Subheading stripping (## lines)
 - Source link removal (lines matching [text →](url))
 - Paragraph splitting on blank lines
-- Callout paragraph detection (bold label pattern **Label:** or *Label:*) and validation (180-250 chars)
+- Callout paragraph detection (bold label pattern) and validation (180-250 chars)
 - Content paragraph detection (first non-callout paragraph) and validation (max 750 chars)
 - Both MAIN ARTICLE 1 and MAIN ARTICLE 2 sections
 - Delta calculation for out-of-range values
@@ -16,13 +16,11 @@ from __future__ import annotations
 import pytest
 
 from ica.validators.character_count import (
-    CharacterCountError,
     _find_callout,
     _strip_source_links,
     validate_character_counts,
     validate_main_articles,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -66,9 +64,8 @@ def _make_main_article(
         parts.append(source_link)
     parts.append("")
     # Add the next section to terminate extraction
-    next_section = index + 1 if index == 1 else 3
     if index == 1:
-        parts.append(f"# MAIN ARTICLE 2\nNext section.\n")
+        parts.append("# MAIN ARTICLE 2\nNext section.\n")
     else:
         parts.append("# INDUSTRY DEVELOPMENTS\nNext section.\n")
     return "\n".join(parts)

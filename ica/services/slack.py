@@ -142,7 +142,7 @@ def _build_modal_blocks(
         if field_type == "dropdown":
             options_raw = f.get("fieldOptions", [])
             options = []
-            for opt in options_raw:  # type: ignore[union-attr]
+            for opt in options_raw:  # type: ignore[attr-defined]
                 opt_text = str(opt.get("option", "")) if isinstance(opt, dict) else str(opt)
                 options.append(
                     {

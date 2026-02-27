@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Protocol
 
 import litellm
@@ -36,7 +36,6 @@ from ica.prompts.social_media import (
     build_social_media_post_prompt,
     build_social_media_regeneration_prompt,
 )
-
 
 # ---------------------------------------------------------------------------
 # Protocols
@@ -281,7 +280,7 @@ def get_source_url(source_name: str, formatted_theme: dict[str, object]) -> str:
 
     # Pass 2: Try source-number match (fallback)
     if source_number:
-        for key, item in formatted_theme.items():
+        for _key, item in formatted_theme.items():
             if not isinstance(item, dict):
                 continue
             if item.get("Source") == source_number:
@@ -531,7 +530,7 @@ async def call_social_media_post_llm(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for social media post generation")
 
@@ -601,7 +600,7 @@ async def call_caption_llm(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for social media caption generation")
 
@@ -641,7 +640,7 @@ async def call_caption_regeneration_llm(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for social media caption regeneration")
 

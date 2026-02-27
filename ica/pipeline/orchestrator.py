@@ -18,10 +18,9 @@ See PRD Section 11.6.
 from __future__ import annotations
 
 import asyncio
-import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any, Protocol
 
 from ica.errors import PipelineStopError
@@ -35,7 +34,7 @@ logger = get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 
-class StepName(str, Enum):
+class StepName(StrEnum):
     """Canonical names for each pipeline step."""
 
     CURATION = "curation"
@@ -162,14 +161,14 @@ async def run_step(
         PipelineStopError: Re-raised from the step if the pipeline must halt.
         Exception: Any unexpected error from the step.
     """
-    started = datetime.now(timezone.utc)
+    started = datetime.now(UTC)
     logger.info("Step %s starting", step_name)
 
     try:
         async with bind_context(step=step_name):
             ctx = await step_fn(ctx)
     except PipelineStopError:
-        completed = datetime.now(timezone.utc)
+        completed = datetime.now(UTC)
         ctx.step_results.append(
             StepResult(
                 step=step_name,
@@ -181,7 +180,7 @@ async def run_step(
         )
         raise
     except Exception as exc:
-        completed = datetime.now(timezone.utc)
+        completed = datetime.now(UTC)
         ctx.step_results.append(
             StepResult(
                 step=step_name,
@@ -193,7 +192,7 @@ async def run_step(
         )
         raise
 
-    completed = datetime.now(timezone.utc)
+    completed = datetime.now(UTC)
     result = StepResult(
         step=step_name,
         status="completed",
@@ -282,11 +281,11 @@ async def _run_parallel_steps(
     errors: list[tuple[str, Exception]] = []
 
     async def _safe_run(name: str, fn: PipelineStep) -> None:
-        started = datetime.now(timezone.utc)
+        started = datetime.now(UTC)
         try:
             async with bind_context(step=name):
                 await fn(ctx)
-            completed = datetime.now(timezone.utc)
+            completed = datetime.now(UTC)
             ctx.step_results.append(
                 StepResult(
                     step=name,
@@ -301,7 +300,7 @@ async def _run_parallel_steps(
                 (completed - started).total_seconds(),
             )
         except Exception as exc:
-            completed = datetime.now(timezone.utc)
+            completed = datetime.now(UTC)
             ctx.step_results.append(
                 StepResult(
                     step=name,

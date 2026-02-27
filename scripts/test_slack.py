@@ -65,7 +65,7 @@ async def main() -> None:
             timeout=60,
         )
         print("  Button click received! Interactive callbacks working.")
-    except asyncio.TimeoutError:
+    except TimeoutError:
         print("  TIMEOUT: No button click received within 60s.")
         print("  Check that Interactivity is enabled in your Slack app settings.")
         await handler.close_async()
@@ -97,7 +97,7 @@ async def main() -> None:
             timeout=60,
         )
         print(f"  Form submitted! Response: {form_result}")
-    except asyncio.TimeoutError:
+    except TimeoutError:
         print("  TIMEOUT: No form submission within 60s.")
         await handler.close_async()
         sys.exit(1)
@@ -116,7 +116,7 @@ async def main() -> None:
             timeout=60,
         )
         print(f"  Freetext submitted! Response: {freetext_result!r}")
-    except asyncio.TimeoutError:
+    except TimeoutError:
         print("  TIMEOUT: No freetext submission within 60s.")
         await handler.close_async()
         sys.exit(1)

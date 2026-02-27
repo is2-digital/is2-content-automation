@@ -32,7 +32,6 @@ import pytest
 
 from ica.pipeline.markdown_generation import (
     FEEDBACK_BUTTON_LABEL,
-    FEEDBACK_FORM_DESCRIPTION,
     FEEDBACK_FORM_TITLE,
     FEEDBACK_MESSAGE,
     GOOGLE_DOC_TITLE,
@@ -41,10 +40,10 @@ from ica.pipeline.markdown_generation import (
     NEXT_STEPS_FIELD_LABEL,
     NEXT_STEPS_FORM_DESCRIPTION,
     NEXT_STEPS_FORM_TITLE,
-    NEXT_STEPS_MESSAGE,
     NEXT_STEPS_OPTIONS,
     MarkdownGenerationResult,
     ValidationResult,
+    _parse_validation_response,
     aggregate_feedback,
     build_next_steps_form,
     call_markdown_llm,
@@ -59,11 +58,9 @@ from ica.pipeline.markdown_generation import (
     run_three_layer_validation,
     run_voice_validation,
     store_markdown_feedback,
-    _parse_validation_response,
 )
 from ica.utils.output_router import UserChoice
 from ica.validators.character_count import CharacterCountError
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -304,16 +301,20 @@ class TestCallMarkdownLlm:
     @pytest.mark.asyncio
     async def test_empty_response_raises(self):
         mock_resp = _mock_llm_response("")
-        with patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp):
-            with pytest.raises(RuntimeError, match="empty response"):
-                await call_markdown_llm(SAMPLE_FORMATTED_THEME, model="m")
+        with (
+            patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp),
+            pytest.raises(RuntimeError, match="empty response"),
+        ):
+            await call_markdown_llm(SAMPLE_FORMATTED_THEME, model="m")
 
     @pytest.mark.asyncio
     async def test_whitespace_only_raises(self):
         mock_resp = _mock_llm_response("   \n  ")
-        with patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp):
-            with pytest.raises(RuntimeError, match="empty response"):
-                await call_markdown_llm(SAMPLE_FORMATTED_THEME, model="m")
+        with (
+            patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp),
+            pytest.raises(RuntimeError, match="empty response"),
+        ):
+            await call_markdown_llm(SAMPLE_FORMATTED_THEME, model="m")
 
     @pytest.mark.asyncio
     async def test_default_model(self):
@@ -763,9 +764,11 @@ class TestCallUserFeedbackRegeneration:
     @pytest.mark.asyncio
     async def test_empty_response_raises(self):
         mock_resp = _mock_llm_response("")
-        with patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp):
-            with pytest.raises(RuntimeError, match="empty response"):
-                await call_user_feedback_regeneration("orig", "fb", model="m")
+        with (
+            patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp),
+            pytest.raises(RuntimeError, match="empty response"),
+        ):
+            await call_user_feedback_regeneration("orig", "fb", model="m")
 
     @pytest.mark.asyncio
     async def test_default_model(self):
@@ -814,9 +817,11 @@ class TestExtractMarkdownLearningData:
     @pytest.mark.asyncio
     async def test_empty_response_raises(self):
         mock_resp = _mock_llm_response("")
-        with patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp):
-            with pytest.raises(RuntimeError, match="empty response"):
-                await extract_markdown_learning_data("fb", "in", "out", model="m")
+        with (
+            patch("ica.pipeline.markdown_generation.litellm.acompletion", return_value=mock_resp),
+            pytest.raises(RuntimeError, match="empty response"),
+        ):
+            await extract_markdown_learning_data("fb", "in", "out", model="m")
 
     @pytest.mark.asyncio
     async def test_invalid_json_returns_raw(self):

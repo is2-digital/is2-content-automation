@@ -7,7 +7,7 @@ search engine (every 2 days).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Protocol
 
 

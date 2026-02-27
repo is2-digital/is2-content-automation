@@ -50,7 +50,6 @@ from ica.pipeline.html_generation import (
 )
 from ica.utils.output_router import UserChoice
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -369,38 +368,44 @@ class TestCallHtmlLlm:
     @pytest.mark.asyncio
     async def test_empty_response_raises(self):
         mock_resp = _mock_llm_response("")
-        with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp):
-            with pytest.raises(RuntimeError, match="empty response"):
-                await call_html_llm(
-                    SAMPLE_MARKDOWN,
-                    SAMPLE_HTML_TEMPLATE,
-                    SAMPLE_DATE,
-                    model="m",
-                )
+        with (
+            patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp),
+            pytest.raises(RuntimeError, match="empty response"),
+        ):
+            await call_html_llm(
+                SAMPLE_MARKDOWN,
+                SAMPLE_HTML_TEMPLATE,
+                SAMPLE_DATE,
+                model="m",
+            )
 
     @pytest.mark.asyncio
     async def test_whitespace_only_response_raises(self):
         mock_resp = _mock_llm_response("   \n  ")
-        with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp):
-            with pytest.raises(RuntimeError, match="empty response"):
-                await call_html_llm(
-                    SAMPLE_MARKDOWN,
-                    SAMPLE_HTML_TEMPLATE,
-                    SAMPLE_DATE,
-                    model="m",
-                )
+        with (
+            patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp),
+            pytest.raises(RuntimeError, match="empty response"),
+        ):
+            await call_html_llm(
+                SAMPLE_MARKDOWN,
+                SAMPLE_HTML_TEMPLATE,
+                SAMPLE_DATE,
+                model="m",
+            )
 
     @pytest.mark.asyncio
     async def test_none_response_raises(self):
         mock_resp = _mock_llm_response(None)  # type: ignore[arg-type]
-        with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp):
-            with pytest.raises(RuntimeError, match="empty response"):
-                await call_html_llm(
-                    SAMPLE_MARKDOWN,
-                    SAMPLE_HTML_TEMPLATE,
-                    SAMPLE_DATE,
-                    model="m",
-                )
+        with (
+            patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp),
+            pytest.raises(RuntimeError, match="empty response"),
+        ):
+            await call_html_llm(
+                SAMPLE_MARKDOWN,
+                SAMPLE_HTML_TEMPLATE,
+                SAMPLE_DATE,
+                model="m",
+            )
 
     @pytest.mark.asyncio
     async def test_strips_response(self):
@@ -517,16 +522,18 @@ class TestCallHtmlRegeneration:
     @pytest.mark.asyncio
     async def test_empty_response_raises(self):
         mock_resp = _mock_llm_response("")
-        with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp):
-            with pytest.raises(RuntimeError, match="empty response"):
-                await call_html_regeneration(
-                    previous_html=SAMPLE_HTML,
-                    markdown_content=SAMPLE_MARKDOWN,
-                    html_template=SAMPLE_HTML_TEMPLATE,
-                    user_feedback="Fix it",
-                    newsletter_date=SAMPLE_DATE,
-                    model="m",
-                )
+        with (
+            patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp),
+            pytest.raises(RuntimeError, match="empty response"),
+        ):
+            await call_html_regeneration(
+                previous_html=SAMPLE_HTML,
+                markdown_content=SAMPLE_MARKDOWN,
+                html_template=SAMPLE_HTML_TEMPLATE,
+                user_feedback="Fix it",
+                newsletter_date=SAMPLE_DATE,
+                model="m",
+            )
 
     @pytest.mark.asyncio
     async def test_strips_response(self):
@@ -581,14 +588,16 @@ class TestExtractHtmlLearningData:
     @pytest.mark.asyncio
     async def test_empty_response_raises(self):
         mock_resp = _mock_llm_response("")
-        with patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp):
-            with pytest.raises(RuntimeError, match="empty response"):
-                await extract_html_learning_data(
-                    feedback="Fix",
-                    input_text="in",
-                    model_output="out",
-                    model="m",
-                )
+        with (
+            patch("ica.pipeline.html_generation.litellm.acompletion", return_value=mock_resp),
+            pytest.raises(RuntimeError, match="empty response"),
+        ):
+            await extract_html_learning_data(
+                feedback="Fix",
+                input_text="in",
+                model_output="out",
+                model="m",
+            )
 
     @pytest.mark.asyncio
     async def test_json_without_learning_feedback_key(self):

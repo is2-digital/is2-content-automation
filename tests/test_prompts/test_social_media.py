@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from ica.llm_configs import get_process_prompts
 from ica.prompts.social_media import (
     build_social_media_caption_prompt,
@@ -315,7 +317,7 @@ class TestBuildSocialMediaPostPrompt:
 class TestBuildSocialMediaCaptionPrompt:
     """Verify the Phase 2 builder function."""
 
-    _articles = {
+    _articles: ClassVar[dict[str, str]] = {
         "posts_json": '[{"title": "test"}]',
         "featured_article": '{"title": "FA"}',
         "main_article_1": '{"title": "M1"}',

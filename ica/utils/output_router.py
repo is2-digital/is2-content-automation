@@ -13,10 +13,10 @@ See PRD Section 9.8 and project-details.md Section 5.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class UserChoice(str, Enum):
+class UserChoice(StrEnum):
     """Possible user selections from the Slack sendAndWait form."""
 
     YES = "yes"

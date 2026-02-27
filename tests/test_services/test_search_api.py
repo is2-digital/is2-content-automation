@@ -7,8 +7,7 @@ from typing import Any
 
 import pytest
 
-from ica.services.search_api import HttpClient, SearchApiClient, SearchResult
-
+from ica.services.search_api import SearchApiClient, SearchResult
 
 # ---------------------------------------------------------------------------
 # Fixtures & helpers
@@ -312,7 +311,6 @@ class TestSearchKeywords:
     async def test_aggregates_results(self, http: StubHttpClient):
         # Return 1 result per call
         call_count = 0
-        original_get = http.get
 
         async def counting_get(url: str, *, params: dict[str, Any]) -> dict[str, Any]:
             nonlocal call_count

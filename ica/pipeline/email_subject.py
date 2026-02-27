@@ -36,7 +36,6 @@ from ica.prompts.email_review import build_email_review_prompt
 from ica.prompts.email_subject import build_email_subject_prompt
 from ica.prompts.learning_data_extraction import build_learning_data_extraction_prompt
 
-
 # ---------------------------------------------------------------------------
 # Protocols
 # ---------------------------------------------------------------------------
@@ -268,7 +267,7 @@ async def call_email_subject_llm(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for email subject generation")
 
@@ -415,9 +414,9 @@ def format_subjects_slack_message(
         Flattened Slack mrkdwn message string.
     """
     blocks = build_subjects_slack_blocks(subjects, recommendation)
-    separator = "\n \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500 \u2500\n\n"
+    separator = "\n " + "\u2500 " * 30 + "\n\n"
     parts = [
-        b["text"]["text"]  # type: ignore[index]
+        b["text"]["text"]
         for b in blocks
         if "text" in b and isinstance(b["text"], dict) and "text" in b["text"]
     ]
@@ -545,7 +544,7 @@ async def call_email_review_llm(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for email review generation")
 
@@ -600,9 +599,9 @@ def format_review_slack_message(review_text: str) -> str:
         Flattened Slack mrkdwn message string.
     """
     blocks = build_review_slack_blocks(review_text)
-    separator = "\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\n"
+    separator = "\n" + "\u2500" * 30 + "\n\n"
     parts = [
-        b["text"]["text"]  # type: ignore[index]
+        b["text"]["text"]
         for b in blocks
         if "text" in b and isinstance(b["text"], dict) and "text" in b["text"]
     ]
@@ -708,7 +707,7 @@ async def extract_email_learning_data(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for learning data extraction")
 
@@ -1010,3 +1009,7 @@ async def run_email_subject_generation(
 
         # Should not reach here, but break just in case
         break  # pragma: no cover
+
+    # Unreachable — the while True loop only exits via return inside
+    msg = "Unreachable: email subject generation loop exited unexpectedly"
+    raise RuntimeError(msg)  # pragma: no cover

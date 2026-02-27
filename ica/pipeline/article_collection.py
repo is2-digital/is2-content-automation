@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Any, Protocol
+from typing import Protocol
 
 from ica.services.search_api import SearchApiClient, SearchResult
 from ica.utils.date_parser import parse_relative_date

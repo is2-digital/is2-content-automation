@@ -17,7 +17,6 @@ from ica.services.llm import (
     completion,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -40,23 +39,23 @@ USER = "Say hello."
 
 
 # Sentinel exception classes — each maps to exactly one retryable error type.
-class _RateLimitSentinel(Exception):
+class _RateLimitSentinelError(Exception):
     pass
 
 
-class _ServiceUnavailableSentinel(Exception):
+class _ServiceUnavailableSentinelError(Exception):
     pass
 
 
-class _TimeoutSentinel(Exception):
+class _TimeoutSentinelError(Exception):
     pass
 
 
-class _InternalServerSentinel(Exception):
+class _InternalServerSentinelError(Exception):
     pass
 
 
-class _APIConnectionSentinel(Exception):
+class _APIConnectionSentinelError(Exception):
     pass
 
 
@@ -66,11 +65,11 @@ class _NonRetryableError(Exception):
 
 def _set_retryable_types(mock_litellm: MagicMock) -> None:
     """Configure mock litellm with unique sentinel exception classes."""
-    mock_litellm.RateLimitError = _RateLimitSentinel
-    mock_litellm.ServiceUnavailableError = _ServiceUnavailableSentinel
-    mock_litellm.Timeout = _TimeoutSentinel
-    mock_litellm.InternalServerError = _InternalServerSentinel
-    mock_litellm.APIConnectionError = _APIConnectionSentinel
+    mock_litellm.RateLimitError = _RateLimitSentinelError
+    mock_litellm.ServiceUnavailableError = _ServiceUnavailableSentinelError
+    mock_litellm.Timeout = _TimeoutSentinelError
+    mock_litellm.InternalServerError = _InternalServerSentinelError
+    mock_litellm.APIConnectionError = _APIConnectionSentinelError
 
 
 def _patch_litellm():
@@ -465,7 +464,7 @@ class TestCompletionRetry:
         with _patch_litellm() as mock_litellm:
             _set_retryable_types(mock_litellm)
             mock_litellm.acompletion = AsyncMock(
-                side_effect=[_RateLimitSentinel("rate limited"), _make_response("ok")]
+                side_effect=[_RateLimitSentinelError("rate limited"), _make_response("ok")]
             )
 
             result = await completion(
@@ -483,7 +482,7 @@ class TestCompletionRetry:
         with _patch_litellm() as mock_litellm:
             _set_retryable_types(mock_litellm)
             mock_litellm.acompletion = AsyncMock(
-                side_effect=[_ServiceUnavailableSentinel("unavailable"), _make_response("ok")]
+                side_effect=[_ServiceUnavailableSentinelError("unavailable"), _make_response("ok")]
             )
 
             result = await completion(
@@ -501,7 +500,7 @@ class TestCompletionRetry:
         with _patch_litellm() as mock_litellm:
             _set_retryable_types(mock_litellm)
             mock_litellm.acompletion = AsyncMock(
-                side_effect=[_TimeoutSentinel("timed out"), _make_response("ok")]
+                side_effect=[_TimeoutSentinelError("timed out"), _make_response("ok")]
             )
 
             result = await completion(
@@ -518,7 +517,7 @@ class TestCompletionRetry:
         with _patch_litellm() as mock_litellm:
             _set_retryable_types(mock_litellm)
             mock_litellm.acompletion = AsyncMock(
-                side_effect=[_InternalServerSentinel("500"), _make_response("ok")]
+                side_effect=[_InternalServerSentinelError("500"), _make_response("ok")]
             )
 
             result = await completion(
@@ -535,7 +534,7 @@ class TestCompletionRetry:
         with _patch_litellm() as mock_litellm:
             _set_retryable_types(mock_litellm)
             mock_litellm.acompletion = AsyncMock(
-                side_effect=[_APIConnectionSentinel("refused"), _make_response("ok")]
+                side_effect=[_APIConnectionSentinelError("refused"), _make_response("ok")]
             )
 
             result = await completion(
@@ -551,7 +550,8 @@ class TestCompletionRetry:
     async def test_exhausts_retries(self) -> None:
         with _patch_litellm() as mock_litellm:
             _set_retryable_types(mock_litellm)
-            mock_litellm.acompletion = AsyncMock(side_effect=_RateLimitSentinel("rate limited"))
+            err = _RateLimitSentinelError("rate limited")
+            mock_litellm.acompletion = AsyncMock(side_effect=err)
 
             with pytest.raises(LLMError, match="failed after"):
                 await completion(
@@ -603,7 +603,8 @@ class TestCompletionRetry:
         """max_retries=0 means only 1 attempt, no retries."""
         with _patch_litellm() as mock_litellm:
             _set_retryable_types(mock_litellm)
-            mock_litellm.acompletion = AsyncMock(side_effect=_RateLimitSentinel("rate limited"))
+            err = _RateLimitSentinelError("rate limited")
+            mock_litellm.acompletion = AsyncMock(side_effect=err)
 
             with pytest.raises(LLMError, match="failed after 1 attempts"):
                 await completion(
@@ -620,7 +621,7 @@ class TestCompletionRetry:
     async def test_succeeds_on_last_retry(self) -> None:
         with _patch_litellm() as mock_litellm:
             _set_retryable_types(mock_litellm)
-            err = _RateLimitSentinel("rate limited")
+            err = _RateLimitSentinelError("rate limited")
             mock_litellm.acompletion = AsyncMock(side_effect=[err, err, _make_response("finally")])
 
             result = await completion(
@@ -638,7 +639,7 @@ class TestCompletionRetry:
     async def test_retryable_error_preserves_cause(self) -> None:
         with _patch_litellm() as mock_litellm:
             _set_retryable_types(mock_litellm)
-            original = _RateLimitSentinel("rate limited")
+            original = _RateLimitSentinelError("rate limited")
             mock_litellm.acompletion = AsyncMock(side_effect=original)
 
             with pytest.raises(LLMError) as exc_info:
@@ -659,8 +660,8 @@ class TestCompletionRetry:
             _set_retryable_types(mock_litellm)
             mock_litellm.acompletion = AsyncMock(
                 side_effect=[
-                    _RateLimitSentinel("rate limit"),
-                    _TimeoutSentinel("timeout"),
+                    _RateLimitSentinelError("rate limit"),
+                    _TimeoutSentinelError("timeout"),
                     _make_response("ok"),
                 ]
             )
@@ -717,7 +718,7 @@ class TestCompletionStepName:
     async def test_step_in_retry_exhausted_error(self) -> None:
         with _patch_litellm() as mock_litellm:
             _set_retryable_types(mock_litellm)
-            mock_litellm.acompletion = AsyncMock(side_effect=_RateLimitSentinel("limit"))
+            mock_litellm.acompletion = AsyncMock(side_effect=_RateLimitSentinelError("limit"))
 
             with pytest.raises(LLMError) as exc_info:
                 await completion(

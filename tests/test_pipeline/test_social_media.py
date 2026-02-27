@@ -21,31 +21,11 @@ import pytest
 
 from ica.pipeline.social_media import (
     APPROVAL_MESSAGE,
-    FEEDBACK_BUTTON_LABEL,
-    FEEDBACK_FORM_DESCRIPTION,
-    FEEDBACK_FORM_TITLE,
-    FEEDBACK_MESSAGE,
-    FINAL_SELECTION_BUTTON,
     FINAL_SELECTION_FIELD,
-    FINAL_SELECTION_FORM_DESCRIPTION,
-    FINAL_SELECTION_FORM_TITLE,
-    FINAL_SELECTION_MESSAGE,
     GOOGLE_DOC_TITLE,
-    PHASE1_BUTTON_LABEL,
-    PHASE1_FORM_DESCRIPTION,
-    PHASE1_FORM_TITLE,
     PHASE1_NEXT_STEPS_FIELD,
-    PHASE1_NEXT_STEPS_MESSAGE,
-    PHASE2_BUTTON_LABEL,
-    PHASE2_FORM_DESCRIPTION,
-    PHASE2_FORM_TITLE,
     PHASE2_NEXT_STEPS_FIELD,
-    PHASE2_NEXT_STEPS_MESSAGE,
-    POST_SELECTION_BUTTON,
     POST_SELECTION_FIELD,
-    POST_SELECTION_FORM_DESCRIPTION,
-    POST_SELECTION_FORM_TITLE,
-    POST_SELECTION_MESSAGE,
     ParsedPost,
     SocialMediaResult,
     _parse_checkbox_response,
@@ -64,7 +44,6 @@ from ica.pipeline.social_media import (
     parse_phase2_titles,
     run_social_media_generation,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -870,7 +849,7 @@ class TestRunSocialMediaGeneration:
 
     @pytest.mark.asyncio
     async def test_happy_path(self):
-        """Full flow: approve → generate → approve → select → captions → approve → final select → doc."""
+        """Full flow: approve, generate, approve, select, captions, approve, final select, doc."""
         slack = self._make_slack()
         docs = self._make_docs()
 

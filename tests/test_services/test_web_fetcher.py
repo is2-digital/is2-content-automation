@@ -12,7 +12,6 @@ Tests cover:
 from __future__ import annotations
 
 from dataclasses import FrozenInstanceError
-from unittest.mock import AsyncMock
 
 import httpx
 import pytest
@@ -27,7 +26,6 @@ from ica.services.web_fetcher import (
     is_fetch_failure,
     strip_html_tags,
 )
-
 
 # ===========================================================================
 # FetchResult dataclass

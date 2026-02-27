@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Protocol
 
 import litellm
@@ -34,7 +34,6 @@ from ica.prompts.linkedin_carousel import (
     build_linkedin_carousel_prompt,
     build_linkedin_regeneration_prompt,
 )
-
 
 # ---------------------------------------------------------------------------
 # Protocols
@@ -241,7 +240,6 @@ def validate_slide_bodies(raw_output: str) -> ValidationResult:
     matches = list(_BODY_RE.finditer(raw_output))
 
     for match in reversed(matches):
-        body_prefix = match.group(1)  # "*Body:*\n"
         body_content = match.group(2)
         cleaned_body = body_content.rstrip()
 
@@ -337,7 +335,7 @@ async def call_carousel_llm(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for LinkedIn carousel generation")
 
@@ -385,7 +383,7 @@ async def call_regeneration_llm(
         ],
     )
 
-    content = response.choices[0].message.content  # type: ignore[union-attr]
+    content: str | None = response.choices[0].message.content
     if not content or not content.strip():
         raise RuntimeError("LLM returned an empty response for LinkedIn carousel regeneration")
 

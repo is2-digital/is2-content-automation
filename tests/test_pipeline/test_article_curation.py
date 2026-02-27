@@ -45,7 +45,6 @@ from ica.pipeline.article_curation import (
     validate_sheet_data,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helpers — lightweight Article stand-in
 # ---------------------------------------------------------------------------

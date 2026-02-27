@@ -7,7 +7,7 @@ Verifies the full flow: SearchApi query → deduplication → date parsing
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date
 from typing import Any
 
 import pytest
@@ -16,7 +16,6 @@ from ica.pipeline.article_collection import (
     DAILY_KEYWORDS,
     EVERY_2_DAYS_KEYWORDS,
     ArticleRecord,
-    CollectionResult,
     collect_articles,
     deduplicate_results,
     parse_articles,
@@ -469,7 +468,7 @@ class TestCollectArticlesDaily:
         repository: MockArticleRepository,
         http_client: MockHttpClient,
     ):
-        result = await collect_articles(
+        await collect_articles(
             client,
             repository,
             schedule="daily",
@@ -593,7 +592,7 @@ class TestCollectArticlesEvery2Days:
         repository: MockArticleRepository,
         http_client: MockHttpClient,
     ):
-        result = await collect_articles(
+        await collect_articles(
             client,
             repository,
             schedule="every_2_days",
@@ -725,15 +724,11 @@ class TestCollectArticlesEdgeCases:
         client = SearchApiClient(api_key="key", http_client=http_client)
 
         # First run
-        result1 = await collect_articles(
-            client, repository, schedule="daily", reference_date=REF_DATE
-        )
+        await collect_articles(client, repository, schedule="daily", reference_date=REF_DATE)
         assert len(repository.articles) == 4
 
         # Second run (same data — simulates upsert)
-        result2 = await collect_articles(
-            client, repository, schedule="daily", reference_date=REF_DATE
-        )
+        await collect_articles(client, repository, schedule="daily", reference_date=REF_DATE)
         # Still 4 unique articles in repository (upsert, not insert)
         assert len(repository.articles) == 4
         assert len(repository.upsert_calls) == 2

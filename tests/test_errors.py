@@ -10,7 +10,6 @@ Covers:
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock
 
 import pytest
@@ -29,7 +28,6 @@ from ica.errors import (
     handle_step_error,
     notify_error,
 )
-
 
 # -----------------------------------------------------------------------
 # Exception hierarchy
@@ -133,7 +131,7 @@ class TestExceptionHierarchyCatchAll:
         [LLMError, FetchError, DatabaseError, ValidationError, PipelineStopError],
     )
     def test_catch_as_exception(self, cls: type[PipelineError]) -> None:
-        with pytest.raises(Exception):
+        with pytest.raises(PipelineError):
             raise cls("step", "detail")
 
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-from unittest.mock import patch
 
 import pytest
 
@@ -18,7 +17,6 @@ from ica.logging import (
     run_id_var,
     step_var,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -432,9 +430,8 @@ class TestBindContextSync:
             assert run_id_var.get() == "outer"
 
     def test_restores_on_exception(self) -> None:
-        with pytest.raises(RuntimeError):
-            with bind_context(run_id="err-run", step="err-step"):
-                raise RuntimeError("boom")
+        with pytest.raises(RuntimeError), bind_context(run_id="err-run", step="err-step"):
+            raise RuntimeError("boom")
         assert run_id_var.get() is None
         assert step_var.get() is None
 

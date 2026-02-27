@@ -3,20 +3,18 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner
 
 from ica.__main__ import (
-    _StubRepository,
-    _status_color,
-    _print_single_run,
     _print_runs_table,
+    _print_single_run,
+    _status_color,
+    _StubRepository,
     app,
 )
-
 
 runner = CliRunner()
 
@@ -78,10 +76,9 @@ class TestServeCommand:
     @patch("ica.__main__.uvicorn", create=True)
     def test_serve_default_options(self, mock_uvicorn: MagicMock) -> None:
         # uvicorn is imported inside the function, so we patch at module level
-        with patch.dict("sys.modules", {"uvicorn": mock_uvicorn}):
-            with patch("ica.__main__.serve") as mock_fn:
-                # Call the real function by invoking via app
-                pass
+        with patch.dict("sys.modules", {"uvicorn": mock_uvicorn}), patch("ica.__main__.serve"):
+            # Call the real function by invoking via app
+            pass
         # Instead, test via direct invocation patching uvicorn.run
         with patch("uvicorn.run") as mock_run:
             result = runner.invoke(app, ["serve"])
@@ -354,7 +351,7 @@ class TestStatusCommand:
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
         with patch("httpx.AsyncClient", return_value=mock_client):
-            result = runner.invoke(app, ["status", "r99"])
+            runner.invoke(app, ["status", "r99"])
 
         call_args = mock_client.get.call_args
         assert "/status/r99" in call_args[0][0]
@@ -368,7 +365,7 @@ class TestStatusCommand:
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
         with patch("httpx.AsyncClient", return_value=mock_client):
-            result = runner.invoke(app, ["status"])
+            runner.invoke(app, ["status"])
 
         call_args = mock_client.get.call_args
         url = call_args[0][0]
@@ -417,24 +414,26 @@ class TestCollectArticlesCommand:
         mock_settings = MagicMock()
         mock_settings.searchapi_api_key = "test-key"
 
-        with patch("ica.config.settings.get_settings", return_value=mock_settings):
-            with patch(
+        with (
+            patch("ica.config.settings.get_settings", return_value=mock_settings),
+            patch(
                 "ica.pipeline.article_collection.collect_articles",
                 side_effect=ValueError("schedule must be 'daily' or 'every_2_days', got 'bad'"),
-            ):
-                mock_client = AsyncMock()
-                mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-                mock_client.__aexit__ = AsyncMock(return_value=False)
+            ),
+        ):
+            mock_client = AsyncMock()
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
 
-                with patch("httpx.AsyncClient", return_value=mock_client):
-                    result = runner.invoke(
-                        app,
-                        [
-                            "collect-articles",
-                            "--schedule",
-                            "bad",
-                        ],
-                    )
+            with patch("httpx.AsyncClient", return_value=mock_client):
+                result = runner.invoke(
+                    app,
+                    [
+                        "collect-articles",
+                        "--schedule",
+                        "bad",
+                    ],
+                )
 
         assert result.exit_code == 1
 

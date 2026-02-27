@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
-import pytest
-
 from ica.prompts.summarization import (
     REGENERATION_SYSTEM_PROMPT,
     REGENERATION_USER_PROMPT,
     build_summarization_regeneration_prompt,
 )
-
 
 # ---------------------------------------------------------------------------
 # Regeneration system prompt — constant sanity checks

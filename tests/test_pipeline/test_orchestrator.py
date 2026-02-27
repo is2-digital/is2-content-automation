@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, patch
+from datetime import UTC, datetime
 
 import pytest
 
@@ -18,7 +17,6 @@ from ica.pipeline.orchestrator import (
     run_pipeline,
     run_step,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -125,7 +123,7 @@ class TestPipelineContext:
 
     def test_step_results_accumulate(self):
         ctx = PipelineContext()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         ctx.step_results.append(
             StepResult(step="a", status="completed", started_at=now, completed_at=now)
         )
@@ -154,29 +152,29 @@ class TestPipelineContext:
 
 class TestStepResult:
     def test_frozen(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         r = StepResult(step="x", status="completed", started_at=now, completed_at=now)
         with pytest.raises(AttributeError):
             r.step = "y"  # type: ignore[misc]
 
     def test_duration_seconds(self):
-        t1 = datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
-        t2 = datetime(2026, 1, 1, 0, 0, 5, tzinfo=timezone.utc)
+        t1 = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        t2 = datetime(2026, 1, 1, 0, 0, 5, tzinfo=UTC)
         r = StepResult(step="x", status="completed", started_at=t1, completed_at=t2)
         assert r.duration_seconds == 5.0
 
     def test_duration_zero(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         r = StepResult(step="x", status="completed", started_at=now, completed_at=now)
         assert r.duration_seconds == 0.0
 
     def test_error_none_by_default(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         r = StepResult(step="x", status="completed", started_at=now, completed_at=now)
         assert r.error is None
 
     def test_error_set(self):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         r = StepResult(step="x", status="failed", started_at=now, completed_at=now, error="boom")
         assert r.error == "boom"
 
