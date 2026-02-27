@@ -77,6 +77,30 @@ if ! command -v jq &> /dev/null; then
   exit 1
 fi
 
+# --- Preflight: Docker containers must be running ---
+# Claude runs in a sandbox that cannot read .env, so it cannot run `make dev`.
+# Containers must already be up before starting the session.
+REQUIRED_CONTAINERS=("ica-app-1" "ica-postgres-1" "ica-redis-1")
+MISSING_CONTAINERS=()
+
+for cname in "${REQUIRED_CONTAINERS[@]}"; do
+  if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -q "^${cname}$"; then
+    MISSING_CONTAINERS+=("$cname")
+  fi
+done
+
+if [ ${#MISSING_CONTAINERS[@]} -gt 0 ]; then
+  echo "ERROR: Required Docker containers are not running:"
+  for c in "${MISSING_CONTAINERS[@]}"; do
+    echo "  - $c"
+  done
+  echo ""
+  echo "Start them first with:  make dev"
+  echo "(Run in a separate terminal — it stays in the foreground.)"
+  exit 1
+fi
+echo "  Docker containers: all running"
+
 # --- Preflight: find Claude CLI even if PATH differs in scripts ---
 resolve_claude_bin() {
   # 1) If CLAUDE_BIN is already set and executable, use it
