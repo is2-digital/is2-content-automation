@@ -53,6 +53,13 @@ class Settings(BaseSettings):
     # --- Google Sheets ---
     google_sheets_spreadsheet_id: str = ""
 
+    # --- Google Shared Drive ---
+    # The service account has no Drive storage quota of its own, so all files
+    # (Docs, Sheets) must be created inside a Shared Drive.  Set this to the
+    # Shared Drive ID (from the URL or Drive API).  If empty, the app will
+    # auto-discover the first Shared Drive accessible to the service account.
+    google_shared_drive_id: str = ""
+
     # --- HTML template ---
     html_template_path: str = ""
 

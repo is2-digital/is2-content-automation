@@ -23,6 +23,7 @@ class FakeSettings:
     slack_channel: str = "C-TEST"
     google_service_account_credentials_path: str = "/tmp/google-sa.json"
     google_sheets_spreadsheet_id: str = "sheet-123"
+    google_shared_drive_id: str = ""
     html_template_path: str = ""
 
 
@@ -752,6 +753,7 @@ class TestServiceFactories:
             _make_docs()
             mock_docs_cls.assert_called_once_with(
                 credentials_path="/tmp/google-sa.json",
+                drive_id="",
             )
 
     def test_make_http_creates_service(self):

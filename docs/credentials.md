@@ -60,17 +60,21 @@ All credentials are loaded via environment variables (or `.env` file in the proj
 | Env Var | Value |
 |---|---|
 | `GOOGLE_SHEETS_SPREADSHEET_ID` | Spreadsheet ID from URL |
+| `GOOGLE_SHARED_DRIVE_ID` | Shared Drive ID (optional — auto-discovered if blank) |
 
 The service account JSON key file defaults to `credentials/google-service-account.json` (one file for both Sheets and Docs). Override with `GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_PATH` env var if needed.
 
 **Setup:**
 
 1. Go to [console.cloud.google.com](https://console.cloud.google.com) → create or select a project.
-2. **APIs & Services** → Enable **Google Sheets API** and **Google Docs API**.
+2. **APIs & Services** → Enable **Google Drive API**, **Google Sheets API**, and **Google Docs API**.
 3. **Credentials** → **Create Credentials** → **Service Account**.
 4. On the service account page → **Keys** tab → **Add Key** → **JSON**. Download the file.
 5. Copy the downloaded file to `credentials/google-service-account.json` (see `credentials/google-service-account.example.json` for the expected format).
-6. Share your Google Sheet and output Docs folder with the service account email (`...@...iam.gserviceaccount.com`) as **Editor**.
+6. Create a **Shared Drive** in Google Drive and add the service account email (`...@...iam.gserviceaccount.com`) as a **Content Manager**. All files (Docs, Sheets) are created inside this Shared Drive because the service account has no Drive storage quota of its own.
+7. (Optional) Set `GOOGLE_SHARED_DRIVE_ID` in `.env` to the Shared Drive ID. If left blank, the app auto-discovers the first accessible Shared Drive.
+
+**Important:** The service account **cannot delete files** from the Shared Drive. Files must be deleted manually by a Drive member with Manager permissions. This is by design — the Content Manager role allows create/edit but not delete.
 
 **Security notes:**
 - Service accounts are preferable to OAuth2 user credentials — no refresh token expiry, no browser flow.
@@ -122,6 +126,7 @@ SLACK_CHANNEL=
 # Google APIs
 # Service account key: copy to credentials/google-service-account.json
 GOOGLE_SHEETS_SPREADSHEET_ID=
+GOOGLE_SHARED_DRIVE_ID=
 
 # Google Custom Search
 GOOGLE_CSE_API_KEY=

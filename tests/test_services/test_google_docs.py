@@ -100,11 +100,17 @@ class TestInit:
                 "ica.services.google_docs._build_service",
                 return_value=MagicMock(),
             ) as build_mock,
+            patch(
+                "ica.services.google_docs._build_drive_service",
+                return_value=MagicMock(),
+            ) as drive_build_mock,
         ):
             svc = GoogleDocsService(credentials_path=path)
             load_mock.assert_called_once_with(path, SCOPES)
             build_mock.assert_called_once()
+            drive_build_mock.assert_called_once()
             assert svc._service is build_mock.return_value
+            assert svc._drive_service is drive_build_mock.return_value
 
     def test_no_args_raises(self) -> None:
         with pytest.raises(ValueError, match="credentials_path or service"):
@@ -127,9 +133,28 @@ class TestInit:
                 "ica.services.google_docs._build_service",
                 return_value=MagicMock(),
             ),
+            patch(
+                "ica.services.google_docs._build_drive_service",
+                return_value=MagicMock(),
+            ),
         ):
             svc = GoogleDocsService(credentials_path=str(path))
             assert svc._service is not None
+
+    def test_drive_id_stored(self, mock_service: MagicMock) -> None:
+        svc = GoogleDocsService(service=mock_service, drive_id="drive-abc")
+        assert svc._drive_id == "drive-abc"
+
+    def test_drive_id_defaults_empty(self, mock_service: MagicMock) -> None:
+        svc = GoogleDocsService(service=mock_service)
+        assert svc._drive_id == ""
+
+    def test_drive_service_injection(self, mock_service: MagicMock) -> None:
+        drive_mock = MagicMock()
+        svc = GoogleDocsService(
+            service=mock_service, drive_service=drive_mock, drive_id="d1"
+        )
+        assert svc._drive_service is drive_mock
 
 
 # ===========================================================================
@@ -224,6 +249,122 @@ class TestCreateDocument:
         )
         result = await svc.create_document("test")
         assert isinstance(result, str)
+
+
+# ===========================================================================
+# create_document — Drive API path (with drive_id)
+# ===========================================================================
+
+
+def _make_drive_service_mock() -> MagicMock:
+    """Return a mock Google Drive API service with files().create() chain."""
+    return MagicMock(spec=["files"])
+
+
+def _setup_drive_create_mock(
+    drive_mock: MagicMock,
+    return_value: dict | None = None,
+) -> MagicMock:
+    """Set up a mock for files().create().execute()."""
+    execute_mock = MagicMock(return_value=return_value or {})
+    create_mock = MagicMock(return_value=MagicMock(execute=execute_mock))
+    drive_mock.files.return_value = MagicMock(create=create_mock)
+    return create_mock
+
+
+class TestCreateDocumentDrivePath:
+    """Tests for create_document when drive_id is configured."""
+
+    @pytest.fixture
+    def drive_mock(self) -> MagicMock:
+        return _make_drive_service_mock()
+
+    @pytest.fixture
+    def drive_svc(
+        self, mock_service: MagicMock, drive_mock: MagicMock
+    ) -> GoogleDocsService:
+        return GoogleDocsService(
+            service=mock_service,
+            drive_service=drive_mock,
+            drive_id="shared-drive-123",
+        )
+
+    @pytest.mark.asyncio
+    async def test_creates_via_drive_api(
+        self,
+        drive_svc: GoogleDocsService,
+        drive_mock: MagicMock,
+        mock_service: MagicMock,
+    ) -> None:
+        create_mock = _setup_drive_create_mock(
+            drive_mock, return_value={"id": "doc-from-drive"}
+        )
+        doc_id = await drive_svc.create_document("My Doc")
+
+        assert doc_id == "doc-from-drive"
+        create_mock.assert_called_once_with(
+            body={
+                "name": "My Doc",
+                "mimeType": "application/vnd.google-apps.document",
+                "parents": ["shared-drive-123"],
+            },
+            fields="id",
+            supportsAllDrives=True,
+        )
+        # Docs API should NOT be called
+        mock_service.documents.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_does_not_use_docs_api(
+        self,
+        drive_svc: GoogleDocsService,
+        drive_mock: MagicMock,
+        mock_service: MagicMock,
+    ) -> None:
+        _setup_drive_create_mock(drive_mock, return_value={"id": "doc-xyz"})
+        await drive_svc.create_document("test")
+        mock_service.documents.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_title_forwarded(
+        self,
+        drive_svc: GoogleDocsService,
+        drive_mock: MagicMock,
+    ) -> None:
+        create_mock = _setup_drive_create_mock(
+            drive_mock, return_value={"id": "id"}
+        )
+        await drive_svc.create_document("Newsletter HTML")
+        body = create_mock.call_args[1]["body"]
+        assert body["name"] == "Newsletter HTML"
+
+    @pytest.mark.asyncio
+    async def test_api_error_propagates(
+        self,
+        drive_svc: GoogleDocsService,
+        drive_mock: MagicMock,
+    ) -> None:
+        execute_mock = MagicMock(side_effect=Exception("Drive quota exceeded"))
+        create_mock = MagicMock(return_value=MagicMock(execute=execute_mock))
+        drive_mock.files.return_value = MagicMock(create=create_mock)
+
+        with pytest.raises(Exception, match="Drive quota exceeded"):
+            await drive_svc.create_document("test")
+
+    @pytest.mark.asyncio
+    async def test_falls_back_without_drive_id(
+        self,
+        mock_service: MagicMock,
+    ) -> None:
+        """Without drive_id, uses the Docs API path."""
+        svc = GoogleDocsService(service=mock_service)
+        _setup_documents_mock(
+            mock_service,
+            "create",
+            return_value={"documentId": "doc-fallback"},
+        )
+        doc_id = await svc.create_document("test")
+        assert doc_id == "doc-fallback"
 
 
 # ===========================================================================
@@ -669,8 +810,8 @@ class TestConstants:
     def test_scopes_contains_documents(self) -> None:
         assert any("documents" in s for s in SCOPES)
 
-    def test_scopes_contains_drive_file(self) -> None:
-        assert any("drive.file" in s for s in SCOPES)
+    def test_scopes_contains_drive(self) -> None:
+        assert any("drive" in s for s in SCOPES)
 
     def test_scopes_is_list(self) -> None:
         assert isinstance(SCOPES, list)

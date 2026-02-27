@@ -63,7 +63,10 @@ def _make_docs() -> GoogleDocsService:
     from ica.services.google_docs import GoogleDocsService
 
     s = _get_settings()
-    return GoogleDocsService(credentials_path=s.google_service_account_credentials_path)
+    return GoogleDocsService(
+        credentials_path=s.google_service_account_credentials_path,
+        drive_id=s.google_shared_drive_id,
+    )
 
 
 def _make_http() -> WebFetcherService:

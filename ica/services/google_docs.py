@@ -1,4 +1,4 @@
-"""Google Docs service wrapping the Docs API v1.
+"""Google Docs service wrapping the Docs API v1 and Drive API v3.
 
 Provides :class:`GoogleDocsService` with three operations used across
 the pipeline:
@@ -6,6 +6,11 @@ the pipeline:
 * :meth:`create_document` — create a new Google Doc, return its ID
 * :meth:`insert_content` — insert text into an existing document
 * :meth:`get_content` — fetch the full plain-text body of a document
+
+When a ``drive_id`` (Shared Drive) is configured, documents are created
+via the Drive API inside the Shared Drive.  The service account has no
+Drive storage quota of its own, so creating documents via the Docs API
+directly will fail with a 403 unless a Shared Drive target is provided.
 
 All Google API calls are synchronous under the hood
 (``google-api-python-client``), so each call is wrapped in
@@ -15,7 +20,10 @@ Usage::
 
     from ica.services.google_docs import GoogleDocsService
 
-    svc = GoogleDocsService(credentials_path="/path/to/creds.json")
+    svc = GoogleDocsService(
+        credentials_path="/path/to/creds.json",
+        drive_id="0AI2VlvBSftPwUk9PVA",
+    )
     doc_id = await svc.create_document("Newsletter HTML")
     await svc.insert_content(doc_id, html_content)
     text = await svc.get_content(doc_id)
@@ -36,9 +44,11 @@ from ica.services.google_auth import load_credentials
 logger = get_logger(__name__)
 
 # Scopes required for creating/reading/writing Google Docs.
+# The ``drive`` scope is needed to create documents inside Shared Drives
+# via the Drive API (service accounts have no storage quota of their own).
 SCOPES = [
     "https://www.googleapis.com/auth/documents",
-    "https://www.googleapis.com/auth/drive.file",
+    "https://www.googleapis.com/auth/drive",
 ]
 
 
@@ -47,27 +57,40 @@ def _build_service(credentials: ServiceAccountCredentials) -> Resource:
     return build("docs", "v1", credentials=credentials, cache_discovery=False)
 
 
+def _build_drive_service(credentials: ServiceAccountCredentials) -> Resource:
+    """Build a Google Drive API v3 service resource."""
+    return build("drive", "v3", credentials=credentials, cache_discovery=False)
+
+
 class GoogleDocsService:
     """Async Google Docs client for document creation, content insertion, and retrieval.
 
     Args:
         credentials_path: Path to a Google service account JSON key file.
-        service: Optional pre-built API service resource (for testing).
+        drive_id: Shared Drive ID where documents are created.  Required
+            for service accounts that have no Drive storage quota.
+        service: Optional pre-built Docs API service resource (for testing).
+        drive_service: Optional pre-built Drive API service resource (for testing).
     """
 
     def __init__(
         self,
         credentials_path: str | Path | None = None,
         *,
+        drive_id: str = "",
         service: Resource | None = None,
+        drive_service: Resource | None = None,
     ) -> None:
         if service is not None:
             self._service = service
+            self._drive_service = drive_service
         elif credentials_path is not None:
             creds = load_credentials(Path(credentials_path), SCOPES)
             self._service = _build_service(creds)
+            self._drive_service = _build_drive_service(creds)
         else:
             raise ValueError("Either credentials_path or service must be provided")
+        self._drive_id = drive_id
 
     # ------------------------------------------------------------------
     # Public API
@@ -75,6 +98,11 @@ class GoogleDocsService:
 
     async def create_document(self, title: str) -> str:
         """Create a new Google Doc with the given title.
+
+        When a Shared Drive ID is configured, the document is created via
+        the Drive API inside the Shared Drive (service accounts have no
+        personal Drive storage quota).  Otherwise falls back to the Docs
+        API directly.
 
         Args:
             title: The document title.
@@ -84,11 +112,27 @@ class GoogleDocsService:
         """
         logger.info("Creating document", extra={"title": title})
 
-        result = await asyncio.to_thread(
-            self._service.documents().create(body={"title": title}).execute,
-        )
+        if self._drive_id and self._drive_service:
+            result = await asyncio.to_thread(
+                self._drive_service.files()
+                .create(
+                    body={
+                        "name": title,
+                        "mimeType": "application/vnd.google-apps.document",
+                        "parents": [self._drive_id],
+                    },
+                    fields="id",
+                    supportsAllDrives=True,
+                )
+                .execute,
+            )
+            doc_id: str = result["id"]
+        else:
+            result = await asyncio.to_thread(
+                self._service.documents().create(body={"title": title}).execute,
+            )
+            doc_id = result["documentId"]
 
-        doc_id: str = result["documentId"]
         logger.info(
             "Document created",
             extra={"document_id": doc_id, "title": title},
