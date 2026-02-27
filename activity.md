@@ -2,7 +2,14 @@
 
 ## Current Status
 **Last Updated:** 2026-02-27
-**Tasks Completed:** ica-vdb (Integration test: learning system Phase D)
+**Tasks Completed:** ica-7h4 (Slack config editing handlers)
+
+## 2026-02-27 (session 8)
+- Created `ica/services/slack_config_handlers.py` — Slack Bolt handlers for LLM config editing (ica-7h4)
+- Flow: trigger button → modal with process dropdown (19 processes) + action dropdown (edit system/instruction, view summary, sync from doc) → dispatches to PromptEditorService
+- Wired into `app.py` via `register_config_handlers()` in `_create_slack_app()` — gracefully degrades if Google Docs not configured
+- 24 unit tests covering process discovery, Block Kit builders, modal extraction, dispatch logic, handler registration + integration
+- No blockers
 
 ## 2026-02-27 (session 7)
 - Added `scripts/test_learning_system.py` — Phase D integration test: learning system feedback loop (ica-vdb)

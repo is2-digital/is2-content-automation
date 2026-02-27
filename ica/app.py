@@ -116,6 +116,21 @@ def _create_slack_app() -> Any:
         slack_service.register_handlers(bolt_app)
         set_shared_service(slack_service)
 
+        # Register config editing handlers (prompt editor via Google Docs)
+        try:
+            from ica.services.google_docs import GoogleDocsService
+            from ica.services.prompt_editor import PromptEditorService
+            from ica.services.slack_config_handlers import register_config_handlers
+
+            docs_service = GoogleDocsService(
+                credentials_path=settings.google_service_account_credentials_path,
+                drive_id=settings.google_shared_drive_id,
+            )
+            editor = PromptEditorService(docs_service)
+            register_config_handlers(bolt_app, editor, settings.slack_channel)
+        except Exception:
+            logger.info("Config editing handlers not registered — Google Docs not configured")
+
         return bolt_app, handler, slack_service
     except Exception:
         logger.info("Slack Bolt not configured — Slack integration disabled")
