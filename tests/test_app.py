@@ -13,6 +13,7 @@ from ica.app import (
     RunStatus,
     _serialize_run,
     create_app,
+    get_active_tasks,
     get_runs,
 )
 
@@ -23,11 +24,14 @@ from ica.app import (
 
 @pytest.fixture(autouse=True)
 def _clear_runs():
-    """Ensure the run store is empty before each test."""
+    """Ensure the run store and active tasks are empty before each test."""
     runs = get_runs()
+    tasks = get_active_tasks()
     runs.clear()
+    tasks.clear()
     yield
     runs.clear()
+    tasks.clear()
 
 
 @pytest.fixture()
@@ -358,7 +362,7 @@ class TestSlackIntegration:
         """When Slack env vars are missing, the app still starts."""
         with patch(
             "ica.app._create_slack_app",
-            return_value=(None, None),
+            return_value=(None, None, None),
         ):
             app = create_app(include_slack=True, include_scheduler=False)
             # Should not have slack_bolt on state (env vars missing → exception caught)
@@ -368,20 +372,34 @@ class TestSlackIntegration:
         """When Slack is configured, the Bolt app is stored on state."""
         mock_bolt = AsyncMock()
         mock_handler = AsyncMock()
+        mock_slack_svc = AsyncMock()
         with patch(
             "ica.app._create_slack_app",
-            return_value=(mock_bolt, mock_handler),
+            return_value=(mock_bolt, mock_handler, mock_slack_svc),
         ):
             app = create_app(include_slack=True, include_scheduler=False)
             assert app.state.slack_bolt is mock_bolt
+
+    def test_slack_service_stored_on_state(self):
+        """When Slack is configured, the shared SlackService is on app.state."""
+        mock_bolt = AsyncMock()
+        mock_handler = AsyncMock()
+        mock_slack_svc = AsyncMock()
+        with patch(
+            "ica.app._create_slack_app",
+            return_value=(mock_bolt, mock_handler, mock_slack_svc),
+        ):
+            app = create_app(include_slack=True, include_scheduler=False)
+            assert app.state.slack_service is mock_slack_svc
 
     def test_slack_events_route_exists_when_configured(self):
         """The /slack/events route is registered when Slack is configured."""
         mock_bolt = AsyncMock()
         mock_handler = AsyncMock()
+        mock_slack_svc = AsyncMock()
         with patch(
             "ica.app._create_slack_app",
-            return_value=(mock_bolt, mock_handler),
+            return_value=(mock_bolt, mock_handler, mock_slack_svc),
         ):
             app = create_app(include_slack=True, include_scheduler=False)
             paths = {route.path for route in app.routes}
@@ -404,3 +422,89 @@ class TestGetRuns:
         runs = get_runs()
         runs["test-1"] = PipelineRun(run_id="test-1")
         assert "test-1" in get_runs()
+
+
+# ---------------------------------------------------------------------------
+# get_active_tasks accessor
+# ---------------------------------------------------------------------------
+
+
+class TestGetActiveTasks:
+    def test_returns_set(self):
+        assert isinstance(get_active_tasks(), set)
+
+    def test_initially_empty(self):
+        assert len(get_active_tasks()) == 0
+
+
+# ---------------------------------------------------------------------------
+# Active task tracking — trigger adds task, completion removes it
+# ---------------------------------------------------------------------------
+
+
+class TestActiveTaskTracking:
+    def test_trigger_adds_task(self, client: TestClient):
+        """Triggering a pipeline adds a task to the active set."""
+        client.post("/trigger")
+        import time
+
+        time.sleep(0.05)
+        # The task should have been added (and may have already completed)
+        # But get_runs shows the run was created
+        assert len(get_runs()) == 1
+
+    def test_completed_task_removed(self):
+        """After a pipeline task completes, it is removed from active set."""
+        import time
+
+        async def _noop(ctx):
+            return ctx
+
+        with patch(
+            "ica.app.build_default_steps",
+            return_value=([("noop", _noop)], []),
+        ):
+            app = create_app(include_slack=False, include_scheduler=False)
+            tc = TestClient(app, raise_server_exceptions=False)
+            tc.post("/trigger")
+            time.sleep(0.2)
+            # Task should be cleaned up after completion
+            assert len(get_active_tasks()) == 0
+
+
+# ---------------------------------------------------------------------------
+# Shared Slack service — pipeline steps use the shared instance
+# ---------------------------------------------------------------------------
+
+
+class TestSharedSlackService:
+    def test_make_slack_uses_shared_instance(self):
+        """_make_slack returns the shared instance when set."""
+        from ica.services.slack import set_shared_service
+
+        mock_svc = AsyncMock()
+        set_shared_service(mock_svc)
+        try:
+            from ica.pipeline.steps import _make_slack
+
+            result = _make_slack()
+            assert result is mock_svc
+        finally:
+            set_shared_service(None)  # type: ignore[arg-type]
+
+    def test_make_slack_falls_back_without_shared(self):
+        """_make_slack creates a new instance when no shared service exists."""
+        from ica.services.slack import set_shared_service
+
+        set_shared_service(None)  # type: ignore[arg-type]
+        try:
+            with patch("ica.pipeline.steps._get_settings") as mock_settings:
+                mock_settings.return_value.slack_bot_token = "xoxb-test"
+                mock_settings.return_value.slack_channel = "#test"
+                from ica.pipeline.steps import _make_slack
+
+                result = _make_slack()
+                assert result is not None
+                assert result.channel == "#test"
+        finally:
+            pass

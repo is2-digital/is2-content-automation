@@ -61,10 +61,21 @@ class PipelineRun:
 # In-memory run store. Keyed by run_id.
 _runs: dict[str, PipelineRun] = {}
 
+# Active pipeline tasks — tracked for graceful shutdown.
+_active_tasks: set[asyncio.Task[None]] = set()
+
+# Seconds to wait for in-flight pipelines during shutdown.
+_SHUTDOWN_TIMEOUT: int = 60
+
 
 def get_runs() -> dict[str, PipelineRun]:
     """Return the run store (exposed for testing)."""
     return _runs
+
+
+def get_active_tasks() -> set[asyncio.Task[None]]:
+    """Return the active tasks set (exposed for testing)."""
+    return _active_tasks
 
 
 # ---------------------------------------------------------------------------
@@ -73,16 +84,22 @@ def get_runs() -> dict[str, PipelineRun]:
 
 
 def _create_slack_app() -> Any:
-    """Create the Slack Bolt async app.
+    """Create the Slack Bolt async app with interaction handlers registered.
 
-    Returns ``None`` when Slack env vars are missing (e.g. in tests).
+    Returns ``(bolt_app, handler, slack_service)`` when Slack env vars are
+    available, or ``(None, None, None)`` otherwise (e.g. in tests).
+
     The Bolt app is mounted as an ASGI sub-application on ``/slack/events``.
+    A shared :class:`~ica.services.slack.SlackService` is created and its
+    interaction handlers (approval buttons, form/freetext modals) are
+    registered on the Bolt app so that ``send_and_wait`` callbacks resolve.
     """
     try:
         from slack_bolt.adapter.fastapi.async_handler import AsyncSlackRequestHandler
         from slack_bolt.async_app import AsyncApp
 
         from ica.config.settings import get_settings
+        from ica.services.slack import SlackService, set_shared_service
 
         settings = get_settings()
         bolt_app = AsyncApp(
@@ -90,10 +107,19 @@ def _create_slack_app() -> Any:
             signing_secret=None,  # Socket mode uses app-level token, not signing secret
         )
         handler = AsyncSlackRequestHandler(bolt_app)
-        return bolt_app, handler
+
+        # Create the shared SlackService and register interaction handlers
+        slack_service = SlackService(
+            token=settings.slack_bot_token,
+            channel=settings.slack_channel,
+        )
+        slack_service.register_handlers(bolt_app)
+        set_shared_service(slack_service)
+
+        return bolt_app, handler, slack_service
     except Exception:
         logger.info("Slack Bolt not configured — Slack integration disabled")
-        return None, None
+        return None, None, None
 
 
 # ---------------------------------------------------------------------------
@@ -122,6 +148,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     logger.info("ica application starting")
     yield
+
+    # --- Wait for in-flight pipeline runs ---
+    if _active_tasks:
+        logger.info(
+            "Waiting up to %ds for %d in-flight pipeline run(s) to finish",
+            _SHUTDOWN_TIMEOUT,
+            len(_active_tasks),
+        )
+        _done, pending = await asyncio.wait(
+            _active_tasks, timeout=_SHUTDOWN_TIMEOUT
+        )
+        if pending:
+            logger.warning(
+                "Cancelling %d pipeline run(s) that did not finish in time",
+                len(pending),
+            )
+            for task in pending:
+                task.cancel()
 
     # --- Shut down scheduler ---
     if scheduler is not None and scheduler.running:
@@ -174,9 +218,10 @@ def create_app(
     bolt_app: Any = None
     slack_handler: Any = None
     if include_slack:
-        bolt_app, slack_handler = _create_slack_app()
+        bolt_app, slack_handler, slack_service = _create_slack_app()
         if bolt_app is not None:
             app.state.slack_bolt = bolt_app
+            app.state.slack_service = slack_service
 
     # ------------------------------------------------------------------
     # Endpoints
@@ -211,8 +256,10 @@ def create_app(
         run = PipelineRun(run_id=run_id, trigger=str(trigger_label))
         _runs[run_id] = run
 
-        # Launch pipeline in background
-        asyncio.create_task(_run_pipeline(run))  # noqa: RUF006
+        # Launch pipeline in background and track for graceful shutdown
+        task = asyncio.create_task(_run_pipeline(run))
+        _active_tasks.add(task)
+        task.add_done_callback(_active_tasks.discard)
 
         return {"run_id": run_id, "status": run.status.value}
 

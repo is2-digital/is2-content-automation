@@ -46,8 +46,11 @@ def _get_settings() -> Settings:
 
 
 def _make_slack() -> SlackService:
-    from ica.services.slack import SlackService
+    from ica.services.slack import SlackService, get_shared_service
 
+    shared = get_shared_service()
+    if shared is not None:
+        return shared
     s = _get_settings()
     return SlackService(token=s.slack_bot_token, channel=s.slack_channel)
 

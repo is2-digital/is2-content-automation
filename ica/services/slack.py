@@ -46,6 +46,25 @@ from ica.logging import get_logger
 logger = get_logger(__name__)
 
 # ---------------------------------------------------------------------------
+# Shared instance — set once at app startup so handler callbacks and
+# pipeline send_and_wait calls share the same _pending dict.
+# ---------------------------------------------------------------------------
+
+_shared_service: SlackService | None = None
+
+
+def get_shared_service() -> SlackService | None:
+    """Return the shared SlackService instance, if one has been configured."""
+    return _shared_service
+
+
+def set_shared_service(service: SlackService) -> None:
+    """Set the shared SlackService instance (called once at app startup)."""
+    global _shared_service
+    _shared_service = service
+
+
+# ---------------------------------------------------------------------------
 # Action ID prefixes — used to route Slack interaction payloads
 # ---------------------------------------------------------------------------
 
