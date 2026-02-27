@@ -1,11 +1,18 @@
+# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
+
+# Tool caches
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environment files (secrets)
 .env
 .env.*
 !.env-example
 credentials/*.json
 !credentials/*.example.json
-.cache/
-.pytest_cache/
