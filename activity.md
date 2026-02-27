@@ -2,9 +2,13 @@
 
 ## Current Status
 **Last Updated:** 2026-02-27
-**Tasks Completed:** ica-18b (Integration test: content processing Phase B)
+**Tasks Completed:** ica-a49 (Integration test: 3-layer markdown validation)
 
 ## 2026-02-27
+- Added `scripts/test_markdown_validation.py` — 3-layer markdown validation integration test (ica-a49)
+- 5 phases: (1) character count code-based validation, (2) structural LLM validation via GPT-4.1 on OpenRouter, (3) voice LLM validation with error merging, (4) full `run_three_layer_validation()` pipeline, (5) `generate_with_validation()` loop with ValidationLoopCounter
+- Supports `--phase` (charcount/structural/voice/pipeline/loop) and `--skip-generation` flags
+- Discovery: `markdown_generation.py` calls `litellm.acompletion` directly without `openrouter/` prefix — test adds `_openrouter_model()` helper to match `ica.services.llm.completion()` behavior
 - Added `scripts/test_content_processing.py` — Phase B integration test: HTTP fetching, LLM summarization, theme generation + marker parsing, freshness check (ica-18b)
 - Script has 4 phases: (1) WebFetcherService with real URLs + YouTube detection + HTML stripping, (2) LLM summarization via OpenRouter + parse_summary_output validation, (3) Theme generation LLM → split_themes → parse_markers %XX_ extraction, (4) Gemini 2.5 Flash freshness check
 - Supports `--phase` (fetch/summarize/theme/freshness) and `--skip-llm` flags
