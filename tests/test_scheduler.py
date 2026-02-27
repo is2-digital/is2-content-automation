@@ -7,7 +7,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from ica.scheduler import (
-    _SchedulerStubRepository,
     create_scheduler,
     get_scheduled_jobs,
     run_article_collection,
@@ -169,18 +168,22 @@ class TestRunArticleCollection:
         mock_result.rows_affected = 2
 
         mock_collect = AsyncMock(return_value=mock_result)
+        mock_session = AsyncMock()
 
         with (
             patch("ica.config.settings.get_settings") as mock_settings,
             patch("ica.services.google_search.GoogleSearchClient"),
             patch("ica.pipeline.article_collection.collect_articles", mock_collect),
             patch("httpx.AsyncClient") as mock_httpx,
+            patch("ica.db.session.get_session") as mock_get_session,
         ):
             mock_settings.return_value = MagicMock(
                 google_cse_api_key="test-key", google_cse_cx="test-cx"
             )
             mock_httpx.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
             mock_httpx.return_value.__aexit__ = AsyncMock(return_value=None)
+            mock_get_session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_get_session.return_value.__aexit__ = AsyncMock(return_value=None)
 
             result = await run_article_collection(schedule="daily")
 
@@ -197,18 +200,22 @@ class TestRunArticleCollection:
         mock_result.rows_affected = 8
 
         mock_collect = AsyncMock(return_value=mock_result)
+        mock_session = AsyncMock()
 
         with (
             patch("ica.config.settings.get_settings") as mock_settings,
             patch("ica.services.google_search.GoogleSearchClient"),
             patch("ica.pipeline.article_collection.collect_articles", mock_collect),
             patch("httpx.AsyncClient") as mock_httpx,
+            patch("ica.db.session.get_session") as mock_get_session,
         ):
             mock_settings.return_value = MagicMock(
                 google_cse_api_key="test-key", google_cse_cx="test-cx"
             )
             mock_httpx.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
             mock_httpx.return_value.__aexit__ = AsyncMock(return_value=None)
+            mock_get_session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_get_session.return_value.__aexit__ = AsyncMock(return_value=None)
 
             result = await run_article_collection(schedule="every_2_days")
 
@@ -235,18 +242,22 @@ class TestRunArticleCollection:
         mock_result.rows_affected = 0
 
         mock_collect = AsyncMock(return_value=mock_result)
+        mock_session = AsyncMock()
 
         with (
             patch("ica.config.settings.get_settings") as mock_settings,
             patch("ica.services.google_search.GoogleSearchClient"),
             patch("ica.pipeline.article_collection.collect_articles", mock_collect),
             patch("httpx.AsyncClient") as mock_httpx,
+            patch("ica.db.session.get_session") as mock_get_session,
         ):
             mock_settings.return_value = MagicMock(
                 google_cse_api_key="test-key", google_cse_cx="test-cx"
             )
             mock_httpx.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
             mock_httpx.return_value.__aexit__ = AsyncMock(return_value=None)
+            mock_get_session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_get_session.return_value.__aexit__ = AsyncMock(return_value=None)
 
             result = await run_article_collection()
 
@@ -261,18 +272,22 @@ class TestRunArticleCollection:
         mock_result.rows_affected = 1
 
         mock_collect = AsyncMock(return_value=mock_result)
+        mock_session = AsyncMock()
 
         with (
             patch("ica.config.settings.get_settings") as mock_settings,
             patch("ica.services.google_search.GoogleSearchClient"),
             patch("ica.pipeline.article_collection.collect_articles", mock_collect),
             patch("httpx.AsyncClient") as mock_httpx,
+            patch("ica.db.session.get_session") as mock_get_session,
         ):
             mock_settings.return_value = MagicMock(
                 google_cse_api_key="test-key", google_cse_cx="test-cx"
             )
             mock_httpx.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
             mock_httpx.return_value.__aexit__ = AsyncMock(return_value=None)
+            mock_get_session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_get_session.return_value.__aexit__ = AsyncMock(return_value=None)
 
             result = await run_article_collection(schedule="daily")
 
@@ -416,27 +431,6 @@ class TestGetScheduledJobs:
         jobs = get_scheduled_jobs(sched)
         for job_info in jobs:
             assert isinstance(job_info["trigger"], str)
-
-
-# ---------------------------------------------------------------------------
-# _SchedulerStubRepository
-# ---------------------------------------------------------------------------
-
-
-class TestSchedulerStubRepository:
-    """Tests for the stub article repository."""
-
-    @pytest.mark.asyncio
-    async def test_upsert_returns_count(self):
-        repo = _SchedulerStubRepository()
-        result = await repo.upsert_articles([1, 2, 3])
-        assert result == 3
-
-    @pytest.mark.asyncio
-    async def test_upsert_empty(self):
-        repo = _SchedulerStubRepository()
-        result = await repo.upsert_articles([])
-        assert result == 0
 
 
 # ---------------------------------------------------------------------------

@@ -128,6 +128,8 @@ async def run_article_collection(*, schedule: str = "daily") -> dict[str, Any]:
         import httpx
 
         from ica.config.settings import get_settings
+        from ica.db.repository import SqlArticleRepository
+        from ica.db.session import get_session
         from ica.pipeline.article_collection import collect_articles
         from ica.services.google_search import GoogleSearchClient
 
@@ -139,13 +141,13 @@ async def run_article_collection(*, schedule: str = "daily") -> dict[str, Any]:
                 cx=settings.google_cse_cx,
                 http_client=http_client,  # type: ignore[arg-type]
             )
-            # Use the stub repository for now — real DB integration will use
-            # the SQLAlchemy repository once service integration tasks land.
-            result = await collect_articles(
-                client=search_client,
-                repository=_SchedulerStubRepository(),
-                schedule=schedule,
-            )
+            async with get_session() as session:
+                repository = SqlArticleRepository(session)
+                result = await collect_articles(
+                    client=search_client,
+                    repository=repository,
+                    schedule=schedule,
+                )
 
         summary = {
             "schedule": schedule,
@@ -228,15 +230,3 @@ def get_scheduled_jobs(scheduler: AsyncIOScheduler) -> list[dict[str, Any]]:
             }
         )
     return jobs
-
-
-class _SchedulerStubRepository:
-    """No-op article repository for scheduler jobs.
-
-    Replaced by real SQLAlchemy repository once DB service integration
-    is complete.
-    """
-
-    async def upsert_articles(self, articles: list[Any]) -> int:
-        """Return count without persisting."""
-        return len(articles)

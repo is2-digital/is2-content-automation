@@ -2,9 +2,18 @@
 
 ## Current Status
 **Last Updated:** 2026-02-27
-**Tasks Completed:** ica-zl6 (Add Google CSE integration test script)
+**Tasks Completed:** ica-idp (Integration test: data collection & curation Phase A)
 
 ## 2026-02-27
+- Added `scripts/test_collection_curation.py` — Phase A integration test: article collection → DB → Google Sheet → Slack approval (ica-idp)
+- Script has 3 phases: (1) Google CSE → dedup → PostgreSQL upsert, (2) DB → Sheet population, (3) Slack sendAndWait approval
+- Supports `--phase`, `--schedule`, `--skip-slack` flags for selective testing
+- Replaced stub repositories in `ica/scheduler.py` and `ica/__main__.py` with real `SqlArticleRepository` backed by PostgreSQL
+- Updated `tests/test_scheduler.py` and `tests/test_cli.py` to mock DB sessions; removed stub repository tests
+- Closed epic ica-lzj (Google CSE migration complete)
+- All 3687 tests pass, lint and mypy clean
+
+## 2026-02-27 (earlier)
 - Added `scripts/test_google_search.py` — live integration test for Google CSE (ica-zl6)
 - Script runs a single query, prints results with date diagnostics (ISO parse, age calculation)
 - Includes httpx adapter for GoogleSearchClient, CLI args for keyword/num/sort-by-date

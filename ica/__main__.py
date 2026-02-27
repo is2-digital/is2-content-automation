@@ -198,20 +198,22 @@ async def _collect_articles(schedule: str) -> None:
     try:
         import httpx
 
+        from ica.db.repository import SqlArticleRepository
+        from ica.db.session import get_session
+
         async with httpx.AsyncClient() as http_client:
             search_client = GoogleSearchClient(
                 api_key=settings.google_cse_api_key,
                 cx=settings.google_cse_cx,
                 http_client=http_client,  # type: ignore[arg-type]
             )
-            # Article collection requires a repository — create a simple
-            # reporting-only stub when running from CLI without a full DB.
-            # In production, this would use the real SQLAlchemy repository.
-            result = await _collect(
-                client=search_client,
-                repository=_StubRepository(),
-                schedule=schedule,
-            )
+            async with get_session() as session:
+                repository = SqlArticleRepository(session)
+                result = await _collect(
+                    client=search_client,
+                    repository=repository,
+                    schedule=schedule,
+                )
 
         console.print("[green]Collection complete[/green]")
         console.print(f"  raw results:    {len(result.raw_results)}")
@@ -236,14 +238,6 @@ async def _collect_articles(schedule: str) -> None:
     except Exception as exc:
         err_console.print(f"[red]Collection failed:[/red] {exc}")
         raise typer.Exit(code=1) from None
-
-
-class _StubRepository:
-    """No-op article repository for CLI dry-run mode."""
-
-    async def upsert_articles(self, articles: list[Any]) -> int:
-        """Return count without persisting (no DB required for CLI preview)."""
-        return len(articles)
 
 
 def main() -> None:

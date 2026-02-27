@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -12,7 +11,6 @@ from ica.__main__ import (
     _print_runs_table,
     _print_single_run,
     _status_color,
-    _StubRepository,
     app,
 )
 
@@ -412,7 +410,13 @@ class TestCollectArticlesCommand:
     def test_collect_articles_invalid_schedule(self) -> None:
         # The ValueError from collect_articles should be caught
         mock_settings = MagicMock()
-        mock_settings.searchapi_api_key = "test-key"
+        mock_settings.google_cse_api_key = "test-key"
+        mock_settings.google_cse_cx = "test-cx"
+
+        mock_session = AsyncMock()
+        mock_get_session = MagicMock()
+        mock_get_session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_get_session.return_value.__aexit__ = AsyncMock(return_value=None)
 
         with (
             patch("ica.config.settings.get_settings", return_value=mock_settings),
@@ -420,6 +424,7 @@ class TestCollectArticlesCommand:
                 "ica.pipeline.article_collection.collect_articles",
                 side_effect=ValueError("schedule must be 'daily' or 'every_2_days', got 'bad'"),
             ),
+            patch("ica.db.session.get_session", mock_get_session),
         ):
             mock_client = AsyncMock()
             mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -446,26 +451,6 @@ class TestCollectArticlesCommand:
 
         assert result.exit_code == 1
         assert "Configuration error" in result.output
-
-
-# ---------------------------------------------------------------------------
-# _StubRepository
-# ---------------------------------------------------------------------------
-
-
-class TestStubRepository:
-    """The stub repository returns article count without DB interaction."""
-
-    def test_upsert_returns_count(self) -> None:
-        repo = _StubRepository()
-        articles = [MagicMock(), MagicMock(), MagicMock()]
-        count = asyncio.run(repo.upsert_articles(articles))
-        assert count == 3
-
-    def test_upsert_empty_list(self) -> None:
-        repo = _StubRepository()
-        count = asyncio.run(repo.upsert_articles([]))
-        assert count == 0
 
 
 # ---------------------------------------------------------------------------
