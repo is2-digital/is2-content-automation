@@ -72,8 +72,9 @@ RUN apt-get update \
 # Copy the pre-built virtual env from builder
 COPY --from=builder /opt/venv /opt/venv
 
-# Copy application source
+# Copy application source and migration config
 COPY ica/ ./ica/
+COPY alembic.ini ./
 
 # Create non-root user for security
 RUN groupadd --gid 1000 appuser \

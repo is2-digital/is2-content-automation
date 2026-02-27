@@ -2,7 +2,16 @@
 
 ## Current Status
 **Last Updated:** 2026-02-27
-**Tasks Completed:** ica-7h4 (Slack config editing handlers)
+**Tasks Completed:** ica-pp6 (Build and test production Docker Compose)
+
+### 2026-02-27 — ica-pp6: Build and test production Docker Compose
+- Verified multi-stage Docker build completes successfully (base → builder → prod)
+- Prod image: ~146MB, non-root `appuser`, Gunicorn with 2 UvicornWorkers
+- Fixed Makefile bug: `prod` and `stage` targets missing `--env-file` flag for compose variable interpolation
+- Added `alembic.ini` to prod image so `docker exec ... alembic upgrade head` works
+- Tested container starts and serves requests: `/health`, `/status`, `/scheduler` all respond correctly
+- Confirmed Gunicorn config: 2 workers, 120s timeout, 30s graceful, 1000 max-requests with 50 jitter
+- Confirmed restart policies (`restart: always`), log rotation, resource limits all set in docker-compose.prod.yml
 
 ## 2026-02-27 (session 8)
 - Created `ica/services/slack_config_handlers.py` — Slack Bolt handlers for LLM config editing (ica-7h4)

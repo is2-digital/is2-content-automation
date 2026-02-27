@@ -8,10 +8,10 @@ dev: ## Start development environment
 	$(COMPOSE) -f docker-compose.dev.yml --env-file .env.dev up --build
 
 stage: ## Start staging environment (detached)
-	$(COMPOSE) -f docker-compose.stage.yml up -d --build
+	$(COMPOSE) -f docker-compose.stage.yml --env-file .env.stage up -d --build
 
 prod: ## Start production environment (detached)
-	$(COMPOSE) -f docker-compose.prod.yml up -d --build
+	$(COMPOSE) -f docker-compose.prod.yml --env-file .env.prod up -d --build
 
 build: ## Build images without starting containers
 	$(COMPOSE) build
