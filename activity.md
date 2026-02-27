@@ -2,9 +2,15 @@
 
 ## Current Status
 **Last Updated:** 2026-02-27
-**Tasks Completed:** ica-a49 (Integration test: 3-layer markdown validation)
+**Tasks Completed:** ica-8k5 (Integration test: HTML generation & Google Docs)
 
 ## 2026-02-27
+- Added `scripts/test_html_generation.py` — HTML generation & Google Docs integration test (ica-8k5)
+- 5 phases: (1) prompt building verification for generation + regeneration + feedback injection, (2) real LLM HTML generation via Claude Sonnet 4.5 on OpenRouter — validates DOCTYPE, CSS class preservation, content population, target="_blank" on links, (3) Google Docs API create/insert/read with real service account + Shared Drive, (4) scoped HTML regeneration with user feedback — validates scope enforcement, (5) learning data extraction LLM call
+- Supports `--phase` (prompts/generate/gdocs/regenerate/learning), `--skip-gdocs`, `--skip-llm` flags
+- No blockers
+
+## 2026-02-27 (session 4)
 - Added `scripts/test_markdown_validation.py` — 3-layer markdown validation integration test (ica-a49)
 - 5 phases: (1) character count code-based validation, (2) structural LLM validation via GPT-4.1 on OpenRouter, (3) voice LLM validation with error merging, (4) full `run_three_layer_validation()` pipeline, (5) `generate_with_validation()` loop with ValidationLoopCounter
 - Supports `--phase` (charcount/structural/voice/pipeline/loop) and `--skip-generation` flags
