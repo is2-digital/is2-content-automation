@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     google_cse_cx: str
 
     # --- Google Sheets ---
-    google_sheets_spreadsheet_id: str = ""
+    curated_articles_google_sheet_id: str = ""
 
     # --- Google Shared Drive ---
     # The service account has no Drive storage quota of its own, so all files

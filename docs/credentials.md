@@ -59,7 +59,7 @@ All credentials are loaded via environment variables (or `.env` file in the proj
 
 | Env Var | Value |
 |---|---|
-| `GOOGLE_SHEETS_SPREADSHEET_ID` | Spreadsheet ID from URL |
+| `CURATED_ARTICLES_GOOGLE_SHEET_ID` | Spreadsheet ID from URL |
 | `GOOGLE_SHARED_DRIVE_ID` | Shared Drive ID (optional — auto-discovered if blank) |
 
 The service account JSON key file defaults to `credentials/google-service-account.json` (one file for both Sheets and Docs). Override with `GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_PATH` env var if needed.
@@ -125,7 +125,7 @@ SLACK_CHANNEL=
 
 # Google APIs
 # Service account key: copy to credentials/google-service-account.json
-GOOGLE_SHEETS_SPREADSHEET_ID=
+CURATED_ARTICLES_GOOGLE_SHEET_ID=
 GOOGLE_SHARED_DRIVE_ID=
 
 # Google Custom Search

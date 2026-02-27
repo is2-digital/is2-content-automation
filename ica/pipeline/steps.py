@@ -100,7 +100,7 @@ async def run_curation_step(ctx: PipelineContext) -> PipelineContext:
     settings = _get_settings()
     slack = _make_slack()
     sheets = _make_sheets()
-    spreadsheet_id = settings.google_sheets_spreadsheet_id
+    spreadsheet_id = settings.curated_articles_google_sheet_id
     channel = settings.slack_channel
 
     # Phase 1: prepare curation data (DB → Sheet)
@@ -156,7 +156,7 @@ async def run_summarization_step(ctx: PipelineContext) -> PipelineContext:
     slack = _make_slack()
     sheets = _make_sheets()
     http = _make_http()
-    spreadsheet_id = settings.google_sheets_spreadsheet_id
+    spreadsheet_id = settings.curated_articles_google_sheet_id
 
     # Phase 1: data preparation (Sheet → DB upsert → normalized articles)
     async with _session() as session:

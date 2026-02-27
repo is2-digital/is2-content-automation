@@ -22,7 +22,7 @@ class FakeSettings:
     slack_bot_token: str = "xoxb-fake"
     slack_channel: str = "C-TEST"
     google_service_account_credentials_path: str = "/tmp/google-sa.json"
-    google_sheets_spreadsheet_id: str = "sheet-123"
+    curated_articles_google_sheet_id: str = "sheet-123"
     google_shared_drive_id: str = ""
     html_template_path: str = ""
 

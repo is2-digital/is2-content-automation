@@ -253,7 +253,7 @@ Pydantic `BaseSettings` loading from env vars / `.env` file.
 | **Google CSE** | `google_cse_api_key` (required), `google_cse_cx` (required) | |
 | **Slack** | `slack_bot_token` (required), `slack_app_token` (required), `slack_channel` (required) | |
 | **Google** | `google_service_account_credentials_path: Path` | Required |
-| **Optional** | `google_sheets_spreadsheet_id`, `html_template_path`, `timezone` (America/Los_Angeles), `log_level` (INFO), `log_format` (text) | |
+| **Optional** | `curated_articles_google_sheet_id`, `html_template_path`, `timezone` (America/Los_Angeles), `log_level` (INFO), `log_format` (text) | |
 | **Computed** | `database_url` (asyncpg), `database_url_sync` (for Alembic) | Derived from postgres fields |
 
 Singleton: `get_settings()` with `@lru_cache(maxsize=1)`.
