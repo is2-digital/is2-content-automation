@@ -8,43 +8,13 @@ Python rewrite of an n8n-based AI newsletter generation system (IS2-News → is2
 
 ## Development Commands
 
-All commands run inside Docker containers via `make` targets. Run `make help` for the full list.
+All commands run inside Docker containers. Nothing is installed locally — never run Python, pytest, ruff, mypy, or any project tooling directly on the host machine.
 
-**IMPORTANT: Never run Python, pytest, ruff, mypy, or any project tooling directly on the host machine.** Nothing is installed locally. Always use `make` targets, which execute inside Docker. If a `make` target fails because containers are not running, start them first with `make dev` — do not fall back to local commands.
+**IMPORTANT: Read `SANDBOX-NOTES.md` before running any commands.** It contains sandbox constraints and the correct command patterns for running tests, linting, and other tooling from within the sandbox.
 
 **Git commands must be single-line with no `$()`, `|`, `<`, `>`, heredocs, or other shell substitutions/redirections.** Multi-`-m` flags are fine for multi-paragraph commit messages. This ensures git operations can run without manual approval.
 
-```bash
-# Start / stop
-make dev                                  # Start dev environment (app + postgres + redis)
-make down                                 # Stop all containers
-make logs                                 # Tail container logs
-make ps                                   # Show running containers
-
-# Tests
-make test                                 # Run all tests
-make test ARGS="tests/test_pipeline/"     # Run one test directory
-make test ARGS="-k test_successful_step"  # Run tests matching name
-
-# Linting & type checking
-make lint                                 # Ruff linter
-make format                               # Ruff auto-format
-make typecheck                            # mypy (strict mode, pydantic plugin)
-
-# Run the app
-make run-pipeline                         # Trigger pipeline via API
-make pipeline-status                      # Show pipeline run status
-make collect                              # Manual article collection
-
-# Database
-make migrate                              # Run Alembic migrations to latest
-make migration msg="description"          # Create a new auto-generated migration
-make db-shell                             # psql shell in postgres container
-
-# Utilities
-make shell                                # Bash shell inside app container
-make clean                                # Stop containers and remove volumes
-```
+For human use outside the sandbox, run `make help` for the full list of make targets.
 
 ## Issue Tracking
 

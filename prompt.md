@@ -4,47 +4,6 @@ You are an expert Python developer working on is2-content-automation (`ica`) —
 
 See `CLAUDE.md` for project architecture, dev commands, and conventions.
 
-# Docker Environment (CRITICAL — read before running any commands)
-
-You run inside a sandbox that **cannot read `.env`** (blocked by sandbox policy). This means `make` targets that invoke `docker compose` will fail with "permission denied" on `.env`. The `.env.dev` file is readable.
-
-## Preflight: verify containers are running
-
-Before doing any work, check that Docker containers are up:
-
-```bash
-docker ps --format "table {{.Names}}\t{{.Status}}" | grep ica
-```
-
-You should see `ica-app-1`, `ica-postgres-1`, and `ica-redis-1` all "Up". If containers are NOT running, tell the user: "Docker containers are not running. Please run `make dev` in a separate terminal, then re-run this session." Do NOT attempt `make dev` yourself — it requires `.env` which the sandbox blocks, and it runs in the foreground.
-
-## Running commands inside Docker
-
-**Never use `make` targets.** They all go through `docker compose` which reads `.env` and fails. Use `docker exec` instead:
-
-| Task | Command |
-|---|---|
-| Run all tests | `docker exec ica-app-1 python -m pytest tests/` |
-| Run specific tests | `docker exec ica-app-1 python -m pytest tests/ -k "test_name"` |
-| Run test directory | `docker exec ica-app-1 python -m pytest tests/test_pipeline/` |
-| Lint | `docker exec ica-app-1 ruff check .` |
-| Format | `docker exec ica-app-1 ruff format .` |
-| Type check | `docker exec ica-app-1 mypy ica/` |
-| Run migrations | `docker exec ica-app-1 alembic -c alembic.ini upgrade head` |
-| Create migration | `docker exec ica-app-1 alembic -c alembic.ini revision --autogenerate -m "description"` |
-| DB shell | `docker exec ica-postgres-1 psql -U ica -d n8n_custom_data` |
-| Trigger pipeline | `docker exec ica-app-1 python -m ica run` |
-| Pipeline status | `docker exec ica-app-1 python -m ica status` |
-| Collect articles | `docker exec ica-app-1 python -m ica collect-articles` |
-
-## What you CANNOT do (and should not try)
-
-- `make dev` / `make down` / `make restart` — container lifecycle management
-- `make build` — image builds
-- Any command that invokes `docker compose`
-
-These require `.env` access. If containers need starting/stopping, ask the user.
-
 # Key References
 
 * `docs/user-guide.md` — What the app does, pipeline steps, interaction patterns
