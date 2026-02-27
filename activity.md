@@ -2,7 +2,16 @@
 
 ## Current Status
 **Last Updated:** 2026-02-27
-**Tasks Completed:** ica-oz1 (Add Slack interactions for config edit/sync/view)
+**Tasks Completed:** ica-juw (Test round-trip: Slack -> Google Docs -> JSON sync)
+
+### 2026-02-27 — ica-juw: Test round-trip: Slack -> Google Docs -> JSON sync
+- Created `tests/test_services/test_prompt_editor_roundtrip.py` with integration tests
+- Full round-trip tests: start_edit → user edits → sync_from_doc (system + instruction fields, multi-cycle version bumps, disk persistence)
+- Plain-text preservation: parametrized tests for markdown syntax, curly-brace templates, %XX_ marker tokens, code blocks, HTML angle brackets, pipes/brackets, mixed real-world prompts
+- Concurrent edit detection: log warning verification when replacing active session, summary active-edit flag after start/sync
+- Model change via Slack form: full modal submission flow, disk persistence, no Google Doc metadata, empty-ID rejection
+- Full Slack interaction handler flows: trigger→modal, sync_from_doc, view_summary, error handling
+- Blocker: Docker containers not running — tests need `make dev` then `docker exec ica-app-1 python -m pytest tests/test_services/test_prompt_editor_roundtrip.py`
 
 ### 2026-02-27 — ica-oz1: Add Slack interactions for config edit/sync/view
 - Added direct model editing via Slack form (no Google Docs round-trip)
