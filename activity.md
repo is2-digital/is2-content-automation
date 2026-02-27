@@ -2,7 +2,13 @@
 
 ## Current Status
 **Last Updated:** 2026-02-27
-**Tasks Completed:** ica-iph (Integration test: generation & validation Phase C)
+**Tasks Completed:** ica-vdb (Integration test: learning system Phase D)
+
+## 2026-02-27 (session 7)
+- Added `scripts/test_learning_system.py` — Phase D integration test: learning system feedback loop (ica-vdb)
+- 5 phases: (1) DB CRUD — seed notes for all 5 feedback types, verify insert/retrieval/ordering, (2) last-40 limit enforcement + type isolation — seed 50 notes, verify only 40 returned and type filtering isolates, (3) aggregate_feedback() across all 5 pipeline modules — verify bullet-list format + empty-input returns None, (4) prompt injection — build prompts for summarization/theme/markdown/email/HTML with feedback, verify "Editorial Improvement Context" appears + negative check without feedback, (5) cross-run LLM — baseline summarization vs feedback-injected summarization + theme generation with DB session
+- Supports `--phase` (db/limit/aggregate/prompt/llm), `--skip-llm`, `--skip-db` flags
+- No blockers (containers not running to execute, but all code verified syntactically and structurally)
 
 ## 2026-02-27 (session 6)
 - Added `scripts/test_parallel_outputs.py` — parallel output steps 6a-6d integration test (ica-ivc)
