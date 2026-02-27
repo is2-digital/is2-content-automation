@@ -15,6 +15,7 @@ from ica.services.prompt_editor import PromptEditorService
 from ica.services.slack_config_handlers import (
     ACTION_CONFIG_TRIGGER,
     ACTION_EDIT_INSTRUCTION,
+    ACTION_EDIT_MODEL,
     ACTION_EDIT_SYSTEM,
     ACTION_SYNC_FROM_DOC,
     ACTION_VIEW_SUMMARY,
@@ -67,9 +68,10 @@ def _write_config(
 def _make_state_values(
     process: str = "summarization",
     action: str = ACTION_VIEW_SUMMARY,
+    model_id: str | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Build mock Slack modal state_values dict."""
-    return {
+    values: dict[str, dict[str, Any]] = {
         "process_block": {
             "process_select": {
                 "type": "static_select",
@@ -88,7 +90,14 @@ def _make_state_values(
                 },
             },
         },
+        "model_block": {
+            "model_input": {
+                "type": "plain_text_input",
+                "value": model_id,
+            },
+        },
     }
+    return values
 
 
 # ---------------------------------------------------------------------------
@@ -189,14 +198,22 @@ class TestBuildConfigModal:
         assert modal["type"] == "modal"
         assert modal["callback_id"] == VIEW_CONFIG_MODAL
 
-    def test_has_process_and_action_blocks(self, tmp_path: Path) -> None:
+    def test_has_process_action_and_model_blocks(self, tmp_path: Path) -> None:
         (tmp_path / "summarization-llm.json").write_text("{}")
 
         modal = build_config_modal(configs_dir=tmp_path)
         blocks = modal["blocks"]
-        assert len(blocks) == 2
+        assert len(blocks) == 3
         assert blocks[0]["block_id"] == "process_block"
         assert blocks[1]["block_id"] == "action_block"
+        assert blocks[2]["block_id"] == "model_block"
+
+    def test_model_block_is_optional(self, tmp_path: Path) -> None:
+        (tmp_path / "summarization-llm.json").write_text("{}")
+
+        modal = build_config_modal(configs_dir=tmp_path)
+        model_block = modal["blocks"][2]
+        assert model_block["optional"] is True
 
     def test_process_options_from_directory(self, tmp_path: Path) -> None:
         for name in ["summarization", "html-generation"]:
@@ -215,6 +232,7 @@ class TestBuildConfigModal:
         values = [o["value"] for o in action_options]
         assert ACTION_EDIT_SYSTEM in values
         assert ACTION_EDIT_INSTRUCTION in values
+        assert ACTION_EDIT_MODEL in values
         assert ACTION_VIEW_SUMMARY in values
         assert ACTION_SYNC_FROM_DOC in values
 
@@ -232,16 +250,27 @@ class TestBuildConfigModal:
 
 
 class TestExtractConfigModalValues:
-    def test_extracts_both_values(self) -> None:
+    def test_extracts_all_values(self) -> None:
+        state = _make_state_values(
+            "theme-generation", ACTION_EDIT_MODEL, model_id="openai/gpt-4.1"
+        )
+        process, action, model_id = extract_config_modal_values(state)
+        assert process == "theme-generation"
+        assert action == ACTION_EDIT_MODEL
+        assert model_id == "openai/gpt-4.1"
+
+    def test_extracts_without_model_id(self) -> None:
         state = _make_state_values("theme-generation", ACTION_EDIT_SYSTEM)
-        process, action = extract_config_modal_values(state)
+        process, action, model_id = extract_config_modal_values(state)
         assert process == "theme-generation"
         assert action == ACTION_EDIT_SYSTEM
+        assert model_id == ""
 
     def test_empty_when_no_selection(self) -> None:
-        process, action = extract_config_modal_values({})
+        process, action, model_id = extract_config_modal_values({})
         assert process == ""
         assert action == ""
+        assert model_id == ""
 
     def test_empty_when_selected_option_is_none(self) -> None:
         state = {
@@ -258,9 +287,10 @@ class TestExtractConfigModalValues:
                 },
             },
         }
-        process, action = extract_config_modal_values(state)
+        process, action, model_id = extract_config_modal_values(state)
         assert process == ""
         assert action == ""
+        assert model_id == ""
 
 
 # ---------------------------------------------------------------------------
@@ -345,6 +375,45 @@ class TestDispatchConfigAction:
         call_kwargs = mock_client.chat_postMessage.call_args[1]
         assert "Synced" in call_kwargs["text"]
         assert "v3" in call_kwargs["text"]
+
+    async def test_edit_model(
+        self,
+        editor: PromptEditorService,
+        mock_client: AsyncMock,
+        tmp_path: Path,
+    ) -> None:
+        _write_config(tmp_path)
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            await dispatch_config_action(
+                editor,
+                mock_client,
+                "#test",
+                "test-process",
+                ACTION_EDIT_MODEL,
+                model_id="openai/gpt-4.1",
+            )
+
+        call_kwargs = mock_client.chat_postMessage.call_args[1]
+        assert "Updated" in call_kwargs["text"]
+        assert "openai/gpt-4.1" in call_kwargs["text"]
+
+    async def test_edit_model_missing_model_id(
+        self,
+        editor: PromptEditorService,
+        mock_client: AsyncMock,
+    ) -> None:
+        await dispatch_config_action(
+            editor,
+            mock_client,
+            "#test",
+            "test-process",
+            ACTION_EDIT_MODEL,
+            model_id="",
+        )
+
+        call_kwargs = mock_client.chat_postMessage.call_args[1]
+        assert "provide a Model ID" in call_kwargs["text"]
 
     async def test_unknown_action(
         self,

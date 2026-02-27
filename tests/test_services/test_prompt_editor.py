@@ -363,6 +363,75 @@ class TestSyncFromDoc:
 
 
 # ---------------------------------------------------------------------------
+# PromptEditorService.update_model()
+# ---------------------------------------------------------------------------
+
+
+class TestUpdateModel:
+    def test_updates_model(
+        self, editor: PromptEditorService, tmp_path: Path
+    ) -> None:
+        _write_config(tmp_path)
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            config = editor.update_model("test-process", "openai/gpt-4.1")
+
+        assert config.model == "openai/gpt-4.1"
+
+    def test_bumps_version(
+        self, editor: PromptEditorService, tmp_path: Path
+    ) -> None:
+        _write_config(tmp_path)
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            config = editor.update_model("test-process", "openai/gpt-4.1")
+
+        assert config.metadata.version == 2
+
+    def test_sets_timestamp(
+        self, editor: PromptEditorService, tmp_path: Path
+    ) -> None:
+        _write_config(tmp_path)
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            config = editor.update_model("test-process", "openai/gpt-4.1")
+
+        assert config.metadata.last_synced_at is not None
+
+    def test_writes_to_disk(
+        self, editor: PromptEditorService, tmp_path: Path
+    ) -> None:
+        _write_config(tmp_path)
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            editor.update_model("test-process", "openai/gpt-4.1")
+
+        saved = _read_saved_config(tmp_path)
+        assert saved["model"] == "openai/gpt-4.1"
+        assert saved["metadata"]["version"] == 2
+
+    def test_strips_whitespace(
+        self, editor: PromptEditorService, tmp_path: Path
+    ) -> None:
+        _write_config(tmp_path)
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            config = editor.update_model("test-process", "  openai/gpt-4.1  ")
+
+        assert config.model == "openai/gpt-4.1"
+
+    def test_raises_on_empty_model(self, editor: PromptEditorService) -> None:
+        with pytest.raises(ValueError, match="must not be empty"):
+            editor.update_model("test-process", "")
+
+    def test_raises_on_whitespace_only_model(
+        self, editor: PromptEditorService
+    ) -> None:
+        with pytest.raises(ValueError, match="must not be empty"):
+            editor.update_model("test-process", "   ")
+
+
+# ---------------------------------------------------------------------------
 # PromptEditorService.get_config_summary()
 # ---------------------------------------------------------------------------
 

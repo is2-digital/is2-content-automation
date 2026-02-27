@@ -2,7 +2,14 @@
 
 ## Current Status
 **Last Updated:** 2026-02-27
-**Tasks Completed:** ica-oiw (Configure API billing alerts and spending limits)
+**Tasks Completed:** ica-oz1 (Add Slack interactions for config edit/sync/view)
+
+### 2026-02-27 — ica-oz1: Add Slack interactions for config edit/sync/view
+- Added direct model editing via Slack form (no Google Docs round-trip)
+- New `PromptEditorService.update_model()` method: updates model, bumps version, persists to disk
+- New `ACTION_EDIT_MODEL` action in Slack config modal with optional Model ID text input
+- `dispatch_config_action()` handles model changes with empty-ID validation
+- 7 new unit tests (prompt editor) + 4 new/updated tests (Slack handlers), all 59 passing
 
 ### 2026-02-27 — ica-oiw: Configure API billing alerts and spending limits
 - Created `docs/billing-alerts.md` with cost estimates per newsletter run

@@ -37,12 +37,14 @@ VIEW_CONFIG_MODAL = "ica_config_modal"
 
 ACTION_EDIT_SYSTEM = "edit_system"
 ACTION_EDIT_INSTRUCTION = "edit_instruction"
+ACTION_EDIT_MODEL = "edit_model"
 ACTION_VIEW_SUMMARY = "view_summary"
 ACTION_SYNC_FROM_DOC = "sync_from_doc"
 
 _ACTIONS: list[tuple[str, str]] = [
     (ACTION_EDIT_SYSTEM, "Edit System Prompt"),
     (ACTION_EDIT_INSTRUCTION, "Edit Instruction Prompt"),
+    (ACTION_EDIT_MODEL, "Edit Model"),
     (ACTION_VIEW_SUMMARY, "View Summary"),
     (ACTION_SYNC_FROM_DOC, "Sync from Doc"),
 ]
@@ -165,6 +167,24 @@ def build_config_modal(
                     "options": action_options,
                 },
             },
+            {
+                "type": "input",
+                "block_id": "model_block",
+                "label": {"type": "plain_text", "text": "Model ID"},
+                "optional": True,
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "model_input",
+                    "placeholder": {
+                        "type": "plain_text",
+                        "text": "e.g. anthropic/claude-sonnet-4.5",
+                    },
+                },
+                "hint": {
+                    "type": "plain_text",
+                    "text": "Only used with Edit Model action.",
+                },
+            },
         ],
     }
 
@@ -176,11 +196,12 @@ def build_config_modal(
 
 def extract_config_modal_values(
     state_values: dict[str, dict[str, Any]],
-) -> tuple[str, str]:
-    """Extract process name and action from config modal state values.
+) -> tuple[str, str, str]:
+    """Extract process name, action, and model ID from config modal state values.
 
     Returns:
-        Tuple of ``(process_name, action_value)``.
+        Tuple of ``(process_name, action_value, model_id)``.
+        ``model_id`` is empty string when not provided.
     """
     process_data = state_values.get("process_block", {}).get("process_select", {})
     selected_process = process_data.get("selected_option")
@@ -190,7 +211,10 @@ def extract_config_modal_values(
     selected_action = action_data.get("selected_option")
     action_value = selected_action.get("value", "") if selected_action else ""
 
-    return process_name, action_value
+    model_data = state_values.get("model_block", {}).get("model_input", {})
+    model_id = model_data.get("value") or ""
+
+    return process_name, action_value, model_id
 
 
 async def dispatch_config_action(
@@ -199,6 +223,8 @@ async def dispatch_config_action(
     channel: str,
     process_name: str,
     action_value: str,
+    *,
+    model_id: str = "",
 ) -> None:
     """Execute the config action and post a result message.
 
@@ -208,6 +234,7 @@ async def dispatch_config_action(
         channel: Channel to post results to.
         process_name: Selected process name.
         action_value: One of the ``ACTION_*`` constants.
+        model_id: New model identifier (only used with ``ACTION_EDIT_MODEL``).
     """
     if action_value == ACTION_EDIT_SYSTEM:
         url = await editor.start_edit(process_name, "system")
@@ -220,6 +247,21 @@ async def dispatch_config_action(
         await client.chat_postMessage(
             channel=channel,
             text=f"Edit *{process_name}* instruction prompt:\n<{url}>",
+        )
+    elif action_value == ACTION_EDIT_MODEL:
+        if not model_id.strip():
+            await client.chat_postMessage(
+                channel=channel,
+                text="Please provide a Model ID when using Edit Model.",
+            )
+            return
+        config = editor.update_model(process_name, model_id)
+        await client.chat_postMessage(
+            channel=channel,
+            text=(
+                f"Updated *{process_name}* model to `{config.model}` "
+                f"(v{config.metadata.version})."
+            ),
         )
     elif action_value == ACTION_VIEW_SUMMARY:
         summary = editor.get_config_summary(process_name)
@@ -278,7 +320,9 @@ def register_config_handlers(
 
         view = body.get("view", {})
         state_values = view.get("state", {}).get("values", {})
-        process_name, action_value = extract_config_modal_values(state_values)
+        process_name, action_value, model_id = extract_config_modal_values(
+            state_values
+        )
 
         if not process_name or not action_value:
             await client.chat_postMessage(
@@ -289,7 +333,8 @@ def register_config_handlers(
 
         try:
             await dispatch_config_action(
-                editor, client, channel, process_name, action_value
+                editor, client, channel, process_name, action_value,
+                model_id=model_id,
             )
         except Exception as exc:
             logger.exception(

@@ -186,6 +186,47 @@ class PromptEditorService:
         )
         return config
 
+    def update_model(self, process_name: str, new_model: str) -> ProcessConfig:
+        """Update the model for a process config directly (no Google Docs).
+
+        Loads the config, replaces the model, bumps the version, sets
+        the sync timestamp, and writes to disk.
+
+        Args:
+            process_name: Process identifier (e.g. ``"summarization"``).
+            new_model: New model identifier in OpenRouter ``provider/model`` format.
+
+        Returns:
+            The updated :class:`ProcessConfig`.
+
+        Raises:
+            ValueError: If *new_model* is empty.
+            FileNotFoundError: If the process config JSON does not exist.
+        """
+        if not new_model or not new_model.strip():
+            raise ValueError("Model ID must not be empty")
+
+        new_model = new_model.strip()
+        config = load_process_config(process_name)
+        old_model = config.model
+
+        config.model = new_model
+        config.metadata.version += 1
+        config.metadata.last_synced_at = datetime.now(UTC).isoformat()
+
+        save_process_config(process_name, config)
+
+        logger.info(
+            "Updated model",
+            extra={
+                "process_name": process_name,
+                "old_model": old_model,
+                "new_model": new_model,
+                "version": config.metadata.version,
+            },
+        )
+        return config
+
     def get_config_summary(self, process_name: str) -> str:
         """Format a process config for Slack display.
 
