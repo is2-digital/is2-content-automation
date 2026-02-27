@@ -2,9 +2,15 @@
 
 ## Current Status
 **Last Updated:** 2026-02-27
-**Tasks Completed:** ica-idp (Integration test: data collection & curation Phase A)
+**Tasks Completed:** ica-18b (Integration test: content processing Phase B)
 
 ## 2026-02-27
+- Added `scripts/test_content_processing.py` — Phase B integration test: HTTP fetching, LLM summarization, theme generation + marker parsing, freshness check (ica-18b)
+- Script has 4 phases: (1) WebFetcherService with real URLs + YouTube detection + HTML stripping, (2) LLM summarization via OpenRouter + parse_summary_output validation, (3) Theme generation LLM → split_themes → parse_markers %XX_ extraction, (4) Gemini 2.5 Flash freshness check
+- Supports `--phase` (fetch/summarize/theme/freshness) and `--skip-llm` flags
+- No blockers
+
+## 2026-02-27 (earlier, session 2)
 - Added `scripts/test_collection_curation.py` — Phase A integration test: article collection → DB → Google Sheet → Slack approval (ica-idp)
 - Script has 3 phases: (1) Google CSE → dedup → PostgreSQL upsert, (2) DB → Sheet population, (3) Slack sendAndWait approval
 - Supports `--phase`, `--schedule`, `--skip-slack` flags for selective testing
