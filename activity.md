@@ -2,9 +2,13 @@
 
 ## Current Status
 **Last Updated:** 2026-02-27
-**Tasks Completed:** ica-vbk (Update docs and config for Google CSE)
+**Tasks Completed:** ica-zl6 (Add Google CSE integration test script)
 
 ## 2026-02-27
+- Added `scripts/test_google_search.py` — live integration test for Google CSE (ica-zl6)
+- Script runs a single query, prints results with date diagnostics (ISO parse, age calculation)
+- Includes httpx adapter for GoogleSearchClient, CLI args for keyword/num/sort-by-date
+- No blockers
 - Updated all docs to replace SearchApi references with Google Custom Search (ica-vbk)
 - Files updated: CLAUDE.md, docs/services.md, docs/credentials.md (already done), docs/user-guide.md, docs/architecture.md, docs/code-walkthrough.md, docs/pipeline-steps.md
 - No blockers
