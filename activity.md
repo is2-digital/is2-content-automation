@@ -2,7 +2,7 @@
 
 ## Current Status
 **Last Updated:** 2026-02-27
-**Tasks Completed:** ica-ivc (Integration test: parallel output steps 6a-6d)
+**Tasks Completed:** ica-iph (Integration test: generation & validation Phase C)
 
 ## 2026-02-27 (session 6)
 - Added `scripts/test_parallel_outputs.py` — parallel output steps 6a-6d integration test (ica-ivc)
@@ -1759,6 +1759,25 @@ After completing each task, add an entry below in this format:
 
 **Next:**
 - Next available task from `bd ready` (ica-c1i.3 and ica-c1i.4 are now unblocked)
+
+**Blockers:**
+- None
+
+---
+
+### 2026-02-27 — ica-iph: Integration test: generation & validation (Phase C)
+
+**Done:**
+- Created `scripts/test_generation_validation.py` — end-to-end Phase C integration test
+- Phase 1: Markdown generation with 3-layer validation (ValidationLoopCounter + generate_with_validation + run_three_layer_validation)
+- Phase 2: HTML generation from Phase 1 markdown (call_html_llm, template preservation, content population)
+- Phase 3: Google Docs integration for both markdown and HTML (create, insert, read round-trip)
+- Phase 4: Parallel output steps 6a-6d via asyncio.gather() with concurrency verification
+- Phase 5: Orchestrator integration (run_pipeline with PipelineContext, StepResult tracking, context propagation from Step 4 → 5 → 6a-6d)
+- All 3687 existing unit tests pass, ruff lint + format clean
+
+**Next:**
+- Next available task from `bd ready` (ica-vdb now unblocked for Phase D)
 
 **Blockers:**
 - None
