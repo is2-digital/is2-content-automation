@@ -22,8 +22,7 @@ class FakeSettings:
 
     slack_bot_token: str = "xoxb-fake"
     slack_channel: str = "C-TEST"
-    google_sheets_credentials_path: str = "/tmp/sheets.json"
-    google_docs_credentials_path: str = "/tmp/docs.json"
+    google_service_account_credentials_path: str = "/tmp/google-sa.json"
     google_sheets_spreadsheet_id: str = "sheet-123"
     html_template_path: str = ""
 
@@ -743,7 +742,7 @@ class TestServiceFactories:
 
             _make_sheets()
             MockSheets.assert_called_once_with(
-                credentials_path="/tmp/sheets.json",
+                credentials_path="/tmp/google-sa.json",
             )
 
     def test_make_docs_creates_service(self, mock_settings):
@@ -753,7 +752,7 @@ class TestServiceFactories:
 
             _make_docs()
             MockDocs.assert_called_once_with(
-                credentials_path="/tmp/docs.json",
+                credentials_path="/tmp/google-sa.json",
             )
 
     def test_make_http_creates_service(self):

@@ -44,14 +44,14 @@ def _make_sheets():
     from ica.services.google_sheets import GoogleSheetsService
 
     s = _get_settings()
-    return GoogleSheetsService(credentials_path=s.google_sheets_credentials_path)
+    return GoogleSheetsService(credentials_path=s.google_service_account_credentials_path)
 
 
 def _make_docs():
     from ica.services.google_docs import GoogleDocsService
 
     s = _get_settings()
-    return GoogleDocsService(credentials_path=s.google_docs_credentials_path)
+    return GoogleDocsService(credentials_path=s.google_service_account_credentials_path)
 
 
 def _make_http():

@@ -251,7 +251,7 @@ Pydantic `BaseSettings` loading from env vars / `.env` file.
 | **Database** | `postgres_host` (postgres), `postgres_port` (5432), `postgres_db` (n8n_custom_data), `postgres_user`, `postgres_password` (required) | |
 | **API Keys** | `openrouter_api_key` (required), `searchapi_api_key` (required) | |
 | **Slack** | `slack_bot_token` (required), `slack_app_token` (required), `slack_channel` (required) | |
-| **Google** | `google_sheets_credentials_path: Path`, `google_docs_credentials_path: Path` | Both required |
+| **Google** | `google_service_account_credentials_path: Path` | Required |
 | **Optional** | `google_sheets_spreadsheet_id`, `html_template_path`, `timezone` (America/Los_Angeles), `log_level` (INFO), `log_format` (text) | |
 | **Computed** | `database_url` (asyncpg), `database_url_sync` (for Alembic) | Derived from postgres fields |
 

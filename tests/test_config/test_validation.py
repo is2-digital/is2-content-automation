@@ -15,9 +15,8 @@ _VALID_ENV = {
     "SLACK_BOT_TOKEN": "xoxb-slack-bot",
     "SLACK_APP_TOKEN": "xapp-slack-app",
     "SLACK_CHANNEL": "C01234ABCDE",
-    "GOOGLE_SHEETS_CREDENTIALS_PATH": "/creds/sheets.json",
-    "GOOGLE_DOCS_CREDENTIALS_PATH": "/creds/docs.json",
-    "SEARCHAPI_API_KEY": "sa-key-456",
+    "GOOGLE_CSE_API_KEY": "cse-key-123",
+    "GOOGLE_CSE_CX": "cse-cx-456",
 }
 
 

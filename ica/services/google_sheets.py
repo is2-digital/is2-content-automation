@@ -24,7 +24,6 @@ Usage::
 from __future__ import annotations
 
 import asyncio
-import json
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +31,7 @@ from google.oauth2.service_account import Credentials as ServiceAccountCredentia
 from googleapiclient.discovery import build, Resource
 
 from ica.logging import get_logger
+from ica.services.google_auth import load_credentials
 
 logger = get_logger(__name__)
 
@@ -40,42 +40,6 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 # Default range covering all columns (A through Z) to capture any data.
 DEFAULT_RANGE = "A:Z"
-
-
-def _load_credentials(credentials_path: Path) -> ServiceAccountCredentials:
-    """Load Google service account credentials from a JSON key file.
-
-    Args:
-        credentials_path: Path to the service account JSON key file.
-
-    Returns:
-        Scoped credentials ready for API use.
-
-    Raises:
-        FileNotFoundError: If the credentials file does not exist.
-        ValueError: If the file is not valid JSON or not a service account key.
-    """
-    path = Path(credentials_path)
-    if not path.exists():
-        raise FileNotFoundError(f"Credentials file not found: {path}")
-
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-        raise ValueError(f"Invalid credentials file: {exc}") from exc
-
-    if not isinstance(data, dict) or "type" not in data:
-        raise ValueError("Credentials file must be a JSON object with a 'type' field")
-
-    if data["type"] != "service_account":
-        raise ValueError(
-            f"Unsupported credential type: {data['type']!r}. Only 'service_account' is supported."
-        )
-
-    return ServiceAccountCredentials.from_service_account_info(
-        data,
-        scopes=SCOPES,
-    )
 
 
 def _build_service(credentials: ServiceAccountCredentials) -> Resource:
@@ -100,7 +64,7 @@ class GoogleSheetsService:
         if service is not None:
             self._service = service
         elif credentials_path is not None:
-            creds = _load_credentials(Path(credentials_path))
+            creds = load_credentials(Path(credentials_path), SCOPES)
             self._service = _build_service(creds)
         else:
             raise ValueError("Either credentials_path or service must be provided")

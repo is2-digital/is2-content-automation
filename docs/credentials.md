@@ -61,7 +61,7 @@ All credentials are loaded via environment variables (or `.env` file in the proj
 |---|---|
 | `GOOGLE_SHEETS_SPREADSHEET_ID` | Spreadsheet ID from URL |
 
-The service account JSON key file defaults to `credentials/google-service-account.json` (one file for both Sheets and Docs). Override with `GOOGLE_SHEETS_CREDENTIALS_PATH` / `GOOGLE_DOCS_CREDENTIALS_PATH` env vars if needed.
+The service account JSON key file defaults to `credentials/google-service-account.json` (one file for both Sheets and Docs). Override with `GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_PATH` env var if needed.
 
 **Setup:**
 

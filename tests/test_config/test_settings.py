@@ -17,9 +17,8 @@ REQUIRED_ENV = {
     "SLACK_BOT_TOKEN": "xoxb-slack-bot",
     "SLACK_APP_TOKEN": "xapp-slack-app",
     "SLACK_CHANNEL": "C01234ABCDE",
-    "GOOGLE_SHEETS_CREDENTIALS_PATH": "/creds/sheets.json",
-    "GOOGLE_DOCS_CREDENTIALS_PATH": "/creds/docs.json",
-    "SEARCHAPI_API_KEY": "sa-key-456",
+    "GOOGLE_CSE_API_KEY": "cse-key-123",
+    "GOOGLE_CSE_CX": "cse-cx-456",
 }
 
 
@@ -135,17 +134,17 @@ class TestRequiredFieldValues:
         s = _make_settings(SLACK_CHANNEL="C999")
         assert s.slack_channel == "C999"
 
-    def test_google_sheets_credentials_path(self) -> None:
-        s = _make_settings(GOOGLE_SHEETS_CREDENTIALS_PATH="/opt/sheets.json")
-        assert s.google_sheets_credentials_path == Path("/opt/sheets.json")
+    def test_google_service_account_credentials_path(self) -> None:
+        s = _make_settings(GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_PATH="/opt/sa.json")
+        assert s.google_service_account_credentials_path == Path("/opt/sa.json")
 
-    def test_google_docs_credentials_path(self) -> None:
-        s = _make_settings(GOOGLE_DOCS_CREDENTIALS_PATH="/opt/docs.json")
-        assert s.google_docs_credentials_path == Path("/opt/docs.json")
+    def test_google_cse_api_key(self) -> None:
+        s = _make_settings(GOOGLE_CSE_API_KEY="cse-key-custom")
+        assert s.google_cse_api_key == "cse-key-custom"
 
-    def test_searchapi_api_key(self) -> None:
-        s = _make_settings(SEARCHAPI_API_KEY="sa-xyz")
-        assert s.searchapi_api_key == "sa-xyz"
+    def test_google_cse_cx(self) -> None:
+        s = _make_settings(GOOGLE_CSE_CX="cse-cx-custom")
+        assert s.google_cse_cx == "cse-cx-custom"
 
 
 # ---------------------------------------------------------------------------
@@ -202,8 +201,8 @@ class TestTypeCoercion:
         assert isinstance(s.postgres_port, int)
 
     def test_credentials_path_string_to_path(self) -> None:
-        s = _make_settings(GOOGLE_SHEETS_CREDENTIALS_PATH="/some/path.json")
-        assert isinstance(s.google_sheets_credentials_path, Path)
+        s = _make_settings(GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_PATH="/some/path.json")
+        assert isinstance(s.google_service_account_credentials_path, Path)
 
     def test_invalid_port_raises(self) -> None:
         with pytest.raises(ValidationError):

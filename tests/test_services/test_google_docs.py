@@ -12,7 +12,6 @@ from ica.services.google_docs import (
     SCOPES,
     GoogleDocsService,
     _extract_text,
-    _load_credentials,
 )
 
 
@@ -80,65 +79,6 @@ def _make_doc_response(text_parts: list[str]) -> dict:
 
 
 # ===========================================================================
-# _load_credentials
-# ===========================================================================
-
-
-class TestLoadCredentials:
-    """Tests for _load_credentials()."""
-
-    def test_file_not_found(self, tmp_path: Path) -> None:
-        with pytest.raises(FileNotFoundError, match="not found"):
-            _load_credentials(tmp_path / "missing.json")
-
-    def test_invalid_json(self, tmp_path: Path) -> None:
-        path = tmp_path / "bad.json"
-        path.write_text("not json", encoding="utf-8")
-        with pytest.raises(ValueError, match="Invalid credentials"):
-            _load_credentials(path)
-
-    def test_missing_type_field(self, tmp_path: Path) -> None:
-        path = tmp_path / "no_type.json"
-        path.write_text(json.dumps({"foo": "bar"}), encoding="utf-8")
-        with pytest.raises(ValueError, match="'type' field"):
-            _load_credentials(path)
-
-    def test_unsupported_type(self, tmp_path: Path) -> None:
-        path = tmp_path / "oauth.json"
-        path.write_text(json.dumps({"type": "authorized_user"}), encoding="utf-8")
-        with pytest.raises(ValueError, match="Unsupported credential type"):
-            _load_credentials(path)
-
-    def test_not_a_dict(self, tmp_path: Path) -> None:
-        path = tmp_path / "array.json"
-        path.write_text(json.dumps([1, 2, 3]), encoding="utf-8")
-        with pytest.raises(ValueError, match="'type' field"):
-            _load_credentials(path)
-
-    def test_valid_service_account(self, tmp_path: Path) -> None:
-        path = _make_service_account_json(tmp_path)
-        mock_creds = MagicMock(
-            service_account_email="test@test-project.iam.gserviceaccount.com",
-            scopes=SCOPES,
-        )
-        with patch(
-            "ica.services.google_docs.ServiceAccountCredentials.from_service_account_info",
-            return_value=mock_creds,
-        ) as from_info:
-            creds = _load_credentials(path)
-            from_info.assert_called_once()
-            call_kwargs = from_info.call_args
-            assert call_kwargs[1]["scopes"] == SCOPES
-        assert creds is mock_creds
-
-    def test_binary_file_raises(self, tmp_path: Path) -> None:
-        path = tmp_path / "binary.json"
-        path.write_bytes(b"\x80\x81\x82")
-        with pytest.raises(ValueError, match="Invalid credentials"):
-            _load_credentials(path)
-
-
-# ===========================================================================
 # GoogleDocsService.__init__
 # ===========================================================================
 
@@ -154,7 +94,7 @@ class TestInit:
         path = _make_service_account_json(tmp_path)
         with (
             patch(
-                "ica.services.google_docs._load_credentials",
+                "ica.services.google_docs.load_credentials",
                 return_value=MagicMock(),
             ) as load_mock,
             patch(
@@ -163,7 +103,7 @@ class TestInit:
             ) as build_mock,
         ):
             svc = GoogleDocsService(credentials_path=path)
-            load_mock.assert_called_once_with(path)
+            load_mock.assert_called_once_with(path, SCOPES)
             build_mock.assert_called_once()
             assert svc._service is build_mock.return_value
 
@@ -181,7 +121,7 @@ class TestInit:
         path = _make_service_account_json(tmp_path)
         with (
             patch(
-                "ica.services.google_docs._load_credentials",
+                "ica.services.google_docs.load_credentials",
                 return_value=MagicMock(),
             ),
             patch(
