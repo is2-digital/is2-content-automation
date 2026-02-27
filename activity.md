@@ -1803,3 +1803,22 @@ After completing each task, add an entry below in this format:
 
 **Blockers:**
 - None
+
+---
+
+### 2026-02-27 — ica-pie: Prompt tuning & quality assurance
+
+**Done:**
+- Strengthened theme generation prompt (`theme-generation-llm.json`) with explicit Marker Format Protocol — lists all required %XX_ markers, enforces exact format rules, warns against deviations
+- Strengthened structural validation prompt (`markdown-structural-validation-llm.json`) with robust JSON-only output instructions matching voice validator's level — no code blocks, no commentary, ONE violation = ONE error string
+- Added "no markdown code blocks" guard to voice validation prompt (`markdown-voice-validation-llm.json`) to prevent GPT-4.1 from wrapping JSON in triple backticks
+- Strengthened LinkedIn carousel prompt (`linkedin-carousel-llm.json`) character error handling — explicit character count formula (body minus 4 offset), targeted retry instructions, slide-by-slide error resolution
+- Verified all character count ranges in markdown generation prompt match validator code (150-190, 300-400, 300-370, 180-250, 750)
+- Verified all LinkedIn carousel ranges match code constants (265-315, 120-150, 130-150)
+- All 4 JSON configs validated syntactically and template-expanded without errors
+
+**Next:**
+- ica-oiw: Configure API billing alerts and spending limits (P4)
+
+**Blockers:**
+- Docker containers not running — full pytest suite not run (JSON validation and template expansion verified locally)
