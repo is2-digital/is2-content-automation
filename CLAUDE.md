@@ -75,7 +75,7 @@ git status  # Must show "up to date with origin"
 - `ica/pipeline/` — Pipeline step implementations + orchestrator. Each step is a standalone module (e.g., `summarization.py`, `theme_generation.py`).
 - `ica/pipeline/steps.py` — Adapter layer that wires step modules to `PipelineStep` protocol with service instantiation via lazy factory helpers (`_make_slack()`, `_make_docs()`, etc.) using deferred imports to avoid circular deps.
 - `ica/pipeline/orchestrator.py` — Runs sequential then parallel steps, manages `PipelineContext` dataclass that accumulates state across the pipeline.
-- `ica/services/` — External service clients: `llm.py` (LiteLLM wrapper), `slack.py` (Slack Bolt), `google_sheets.py`, `google_docs.py`, `search_api.py` (SearchApi), `web_fetcher.py` (httpx).
+- `ica/services/` — External service clients: `llm.py` (LiteLLM wrapper), `slack.py` (Slack Bolt), `google_sheets.py`, `google_docs.py`, `google_search.py` (Google Custom Search), `web_fetcher.py` (httpx).
 - `ica/llm_configs/` — 19 JSON process config files (`{process}-llm.json`) with model, system/instruction prompts, and metadata. Loaded via `loader.py` with file-mtime-invalidated cache. Schema in `schema.py` (`ProcessConfig` Pydantic model).
 - `ica/prompts/` — LLM prompt builder functions. System/instruction text loaded from JSON via `ica.llm_configs.get_process_prompts()`. Python functions handle dynamic runtime interpolation (injecting feedback, validator errors, article content). One file per pipeline step.
 - `ica/validators/` — Content validation (`character_count.py` for markdown section character counts).
@@ -97,8 +97,8 @@ Trigger → [1] Article Curation (Slack approval + Google Sheets)
 ```
 
 A **separate scheduled job** runs independently for article collection:
-- Daily: SearchApi (google_news engine) for 3 keywords
-- Every 2 days: SearchApi (default engine) for 5 keywords
+- Daily: Google CSE sorted by date, 3 keywords (10 results each)
+- Every 2 days: Google CSE relevance ranking, 5 keywords (10 results each)
 
 ### Key Patterns
 

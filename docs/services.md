@@ -158,9 +158,9 @@ Concatenates all text runs into a single string.
 
 ---
 
-## SearchApi Service (`ica/services/search_api.py`)
+## Google Custom Search Service (`ica/services/google_search.py`)
 
-HTTP client for [SearchApi.io](https://www.searchapi.io/) article discovery.
+Client for the [Google Custom Search JSON API](https://developers.google.com/custom-search/v1/overview) for article discovery.
 
 ### SearchResult (frozen dataclass)
 
@@ -169,8 +169,8 @@ HTTP client for [SearchApi.io](https://www.searchapi.io/) article discovery.
 class SearchResult:
     url: str
     title: str
-    date: str | None   # may be relative: "3 days ago"
-    origin: str        # "google_news" | "default"
+    date: str | None   # ISO-8601 from page metatags (article:published_time, og:updated_time, etc.)
+    origin: str        # "daily" | "every_2_days"
 ```
 
 ### HttpClient Protocol
@@ -182,19 +182,38 @@ class HttpClient(Protocol):
 
 Dependency injection point — `WebFetcherService` implements this in production; tests use mocks.
 
+### GoogleSearchClient
+
+```python
+@dataclass
+class GoogleSearchClient:
+    api_key: str          # GOOGLE_CSE_API_KEY
+    cx: str               # GOOGLE_CSE_CX (Search Engine ID)
+    http_client: HttpClient
+    base_url: str = "https://www.googleapis.com/customsearch/v1"
+```
+
 ### Methods
 
 | Method | Purpose |
 |---|---|
-| `search(keyword, *, engine, num, time_period, location)` | Single keyword query. Parses `data.organic_results[].{link, title, date}` |
-| `search_keywords(keywords, *, engine, num, time_period, location)` | Multiple keywords sequential, aggregates results |
+| `search(keyword, *, num, date_restrict, gl, sort_by_date)` | Single keyword query. Auto-paginates when `num` > 10. Parses `items[].{link, title}` + date from `pagemap.metatags` |
+| `search_keywords(keywords, *, num, date_restrict, gl, sort_by_date)` | Multiple keywords sequential, aggregates results |
+
+### Date Extraction
+
+Dates are extracted from `item.pagemap.metatags[0]` using these meta tag keys (in priority order): `article:published_time`, `og:updated_time`, `date`, `publishdate`, `datePublished`, `dc.date`.
 
 ### Search Schedules
 
-| Schedule | Engine | Keywords | Results Per Keyword |
+| Schedule | Mode | Keywords | Results Per Keyword |
 |---|---|---|---|
-| Daily | `google_news` | 3 broad (AGI, Automation, AI) | 15 |
-| Every 2 days | `default` | 5 specific (AI breakthrough, AI latest, etc.) | 10 |
+| Daily | `sort_by_date=True` | 3 broad (AGI, Automation, AI) | 10 |
+| Every 2 days | `sort_by_date=False` (relevance) | 5 specific (AI breakthrough, AI latest, etc.) | 10 |
+
+### Pricing
+
+100 free queries/day (we use ~8). Additional queries cost $5/1,000 if billing is enabled.
 
 ---
 
@@ -410,7 +429,7 @@ Pipeline Steps
 │   ├── wraps: google-api-python-client (sync, via asyncio.to_thread)
 │   └── satisfies: GoogleDocsWriter protocol
 │
-├── SearchApi Client (search_api.py)
+├── Google Search Client (google_search.py)
 │   ├── depends on: HttpClient protocol (implemented by WebFetcherService)
 │   └── returns: list[SearchResult]
 │

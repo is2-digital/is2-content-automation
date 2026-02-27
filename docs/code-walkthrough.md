@@ -128,7 +128,7 @@ Four commands are defined:
 | `serve` | Start the FastAPI web server | 34 |
 | `run` | Trigger a pipeline run via HTTP POST | 52 |
 | `status` | Check pipeline run status | 83 |
-| `collect-articles` | Manually harvest articles from SearchApi | 169 |
+| `collect-articles` | Manually harvest articles from Google Custom Search | 169 |
 
 **Key pattern — `asyncio.run()`** (lines 57, 88, 181): Bridges sync CLI code
 to async application code. Creates a new event loop, runs the coroutine, and
@@ -214,8 +214,8 @@ def create_scheduler(
 
 | Job | Trigger | What it does |
 |-----|---------|-------------|
-| Daily article collection | Cron, 6 AM | SearchApi `google_news` engine, 3 keywords |
-| Every-2-days collection | Interval, 48h | SearchApi `default` engine, 5 keywords |
+| Daily article collection | Cron, 6 AM | Google CSE sorted by date, 3 keywords |
+| Every-2-days collection | Interval, 48h | Google CSE relevance ranking, 5 keywords |
 | Pipeline trigger | Cron, every 5 days (optional) | HTTP POST to `/trigger` |
 
 **For PHP devs:** APScheduler runs in-process (same event loop as FastAPI).
@@ -257,7 +257,8 @@ class Settings(BaseSettings):
     openrouter_api_key: str        # REQUIRED
     slack_bot_token: str           # REQUIRED
     slack_app_token: str           # REQUIRED
-    search_api_key: str            # REQUIRED
+    google_cse_api_key: str        # REQUIRED
+    google_cse_cx: str             # REQUIRED
 
     @computed_field
     @property
@@ -644,10 +645,10 @@ async def insert_content(self, document_id: str, text: str) -> None:
 `_extract_text()` walks this tree with safe `.get()` calls (no crashes on
 missing keys).
 
-### `ica/services/search_api.py` (136 lines)
+### `ica/services/google_search.py` (200 lines)
 
-Wraps **SearchApi** for article discovery. Uses a **Protocol** for HTTP
-dependency injection.
+Wraps the **Google Custom Search JSON API** for article discovery. Uses a
+**Protocol** for HTTP dependency injection.
 
 ```python
 class HttpClient(Protocol):
@@ -658,8 +659,8 @@ class HttpClient(Protocol):
 class SearchResult:
     url: str
     title: str
-    date: str | None
-    origin: str          # "google_news" or "default"
+    date: str | None     # ISO-8601 from page metatags
+    origin: str          # "daily" or "every_2_days"
 ```
 
 **For PHP devs:** `Protocol` is Python's version of an interface, but
@@ -668,9 +669,9 @@ automatically satisfies the protocol — no `implements` declaration needed. Thi
 makes testing trivial: pass any object with a `get` method.
 
 Methods:
-- `search(keyword, engine="google_news")` — single keyword search
+- `search(keyword, *, num, date_restrict, sort_by_date)` — single keyword search, auto-paginates
 - `search_keywords(keywords: list[str])` — aggregate results across keywords
-- `_parse_results()` — extract `organic_results[].{link, title, date}`
+- `_parse_results()` — extract `items[].{link, title}` + date from `pagemap.metatags`
 
 ### `ica/services/web_fetcher.py` (216 lines)
 
@@ -1088,13 +1089,13 @@ DAILY_KEYWORDS = ["Artificial General Intelligence", "Automation", "Artificial I
 EVERY_2_DAYS_KEYWORDS = ["AI breakthrough", "AI latest", "AI tutorial", "AI case study", "AI research"]
 
 async def collect_articles(
-    client: SearchApiClient,
+    client: GoogleSearchClient,
     repository: ArticleRepository,
     *,
     schedule: str = "daily",
 ) -> CollectionResult:
     """
-    1. Query SearchApi for each keyword
+    1. Query Google CSE for each keyword
     2. Deduplicate results by URL
     3. Parse relative dates ('3 days ago' → calendar date)
     4. Upsert to database
@@ -1105,8 +1106,8 @@ async def collect_articles(
 
 | Schedule | Engine | Keywords | Results per keyword |
 |----------|--------|----------|---------------------|
-| `daily` | `google_news` | 3 | 15 |
-| `every_2_days` | `default` | 5 | 10 |
+| `daily` | `sort_by_date=True` | 3 | 10 |
+| `every_2_days` | `sort_by_date=False` | 5 | 10 |
 
 **Key types:**
 
@@ -1491,7 +1492,7 @@ Two parsers:
 
 ```python
 def parse_relative_date(date_string: str | None) -> date:
-    """Parse '3 days ago' from SearchApi results."""
+    """Parse '3 days ago' from search results."""
     match = _RELATIVE_DATE_RE.search(date_string)    # r"(\d+)\s*(day|days|...)\s*ago"
     value = int(match.group(1))
     unit = match.group(2).lower()
@@ -2024,7 +2025,7 @@ full type annotations. Every return type must be specified. No implicit `Any`.
 | `ica/services/slack.py` | 584 | Slack Bolt: send_and_wait, forms, modals |
 | `ica/services/google_sheets.py` | 241 | Sheets API v4: read/write/clear rows |
 | `ica/services/google_docs.py` | 213 | Docs API v1: create/read/write documents |
-| `ica/services/search_api.py` | 136 | SearchApi: keyword search + result parsing |
+| `ica/services/google_search.py` | 200 | Google CSE: keyword search + result parsing |
 | `ica/services/web_fetcher.py` | 216 | httpx: fetch URLs, strip HTML, detect failures |
 | `ica/services/prompt_editor.py` | 215 | Edit LLM prompts via Google Docs |
 

@@ -1,8 +1,13 @@
 # ims-tt - Activity Log
 
 ## Current Status
-**Last Updated:** 2026-02-26
-**Tasks Completed:** ica-9t4, ica-dnp, ica-vs7 (Rewrite search service for Google CSE)
+**Last Updated:** 2026-02-27
+**Tasks Completed:** ica-vbk (Update docs and config for Google CSE)
+
+## 2026-02-27
+- Updated all docs to replace SearchApi references with Google Custom Search (ica-vbk)
+- Files updated: CLAUDE.md, docs/services.md, docs/credentials.md (already done), docs/user-guide.md, docs/architecture.md, docs/code-walkthrough.md, docs/pipeline-steps.md
+- No blockers
 
 ## 2026-02-26
 - Rewrote `ica/services/search_api.py` → `ica/services/google_search.py` for Google Custom Search JSON API (ica-9t4)

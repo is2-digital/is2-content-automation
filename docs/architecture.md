@@ -249,7 +249,8 @@ Pydantic `BaseSettings` loading from env vars / `.env` file.
 | Group | Fields | Notes |
 |---|---|---|
 | **Database** | `postgres_host` (postgres), `postgres_port` (5432), `postgres_db` (n8n_custom_data), `postgres_user`, `postgres_password` (required) | |
-| **API Keys** | `openrouter_api_key` (required), `searchapi_api_key` (required) | |
+| **API Keys** | `openrouter_api_key` (required) | |
+| **Google CSE** | `google_cse_api_key` (required), `google_cse_cx` (required) | |
 | **Slack** | `slack_bot_token` (required), `slack_app_token` (required), `slack_channel` (required) | |
 | **Google** | `google_service_account_credentials_path: Path` | Required |
 | **Optional** | `google_sheets_spreadsheet_id`, `html_template_path`, `timezone` (America/Los_Angeles), `log_level` (INFO), `log_format` (text) | |
@@ -315,7 +316,7 @@ Built with Typer + Rich for terminal UI.
 | `ica serve [--host] [--port] [--reload]` | Starts FastAPI via `uvicorn.run` with factory pattern |
 | `ica run [--trigger cli] [--base-url]` | POSTs to `/trigger` endpoint, displays run_id and status |
 | `ica status [run_id] [--base-url]` | GETs `/status`, displays as Rich table or pretty-printed single run with color-coded status |
-| `ica collect-articles [--schedule daily\|every_2_days]` | Manual article collection via SearchApi. Displays stats and sample articles |
+| `ica collect-articles [--schedule daily\|every_2_days]` | Manual article collection via Google Custom Search. Displays stats and sample articles |
 
 Status colors: pending (yellow), running (cyan), completed (green), failed (red).
 

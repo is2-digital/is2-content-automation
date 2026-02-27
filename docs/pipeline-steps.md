@@ -470,7 +470,7 @@ Error details formatted as JSON dict for injection into retry prompt.
 
 ## Article Collection (`ica/pipeline/article_collection.py`)
 
-**Purpose**: Scheduled job for article discovery via SearchApi. Runs independently of the pipeline.
+**Purpose**: Scheduled job for article discovery via Google Custom Search. Runs independently of the pipeline.
 
 ### Function
 
@@ -478,12 +478,12 @@ Error details formatted as JSON dict for injection into retry prompt.
 
 1. **Keyword selection** by schedule:
 
-| Schedule | Engine | Keywords | Results/Keyword |
+| Schedule | Mode | Keywords | Results/Keyword |
 |---|---|---|---|
-| `daily` | `google_news` | AGI, Automation, Artificial Intelligence | 15 |
-| `every_2_days` | `default` | AI breakthrough, AI latest, AI tutorial, AI case study, AI research | 10 |
+| `daily` | `sort_by_date=True` | AGI, Automation, Artificial Intelligence | 10 |
+| `every_2_days` | `sort_by_date=False` (relevance) | AI breakthrough, AI latest, AI tutorial, AI case study, AI research | 10 |
 
-2. Search via `SearchApiClient.search_keywords()` → collect raw results
+2. Search via `GoogleSearchClient.search_keywords()` → collect raw results
 3. Deduplicate by URL (first occurrence wins)
 4. Parse relative dates ("2 days ago") via `parse_relative_date()`
 5. Upsert `ArticleRecord` objects to PostgreSQL

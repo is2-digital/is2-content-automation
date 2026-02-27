@@ -106,5 +106,5 @@ For direct CLI access inside the container, use `make shell` to open a bash sess
 
 * **LLMs**: Claude Sonnet 4.5 (Primary), GPT-4.1 (Validation), Gemini Flash (Freshness).
 * **Storage**: PostgreSQL (Data), Google Sheets (Curation), Google Docs (Outputs).
-* **Search**: SearchApi (Article discovery).
+* **Search**: Google Custom Search (Article discovery).
 
