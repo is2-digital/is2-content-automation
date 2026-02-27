@@ -2,7 +2,16 @@
 
 ## Current Status
 **Last Updated:** 2026-02-27
-**Tasks Completed:** ica-pp6 (Build and test production Docker Compose)
+**Tasks Completed:** ica-oiw (Configure API billing alerts and spending limits)
+
+### 2026-02-27 — ica-oiw: Configure API billing alerts and spending limits
+- Created `docs/billing-alerts.md` with cost estimates per newsletter run
+- Documented per-model pricing (Claude Sonnet 4.5, GPT-4.1, Gemini 2.5 Flash via OpenRouter)
+- Estimated ~$0.82/newsletter typical, ~$3.30/month for weekly cadence
+- Google CSE: ~8 queries/day stays within 100/day free tier ($0/month)
+- Added step-by-step OpenRouter billing limit setup (monthly cap, per-key rate limits)
+- Added Google Cloud billing alerts and API quota restriction steps
+- Documented parallel steps (6a-6d) burst pattern and investigation triggers
 
 ### 2026-02-27 — ica-pp6: Build and test production Docker Compose
 - Verified multi-stage Docker build completes successfully (base → builder → prod)
