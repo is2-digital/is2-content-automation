@@ -2,7 +2,13 @@
 
 ## Current Status
 **Last Updated:** 2026-02-27
-**Tasks Completed:** ica-8k5 (Integration test: HTML generation & Google Docs)
+**Tasks Completed:** ica-ivc (Integration test: parallel output steps 6a-6d)
+
+## 2026-02-27 (session 6)
+- Added `scripts/test_parallel_outputs.py` — parallel output steps 6a-6d integration test (ica-ivc)
+- 5 phases: (1) Step 6a alternates HTML — filter_unused_articles() with URL extraction, unused article detection, edge cases, (2) Step 6b email subject — strip_html_to_text + call_email_subject_llm + parse_subjects + call_email_review_llm + create_email_doc, (3) Step 6c social media — call_social_media_post_llm + parse_phase1_titles + create_social_media_doc, (4) Step 6d LinkedIn carousel — generate_with_validation + validate_slide_bodies + create_carousel_doc, (5) concurrent execution via asyncio.gather() — verifies wall-clock < sequential sum, ctx.extra key population, failure isolation
+- Supports `--phase` (alternates/email/social/carousel/concurrent), `--skip-llm`, `--skip-gdocs` flags
+- No blockers
 
 ## 2026-02-27
 - Added `scripts/test_html_generation.py` — HTML generation & Google Docs integration test (ica-8k5)
