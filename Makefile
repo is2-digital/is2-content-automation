@@ -1,5 +1,5 @@
 .PHONY: dev stage prod build down logs db-shell ps restart clean migrate migration \
-       test lint format typecheck shell run-pipeline pipeline-status collect help
+       test lint format typecheck shell run-pipeline pipeline-status collect filter-logs help
 
 COMPOSE = docker compose -f docker-compose.yml
 ARGS ?=
@@ -63,6 +63,9 @@ pipeline-status: ## Show pipeline run status
 
 collect: ## Run manual article collection
 	$(COMPOSE) exec app python -m ica collect-articles $(ARGS)
+
+filter-logs: ## Filter JSON logs (usage: make filter-logs ARGS="--level ERROR")
+	$(COMPOSE) logs --no-color | $(COMPOSE) exec -T app python -m ica filter-logs $(ARGS)
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'

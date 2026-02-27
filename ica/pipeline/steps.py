@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from ica.config.settings import Settings
+    from ica.errors import CompositeErrorNotifier
     from ica.services.google_docs import GoogleDocsService
     from ica.services.google_sheets import GoogleSheetsService
     from ica.services.slack import SlackService
@@ -76,6 +77,42 @@ def _make_http() -> WebFetcherService:
     from ica.services.web_fetcher import WebFetcherService
 
     return WebFetcherService()
+
+
+def _make_error_notifier() -> CompositeErrorNotifier:
+    """Build a composite error notifier from configured channels.
+
+    Collects Slack (if configured) and email (if configured) into a
+    single :class:`~ica.errors.CompositeErrorNotifier`.
+    """
+    from ica.errors import CompositeErrorNotifier, ErrorNotifier
+
+    notifiers: list[ErrorNotifier] = []
+
+    # Slack notifier
+    try:
+        slack = _make_slack()
+        notifiers.append(slack)
+    except Exception:
+        pass
+
+    # Email notifier
+    s = _get_settings()
+    if s.email_smtp_user:
+        from ica.services.email import EmailNotifier
+
+        notifiers.append(
+            EmailNotifier(
+                smtp_host=s.email_smtp_host,
+                smtp_port=s.email_smtp_port,
+                username=s.email_smtp_user,
+                password=s.email_smtp_password,
+                from_addr=s.email_from,
+                to_addrs=s.email_to,
+            )
+        )
+
+    return CompositeErrorNotifier(notifiers)
 
 
 @asynccontextmanager

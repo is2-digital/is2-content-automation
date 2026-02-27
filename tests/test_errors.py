@@ -16,11 +16,14 @@ import pytest
 
 from ica.errors import (
     DEFAULT_MAX_VALIDATION_ATTEMPTS,
+    CompositeErrorNotifier,
     DatabaseError,
+    ErrorNotifier,
     FetchError,
     LLMError,
     PipelineError,
     PipelineStopError,
+    SlackErrorNotifier,
     ValidationError,
     ValidationLoopCounter,
     format_error_slack_message,
@@ -450,3 +453,56 @@ class TestValidationLoopCounterUsagePattern:
 
         assert counter.count == 0
         assert retried is False
+
+
+# -----------------------------------------------------------------------
+# ErrorNotifier protocol + backward compat
+# -----------------------------------------------------------------------
+
+
+class TestErrorNotifierBackwardCompat:
+    """SlackErrorNotifier alias should point to ErrorNotifier."""
+
+    def test_alias_is_same_class(self) -> None:
+        assert SlackErrorNotifier is ErrorNotifier
+
+
+# -----------------------------------------------------------------------
+# CompositeErrorNotifier
+# -----------------------------------------------------------------------
+
+
+class TestCompositeErrorNotifier:
+    """CompositeErrorNotifier — fans out to multiple notifiers."""
+
+    @pytest.mark.asyncio
+    async def test_calls_all_notifiers(self) -> None:
+        n1 = AsyncMock()
+        n2 = AsyncMock()
+        composite = CompositeErrorNotifier([n1, n2])
+        await composite.send_error("boom")
+        n1.send_error.assert_awaited_once_with("boom")
+        n2.send_error.assert_awaited_once_with("boom")
+
+    @pytest.mark.asyncio
+    async def test_failure_in_one_does_not_block_others(self) -> None:
+        n1 = AsyncMock(spec=["send_error"])
+        n1.send_error = AsyncMock(side_effect=RuntimeError("Slack down"))
+        n2 = AsyncMock()
+        composite = CompositeErrorNotifier([n1, n2])
+        await composite.send_error("boom")
+        # n2 should still be called even though n1 failed
+        n2.send_error.assert_awaited_once_with("boom")
+
+    @pytest.mark.asyncio
+    async def test_empty_list(self) -> None:
+        composite = CompositeErrorNotifier([])
+        # Should not raise
+        await composite.send_error("boom")
+
+    @pytest.mark.asyncio
+    async def test_single_notifier(self) -> None:
+        n1 = AsyncMock()
+        composite = CompositeErrorNotifier([n1])
+        await composite.send_error("test")
+        n1.send_error.assert_awaited_once_with("test")

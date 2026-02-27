@@ -184,3 +184,58 @@ class TestPackageExport:
         from ica.config import validate_config as vc
 
         assert vc is validate_config
+
+
+# ---------------------------------------------------------------------------
+# Email notification config validation
+# ---------------------------------------------------------------------------
+
+
+class TestEmailValidation:
+    """validate_config should enforce email field dependencies."""
+
+    def test_email_user_without_password_fails(self) -> None:
+        result = _validate_with_env(
+            EMAIL_SMTP_USER="user@gmail.com",
+            EMAIL_FROM="user@gmail.com",
+            EMAIL_TO="ops@example.com",
+        )
+        assert result.ok is False
+        assert any("EMAIL_SMTP_PASSWORD" in e for e in result.errors)
+
+    def test_email_user_without_from_fails(self) -> None:
+        result = _validate_with_env(
+            EMAIL_SMTP_USER="user@gmail.com",
+            EMAIL_SMTP_PASSWORD="app-pass",
+            EMAIL_TO="ops@example.com",
+        )
+        assert result.ok is False
+        assert any("EMAIL_FROM" in e for e in result.errors)
+
+    def test_email_user_without_to_fails(self) -> None:
+        result = _validate_with_env(
+            EMAIL_SMTP_USER="user@gmail.com",
+            EMAIL_SMTP_PASSWORD="app-pass",
+            EMAIL_FROM="user@gmail.com",
+        )
+        assert result.ok is False
+        assert any("EMAIL_TO" in e for e in result.errors)
+
+    def test_email_fully_configured_passes(self) -> None:
+        result = _validate_with_env(
+            EMAIL_SMTP_USER="user@gmail.com",
+            EMAIL_SMTP_PASSWORD="app-pass",
+            EMAIL_FROM="user@gmail.com",
+            EMAIL_TO="ops@example.com",
+        )
+        assert result.ok is True
+
+    def test_email_not_configured_passes(self) -> None:
+        """No email env vars at all — should pass (opt-in)."""
+        result = _validate_with_env()
+        assert result.ok is True
+
+    def test_email_user_without_all_required_collects_all_errors(self) -> None:
+        result = _validate_with_env(EMAIL_SMTP_USER="user@gmail.com")
+        assert result.ok is False
+        assert len([e for e in result.errors if "EMAIL_" in e]) == 3

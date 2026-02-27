@@ -73,4 +73,13 @@ def validate_config() -> ValidationResult:
         elif "/" not in model_id:
             errors.append(f"{purpose.value}: '{model_id}' missing provider/model separator '/'")
 
+    # --- Validate email notification config (opt-in) ---
+    if settings.email_smtp_user:
+        if not settings.email_smtp_password:
+            errors.append("EMAIL_SMTP_PASSWORD is required when EMAIL_SMTP_USER is set")
+        if not settings.email_from:
+            errors.append("EMAIL_FROM is required when EMAIL_SMTP_USER is set")
+        if not settings.email_to:
+            errors.append("EMAIL_TO is required when EMAIL_SMTP_USER is set")
+
     return ValidationResult(ok=len(errors) == 0, errors=tuple(errors))

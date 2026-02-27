@@ -21,6 +21,7 @@ from typing import Any
 
 from fastapi import FastAPI, Request, Response
 
+from ica.errors import PipelineStopError
 from ica.logging import bind_context, configure_logging, get_logger
 from ica.pipeline.orchestrator import (
     PipelineContext,
@@ -351,11 +352,27 @@ async def _run_pipeline(run: PipelineRun) -> None:
         run.status = RunStatus.COMPLETED
         run.completed_at = datetime.now(UTC)
         logger.info("Pipeline run %s completed", run.run_id)
+    except PipelineStopError as exc:
+        # Already notified at step level — just update run status
+        run.status = RunStatus.FAILED
+        run.error = str(exc)
+        run.completed_at = datetime.now(UTC)
+        logger.error("Pipeline run %s stopped: %s", run.run_id, exc)
     except Exception as exc:
         run.status = RunStatus.FAILED
         run.error = str(exc)
         run.completed_at = datetime.now(UTC)
-        logger.exception("Pipeline run %s failed", run.run_id)
+        logger.exception("Pipeline run %s failed (unexpected)", run.run_id)
+        # Send notification for unexpected errors
+        try:
+            from ica.errors import format_error_slack_message
+            from ica.pipeline.steps import _make_error_notifier
+
+            notifier = _make_error_notifier()
+            message = format_error_slack_message("pipeline orchestrator", str(exc))
+            await notifier.send_error(message)
+        except Exception:
+            logger.exception("Failed to send error notification for run %s", run.run_id)
 
 
 # ---------------------------------------------------------------------------

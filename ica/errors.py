@@ -150,34 +150,55 @@ def format_llm_error_slack_message(error: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Slack notifier protocol + notify helper
+# Error notifier protocol + notify helper
 # ---------------------------------------------------------------------------
 
 
-class SlackErrorNotifier(Protocol):
-    """Protocol for sending error notifications to Slack.
+class ErrorNotifier(Protocol):
+    """Protocol for sending error notifications.
 
-    Implementations typically call the Slack Web API ``chat_postMessage``
-    method targeting the configured channel.
+    Implementations may post to Slack, send email, or use any other channel.
     """
 
     async def send_error(self, message: str) -> None:
-        """Post an error message to the Slack channel."""
+        """Send an error notification message."""
         ...
 
 
+# Backward-compatible alias
+SlackErrorNotifier = ErrorNotifier
+
+
+class CompositeErrorNotifier:
+    """Fans out error notifications to multiple notifiers.
+
+    If one notifier fails, the others still receive the message.
+    """
+
+    def __init__(self, notifiers: list[ErrorNotifier]) -> None:
+        self._notifiers = notifiers
+
+    async def send_error(self, message: str) -> None:
+        """Send *message* to all registered notifiers."""
+        for notifier in self._notifiers:
+            try:
+                await notifier.send_error(message)
+            except Exception:
+                logger.exception("Error notifier %s failed", type(notifier).__name__)
+
+
 async def notify_error(
-    notifier: SlackErrorNotifier | None,
+    notifier: ErrorNotifier | None,
     step: str,
     error: str,
 ) -> None:
-    """Send a pipeline error notification to Slack.
+    """Send a pipeline error notification.
 
-    If *notifier* is ``None`` (e.g. in tests or when Slack is not
+    If *notifier* is ``None`` (e.g. in tests or when notifications are not
     configured), the notification is logged but not sent.
 
     Args:
-        notifier: Slack notifier implementation, or ``None``.
+        notifier: Error notifier implementation, or ``None``.
         step: Human-readable pipeline step name.
         error: The error description string.
     """
@@ -188,7 +209,7 @@ async def notify_error(
         try:
             await notifier.send_error(message)
         except Exception:
-            logger.exception("Failed to send error notification to Slack")
+            logger.exception("Failed to send error notification")
 
 
 # ---------------------------------------------------------------------------
@@ -199,7 +220,7 @@ async def notify_error(
 async def handle_step_error(
     error: Exception,
     step: str,
-    notifier: SlackErrorNotifier | None = None,
+    notifier: ErrorNotifier | None = None,
 ) -> None:
     """Handle an error from a pipeline step.
 

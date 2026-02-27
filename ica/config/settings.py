@@ -70,6 +70,14 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "text"
 
+    # --- Email notifications (opt-in) ---
+    email_smtp_host: str = "smtp.gmail.com"
+    email_smtp_port: int = 587
+    email_smtp_user: str = ""
+    email_smtp_password: str = ""
+    email_from: str = ""
+    email_to: str = ""
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def database_url(self) -> str:

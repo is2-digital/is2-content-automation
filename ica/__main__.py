@@ -240,6 +240,40 @@ async def _collect_articles(schedule: str) -> None:
         raise typer.Exit(code=1) from None
 
 
+@app.command(name="filter-logs")
+def filter_logs(
+    run_id: str | None = typer.Option(None, "--run-id", help="Filter by run_id."),
+    step: str | None = typer.Option(None, "--step", help="Filter by step name."),
+    level: str | None = typer.Option(
+        None, "--level", help="Minimum log level (DEBUG/INFO/WARNING/ERROR/CRITICAL)."
+    ),
+    since: str | None = typer.Option(None, "--since", help="ISO datetime — entries at or after."),
+    until: str | None = typer.Option(None, "--until", help="ISO datetime — entries before."),
+    raw: bool = typer.Option(False, "--raw", help="Output raw JSON instead of formatted lines."),
+) -> None:
+    """Filter JSON pipeline logs from stdin.
+
+    Reads JSON log lines from stdin and filters by run_id, step, level,
+    and/or date range. Designed to be piped from ``docker compose logs``.
+    """
+    import sys
+
+    from ica.cli.log_filter import filter_stream
+
+    count = filter_stream(
+        sys.stdin,
+        sys.stdout,
+        run_id=run_id,
+        step=step,
+        level=level,
+        since=since,
+        until=until,
+        raw=raw,
+    )
+    if count == 0:
+        err_console.print("No matching log entries found.")
+
+
 def main() -> None:
     """Entry point for ``python -m ica`` and the ``ica`` console script."""
     app()
