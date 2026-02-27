@@ -112,7 +112,7 @@ def create_scheduler(
 async def run_article_collection(*, schedule: str = "daily") -> dict[str, Any]:
     """Execute article collection as a scheduled job.
 
-    Loads settings, creates an HTTP client and SearchApi client, and runs
+    Loads settings, creates an HTTP client and Google CSE client, and runs
     the full collection pipeline.  Failures are logged but not re-raised
     (APScheduler handles job exceptions gracefully).
 
@@ -129,13 +129,14 @@ async def run_article_collection(*, schedule: str = "daily") -> dict[str, Any]:
 
         from ica.config.settings import get_settings
         from ica.pipeline.article_collection import collect_articles
-        from ica.services.search_api import SearchApiClient
+        from ica.services.google_search import GoogleSearchClient
 
         settings = get_settings()
 
         async with httpx.AsyncClient() as http_client:
-            search_client = SearchApiClient(
+            search_client = GoogleSearchClient(
                 api_key=settings.google_cse_api_key,
+                cx=settings.google_cse_cx,
                 http_client=http_client,  # type: ignore[arg-type]
             )
             # Use the stub repository for now — real DB integration will use

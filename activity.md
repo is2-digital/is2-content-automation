@@ -1,8 +1,17 @@
 # ims-tt - Activity Log
 
 ## Current Status
-**Last Updated:** 2026-02-25
-**Tasks Completed:** ica-50f (Create prompt_editor.py service module)
+**Last Updated:** 2026-02-26
+**Tasks Completed:** ica-9t4, ica-dnp, ica-vs7 (Rewrite search service for Google CSE)
+
+## 2026-02-26
+- Rewrote `ica/services/search_api.py` → `ica/services/google_search.py` for Google Custom Search JSON API (ica-9t4)
+- Renamed `SearchApiClient` → `GoogleSearchClient` with new params: `key`, `cx`, `dateRestrict`, `gl`, `sort`
+- Updated `_parse_results()` for Google CSE `items[]` response shape with pagemap metatags date extraction
+- Added automatic pagination for `num > 10` (Google CSE per-request limit)
+- Updated all consumers: `article_collection.py`, `scheduler.py`, `__main__.py` (ica-dnp)
+- Rewrote unit tests and e2e tests for Google CSE response format (ica-vs7)
+- All 3691 tests pass, lint and mypy clean
 **Current Task:** None
 **Tasks Completed This Session:** 1 (session 68)
 

@@ -1,10 +1,10 @@
 """Article Collection Pipeline — scheduled utility for article discovery.
 
 Runs on two schedules:
-- **Daily**: google_news engine with 3 keywords (15 results each)
-- **Every 2 days**: default engine with 5 keywords (10 results each)
+- **Daily**: Google CSE sorted by date, 3 keywords (10 results each)
+- **Every 2 days**: Google CSE relevance ranking, 5 keywords (10 results each)
 
-Flow: SearchApi queries → date parsing → deduplication → DB upsert.
+Flow: Google CSE queries → date parsing → deduplication → DB upsert.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from datetime import date
 from typing import Protocol
 
-from ica.services.search_api import SearchApiClient, SearchResult
+from ica.services.google_search import GoogleSearchClient, SearchResult
 from ica.utils.date_parser import parse_relative_date
 
 # Default keyword sets per PRD Section 1.3
@@ -39,8 +39,8 @@ class ArticleRecord:
     Attributes:
         url: Article URL (primary key in DB).
         title: Article title.
-        origin: Search engine source (``"google_news"`` or ``"default"``).
-        publish_date: Parsed date from SearchApi's relative date string.
+        origin: Schedule label (``"daily"`` or ``"every_2_days"``).
+        publish_date: Parsed publish date from search result metadata.
     """
 
     url: str
@@ -132,7 +132,7 @@ def parse_articles(
 
 
 async def collect_articles(
-    client: SearchApiClient,
+    client: GoogleSearchClient,
     repository: ArticleRepository,
     *,
     schedule: str = "daily",
@@ -140,16 +140,16 @@ async def collect_articles(
 ) -> CollectionResult:
     """Execute the full article collection pipeline.
 
-    1. Query SearchApi for each keyword in the schedule's keyword set.
+    1. Query Google Custom Search for each keyword in the schedule's keyword set.
     2. Deduplicate results by URL.
-    3. Parse relative dates into calendar dates.
+    3. Parse dates into calendar dates.
     4. Upsert article records into the database.
 
     Args:
-        client: Configured :class:`SearchApiClient`.
+        client: Configured :class:`GoogleSearchClient`.
         repository: Database repository implementing :class:`ArticleRepository`.
-        schedule: Either ``"daily"`` (google_news, 3 keywords, 15 results)
-            or ``"every_2_days"`` (default engine, 5 keywords, 10 results).
+        schedule: Either ``"daily"`` (sort by date, 3 keywords, 10 results)
+            or ``"every_2_days"`` (relevance ranking, 5 keywords, 10 results).
         reference_date: Override for date calculations (testing).
 
     Returns:
@@ -160,17 +160,19 @@ async def collect_articles(
     """
     if schedule == "daily":
         keywords = DAILY_KEYWORDS
-        engine = "google_news"
-        num = 15
+        sort_by_date = True
+        num = 10
     elif schedule == "every_2_days":
         keywords = EVERY_2_DAYS_KEYWORDS
-        engine = "default"
+        sort_by_date = False
         num = 10
     else:
         raise ValueError(f"schedule must be 'daily' or 'every_2_days', got {schedule!r}")
 
     # Step 1: Search
-    raw_results = await client.search_keywords(keywords, engine=engine, num=num)
+    raw_results = await client.search_keywords(
+        keywords, num=num, sort_by_date=sort_by_date
+    )
 
     # Step 2: Deduplicate
     deduplicated = deduplicate_results(raw_results)

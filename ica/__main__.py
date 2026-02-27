@@ -185,7 +185,7 @@ async def _collect_articles(schedule: str) -> None:
     try:
         from ica.config.settings import get_settings
         from ica.pipeline.article_collection import collect_articles as _collect
-        from ica.services.search_api import SearchApiClient
+        from ica.services.google_search import GoogleSearchClient
 
         settings = get_settings()
     except Exception as exc:
@@ -199,8 +199,9 @@ async def _collect_articles(schedule: str) -> None:
         import httpx
 
         async with httpx.AsyncClient() as http_client:
-            search_client = SearchApiClient(
+            search_client = GoogleSearchClient(
                 api_key=settings.google_cse_api_key,
+                cx=settings.google_cse_cx,
                 http_client=http_client,  # type: ignore[arg-type]
             )
             # Article collection requires a repository — create a simple

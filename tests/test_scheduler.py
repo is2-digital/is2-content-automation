@@ -172,11 +172,13 @@ class TestRunArticleCollection:
 
         with (
             patch("ica.config.settings.get_settings") as mock_settings,
-            patch("ica.services.search_api.SearchApiClient"),
+            patch("ica.services.google_search.GoogleSearchClient"),
             patch("ica.pipeline.article_collection.collect_articles", mock_collect),
             patch("httpx.AsyncClient") as mock_httpx,
         ):
-            mock_settings.return_value = MagicMock(searchapi_api_key="test-key")
+            mock_settings.return_value = MagicMock(
+                google_cse_api_key="test-key", google_cse_cx="test-cx"
+            )
             mock_httpx.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
             mock_httpx.return_value.__aexit__ = AsyncMock(return_value=None)
 
@@ -198,11 +200,13 @@ class TestRunArticleCollection:
 
         with (
             patch("ica.config.settings.get_settings") as mock_settings,
-            patch("ica.services.search_api.SearchApiClient"),
+            patch("ica.services.google_search.GoogleSearchClient"),
             patch("ica.pipeline.article_collection.collect_articles", mock_collect),
             patch("httpx.AsyncClient") as mock_httpx,
         ):
-            mock_settings.return_value = MagicMock(searchapi_api_key="test-key")
+            mock_settings.return_value = MagicMock(
+                google_cse_api_key="test-key", google_cse_cx="test-cx"
+            )
             mock_httpx.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
             mock_httpx.return_value.__aexit__ = AsyncMock(return_value=None)
 
@@ -234,11 +238,13 @@ class TestRunArticleCollection:
 
         with (
             patch("ica.config.settings.get_settings") as mock_settings,
-            patch("ica.services.search_api.SearchApiClient"),
+            patch("ica.services.google_search.GoogleSearchClient"),
             patch("ica.pipeline.article_collection.collect_articles", mock_collect),
             patch("httpx.AsyncClient") as mock_httpx,
         ):
-            mock_settings.return_value = MagicMock(searchapi_api_key="test-key")
+            mock_settings.return_value = MagicMock(
+                google_cse_api_key="test-key", google_cse_cx="test-cx"
+            )
             mock_httpx.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
             mock_httpx.return_value.__aexit__ = AsyncMock(return_value=None)
 
@@ -258,11 +264,13 @@ class TestRunArticleCollection:
 
         with (
             patch("ica.config.settings.get_settings") as mock_settings,
-            patch("ica.services.search_api.SearchApiClient"),
+            patch("ica.services.google_search.GoogleSearchClient"),
             patch("ica.pipeline.article_collection.collect_articles", mock_collect),
             patch("httpx.AsyncClient") as mock_httpx,
         ):
-            mock_settings.return_value = MagicMock(searchapi_api_key="test-key")
+            mock_settings.return_value = MagicMock(
+                google_cse_api_key="test-key", google_cse_cx="test-cx"
+            )
             mock_httpx.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
             mock_httpx.return_value.__aexit__ = AsyncMock(return_value=None)
 
