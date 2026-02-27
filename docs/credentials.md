@@ -59,11 +59,9 @@ All credentials are loaded via environment variables (or `.env` file in the proj
 
 | Env Var | Value |
 |---|---|
-| `GOOGLE_SHEETS_CREDENTIALS_PATH` | Path to JSON key file |
-| `GOOGLE_DOCS_CREDENTIALS_PATH` | Path to JSON key file |
 | `GOOGLE_SHEETS_SPREADSHEET_ID` | Spreadsheet ID from URL |
 
-You can use one service account for both, pointing both env vars to the same file.
+The service account JSON key file defaults to `credentials/google-service-account.json` (one file for both Sheets and Docs). Override with `GOOGLE_SHEETS_CREDENTIALS_PATH` / `GOOGLE_DOCS_CREDENTIALS_PATH` env vars if needed.
 
 **Setup:**
 
@@ -71,7 +69,8 @@ You can use one service account for both, pointing both env vars to the same fil
 2. **APIs & Services** → Enable **Google Sheets API** and **Google Docs API**.
 3. **Credentials** → **Create Credentials** → **Service Account**.
 4. On the service account page → **Keys** tab → **Add Key** → **JSON**. Download the file.
-5. Share your Google Sheet and output Docs folder with the service account email (`...@...iam.gserviceaccount.com`) as **Editor**.
+5. Copy the downloaded file to `credentials/google-service-account.json` (see `credentials/google-service-account.example.json` for the expected format).
+6. Share your Google Sheet and output Docs folder with the service account email (`...@...iam.gserviceaccount.com`) as **Editor**.
 
 **Security notes:**
 - Service accounts are preferable to OAuth2 user credentials — no refresh token expiry, no browser flow.
@@ -120,9 +119,8 @@ SLACK_BOT_TOKEN=xoxb-
 SLACK_APP_TOKEN=xapp-
 SLACK_CHANNEL=
 
-# Google APIs (can be the same file for both)
-GOOGLE_SHEETS_CREDENTIALS_PATH=./credentials/google-service-account.json
-GOOGLE_DOCS_CREDENTIALS_PATH=./credentials/google-service-account.json
+# Google APIs
+# Service account key: copy to credentials/google-service-account.json
 GOOGLE_SHEETS_SPREADSHEET_ID=
 
 # Google Custom Search

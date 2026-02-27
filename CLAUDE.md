@@ -135,7 +135,7 @@ All 389 implementation tasks are closed. The codebase is **feature-complete at t
 |---|---|
 | `docs/user-guide.md` | User-facing guide: what the app does, pipeline steps, interaction patterns |
 | `docs/credentials.md` | Credential setup for all 5 external services |
-| `.env.example` | Template for all required environment variables |
+| `.env-example` | Template for all required environment variables |
 | `_n8n-project/workflows/` | Source n8n JSON files (the reference implementation ported from) |
 
 ## Tool Configuration

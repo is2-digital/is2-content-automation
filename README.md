@@ -89,14 +89,17 @@ ica/
 ### Prerequisites
 
 * Docker & Docker Compose
-* API Keys: OpenRouter, Slack (Bot + App tokens), Google Service Account, SearchApi
+* API Keys: OpenRouter, Slack (Bot + App tokens), Google Service Account, Google Custom Search
 
 ### Setup
 
 ```bash
 # Configure environment
-cp .env.example .env
+cp .env-example .env
 # Edit .env with your credentials (see docs/credentials.md)
+
+# Copy your Google service account JSON key into the credentials directory
+cp ~/path-to-downloaded-key.json credentials/google-service-account.json
 
 # Start the dev environment (app + PostgreSQL + Redis)
 make dev

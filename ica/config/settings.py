@@ -42,8 +42,8 @@ class Settings(BaseSettings):
     slack_channel: str
 
     # --- Google APIs ---
-    google_sheets_credentials_path: Path
-    google_docs_credentials_path: Path
+    google_sheets_credentials_path: Path = Path("/app/credentials/google-service-account.json")
+    google_docs_credentials_path: Path = Path("/app/credentials/google-service-account.json")
 
     # --- Google Custom Search ---
     google_cse_api_key: str
