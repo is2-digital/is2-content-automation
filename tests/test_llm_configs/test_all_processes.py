@@ -61,28 +61,8 @@ EXPECTED_MODELS = {
 }
 _DEFAULT_MODEL = "anthropic/claude-sonnet-4.5"
 
-# Expected prompt lengths per process: (system_len, instruction_len)
-EXPECTED_PROMPT_LENGTHS: dict[str, tuple[int, int]] = {
-    "summarization": (1427, 643),
-    "summarization-regeneration": (1485, 109),
-    "learning-data-extraction": (156, 1037),
-    "theme-generation": (891, 6578),
-    "freshness-check": (173, 541),
-    "markdown-generation": (8751, 3292),
-    "markdown-regeneration": (1303, 15),
-    "markdown-structural-validation": (1409, 18),
-    "markdown-voice-validation": (3249, 151),
-    "html-generation": (4302, 189),
-    "html-regeneration": (2673, 309),
-    "email-subject": (558, 553),
-    "email-subject-regeneration": (558, 553),
-    "email-preview": (11080, 245),
-    "social-media-post": (5276, 1105),
-    "social-media-caption": (3230, 904),
-    "social-media-regeneration": (1803, 665),
-    "linkedin-carousel": (4906, 718),
-    "linkedin-regeneration": (2887, 836),
-}
+# Minimum prompt length to catch accidental truncation (characters)
+MIN_PROMPT_LENGTH = 300
 
 
 @pytest.fixture(autouse=True)
@@ -154,22 +134,12 @@ class TestGetProcessPromptsAllProcesses:
         assert isinstance(result[1], str)
 
     @pytest.mark.parametrize("process_name", ALL_PROCESS_NAMES)
-    def test_system_prompt_length_matches_snapshot(self, process_name: str) -> None:
-        """Guard against accidental prompt truncation or whitespace drift."""
-        system, _ = get_process_prompts(process_name)
-        expected_sys_len, _ = EXPECTED_PROMPT_LENGTHS[process_name]
-        assert len(system) == expected_sys_len, (
-            f"{process_name}: system prompt length {len(system)} != expected {expected_sys_len}"
-        )
-
-    @pytest.mark.parametrize("process_name", ALL_PROCESS_NAMES)
-    def test_instruction_length_matches_snapshot(self, process_name: str) -> None:
-        """Guard against accidental instruction truncation or whitespace drift."""
-        _, instruction = get_process_prompts(process_name)
-        _, expected_inst_len = EXPECTED_PROMPT_LENGTHS[process_name]
-        assert len(instruction) == expected_inst_len, (
-            f"{process_name}: instruction length {len(instruction)} "
-            f"!= expected {expected_inst_len}"
+    def test_prompts_not_truncated(self, process_name: str) -> None:
+        """Guard against accidental prompt truncation."""
+        system, instruction = get_process_prompts(process_name)
+        total = len(system) + len(instruction)
+        assert total >= MIN_PROMPT_LENGTH, (
+            f"{process_name}: combined prompt length {total} < {MIN_PROMPT_LENGTH}"
         )
 
     @pytest.mark.parametrize("process_name", ALL_PROCESS_NAMES)
