@@ -1,9 +1,11 @@
 """Prompt editor service for editing LLM config prompts via Google Docs.
 
-Provides :class:`PromptEditorService` with three operations:
+Provides :class:`PromptEditorService` with five operations:
 
-* :meth:`start_edit` — open a Google Doc for editing a prompt field
-* :meth:`sync_from_doc` — pull edits from the Doc back into the JSON config
+* :meth:`start_edit` — open a Google Doc for editing a single prompt field
+* :meth:`sync_from_doc` — pull single-field edits from the Doc back into JSON
+* :meth:`start_full_edit` — open a Google Doc for editing all config fields
+* :meth:`sync_full_from_doc` — pull all-field edits from the Doc back into JSON
 * :meth:`get_config_summary` — format config info for Slack display
 
 Usage::
@@ -23,6 +25,11 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from ica.cli.config_editor import (
+    apply_doc_changes,
+    build_full_doc_content,
+    parse_doc_sections,
+)
 from ica.llm_configs.loader import (
     get_process_model,
     load_process_config,
@@ -185,6 +192,91 @@ class PromptEditorService:
             },
         )
         return config
+
+    async def start_full_edit(self, process_name: str) -> str:
+        """Open a Google Doc for editing all config fields.
+
+        Creates a new Google Doc populated with every editable field
+        (model, description, system prompt, instruction prompt) using
+        ``## section`` markers. Updates config metadata with the doc ID.
+
+        Args:
+            process_name: Process identifier (e.g. ``"summarization"``).
+
+        Returns:
+            The Google Doc URL for editing.
+
+        Raises:
+            FileNotFoundError: If the process config JSON does not exist.
+        """
+        config = load_process_config(process_name)
+
+        if config.metadata.google_doc_id is not None:
+            logger.warning(
+                "Replacing existing edit session",
+                extra={
+                    "process_name": process_name,
+                    "old_doc_id": config.metadata.google_doc_id,
+                },
+            )
+
+        title = f"[ICA Config] {process_name} — full edit"
+        doc_id = await self._docs.create_document(title)
+
+        doc_content = build_full_doc_content(process_name, config)
+        await self._docs.insert_content(doc_id, doc_content)
+
+        config.metadata.google_doc_id = doc_id
+        save_process_config(process_name, config)
+
+        url = _DOC_URL_TEMPLATE.format(doc_id=doc_id)
+        logger.info(
+            "Full edit session started",
+            extra={"process_name": process_name, "doc_url": url},
+        )
+        return url
+
+    async def sync_full_from_doc(self, process_name: str) -> ProcessConfig:
+        """Pull all edited fields from Google Doc back to JSON config.
+
+        Reads the document, parses ``## section`` markers to extract
+        field values, applies changes via :func:`apply_doc_changes`,
+        clears the linked doc ID, and saves the config.
+
+        Args:
+            process_name: Process identifier (e.g. ``"summarization"``).
+
+        Returns:
+            The updated :class:`ProcessConfig`.
+
+        Raises:
+            ValueError: If no Google Doc is linked.
+        """
+        config = load_process_config(process_name)
+
+        if config.metadata.google_doc_id is None:
+            raise ValueError(
+                f"No Google Doc linked for process {process_name!r}. "
+                "Call start_full_edit() first."
+            )
+
+        content = await self._docs.get_content(config.metadata.google_doc_id)
+        sections = parse_doc_sections(content)
+
+        updated, changes = apply_doc_changes(process_name, sections)
+
+        updated.metadata.google_doc_id = None
+        save_process_config(process_name, updated)
+
+        logger.info(
+            "Synced full config from doc",
+            extra={
+                "process_name": process_name,
+                "version": updated.metadata.version,
+                "changed_fields": list(changes.keys()),
+            },
+        )
+        return updated
 
     def update_model(self, process_name: str, new_model: str) -> ProcessConfig:
         """Update the model for a process config directly (no Google Docs).

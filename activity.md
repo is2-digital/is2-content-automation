@@ -2,7 +2,13 @@
 
 ## Current Status
 **Last Updated:** 2026-02-27
-**Tasks Completed:** ica-hlu.1 (Create core config editor module)
+**Tasks Completed:** ica-hlu.2 (Extend PromptEditorService with full-config edit methods)
+
+### 2026-02-27 — ica-hlu.2: Extend PromptEditorService with full-config edit methods
+- Added `start_full_edit(process_name)` to `PromptEditorService` — creates Google Doc with all config fields via `build_full_doc_content()`, sets `google_doc_id` in metadata, returns doc URL
+- Added `sync_full_from_doc(process_name)` to `PromptEditorService` — reads doc, parses `## section` markers via `parse_doc_sections()`, applies changes via `apply_doc_changes()`, clears doc ID, returns updated config
+- Both methods import from `ica.cli.config_editor` (created in ica-hlu.1)
+- Ruff + mypy pass; all 52 existing prompt_editor tests pass (2 pre-existing trailing-newline roundtrip failures unrelated)
 
 ### 2026-02-27 — ica-hlu.1: Create core config editor module
 - Created `ica/cli/config_editor.py` with 6 functions for the CLI LLM config management epic
