@@ -25,6 +25,63 @@ Sources: [Anthropic Models](https://platform.claude.com/docs/en/docs/about-claud
 
 ---
 
+## Pipeline Execution Order
+
+The 19 LLM configs are invoked across 6 pipeline steps. Steps 1-5 run sequentially; Step 6 launches 4 sub-steps in parallel.
+
+### Sequential Steps
+
+```
+Step 1: Curation
+  No LLM calls — Slack approval + Google Sheets
+
+Step 2: Summarization
+  - summarization                   (per article, may loop with feedback)
+  - summarization-regeneration      (if reviewer requests changes)
+  - learning-data-extraction        (if feedback is given)
+
+Step 3: Theme Generation
+  - theme-generation                (generates 2 candidate themes)
+  - freshness-check                 (validates against recent newsletters)
+  - learning-data-extraction        (if feedback is given, regenerates)
+
+Step 4: Markdown Generation
+  - markdown-generation             (creates newsletter draft)
+  - markdown-structural-validation  (layer 1+2: char counts + structure)
+  - markdown-voice-validation       (layer 3: voice/tone check)
+  - markdown-regeneration           (if reviewer requests changes)
+  ↻ validation loop runs up to 3 times
+
+Step 5: HTML Generation
+  - html-generation                 (populates HTML template from markdown)
+  - html-regeneration               (if reviewer requests changes)
+```
+
+### Parallel Steps (all launch concurrently after Step 5)
+
+```
+Step 6a: Alternates HTML
+  No LLM calls — filters unused articles
+
+Step 6b: Email Subject & Preview
+  - email-subject                   (generates 10 subject lines)
+  - email-subject-regeneration      (if reviewer requests changes)
+  - email-preview                   (generates email intro text)
+
+Step 6c: Social Media
+  - social-media-post               (Phase 1: 12 graphics-only posts)
+  - social-media-caption            (Phase 2: captions for selected posts)
+  - social-media-regeneration       (if reviewer requests changes)
+
+Step 6d: LinkedIn Carousel
+  - linkedin-carousel               (post copy + 10 slides)
+  - linkedin-regeneration           (if reviewer requests changes)
+```
+
+**Breakdown:** 15 configs used in direct pipeline steps, 3 regeneration variants triggered by human feedback loops, and 1 utility (`learning-data-extraction`) called from multiple steps whenever feedback is stored.
+
+---
+
 ## Scoring Legend
 
 Each prompt is scored on five dimensions (1-5 scale):
