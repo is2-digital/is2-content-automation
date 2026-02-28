@@ -2,7 +2,16 @@
 
 ## Current Status
 **Last Updated:** 2026-02-27
-**Tasks Completed:** ica-juw (Test round-trip: Slack -> Google Docs -> JSON sync)
+**Tasks Completed:** ica-hlu.1 (Create core config editor module)
+
+### 2026-02-27 — ica-hlu.1: Create core config editor module
+- Created `ica/cli/config_editor.py` with 6 functions for the CLI LLM config management epic
+- `list_all_configs()`: globs `*-llm.json`, loads via `load_process_config()`, returns sorted tuples
+- `format_config_table()`: Rich Table with #/Process/Model/System Prompt columns (60-char truncation)
+- `build_full_doc_content()` / `parse_doc_sections()`: round-trip serialization for Google Docs editing
+- `apply_doc_changes()`: loads config, diffs fields, bumps version, sets `lastSyncedAt`, saves
+- `format_sync_summary()`: Rich-formatted output of version bump, model change, char count diffs
+- Passes ruff + mypy strict, all 3768 existing tests unaffected (2 pre-existing roundtrip failures)
 
 ### 2026-02-27 — ica-juw: Test round-trip: Slack -> Google Docs -> JSON sync
 - Created `tests/test_services/test_prompt_editor_roundtrip.py` with integration tests
