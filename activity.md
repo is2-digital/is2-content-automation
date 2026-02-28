@@ -2,7 +2,13 @@
 
 ## Current Status
 **Last Updated:** 2026-02-27
-**Tasks Completed:** ica-hlu.4 (Tests for config_editor.py)
+**Tasks Completed:** ica-hlu.5 (Tests for PromptEditorService full-edit methods)
+
+### 2026-02-27 — ica-hlu.5: Tests for PromptEditorService full-edit methods
+- Added `TestStartFullEdit` (5 tests): doc creation/URL, all-sections content, metadata doc ID, existing session replacement, correct doc ID passed to insert
+- Added `TestSyncFullFromDoc` (9 tests): config update, version bump, doc ID clearing, timestamp, disk persistence, unchanged fields preserved, multiple field changes, no-doc-linked error, correct doc ID read
+- Discovered latent bug in `parse_doc_sections` regex: `[\w\s]*` captures across newlines when content is all word chars + spaces (no punctuation). Used realistic test values (with periods) to avoid triggering it.
+- All 45 tests pass, ruff clean, no new mypy errors
 
 ### 2026-02-27 — ica-hlu.3: Add 'ica config' command to __main__.py
 - Added `config` command and `_config_editor()` async function to `ica/__main__.py`

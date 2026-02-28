@@ -489,3 +489,290 @@ class TestGetConfigSummary:
         assert "System prompt:" in summary
         assert "Instruction prompt:" in summary
         assert "chars" in summary
+
+
+# ---------------------------------------------------------------------------
+# PromptEditorService.start_full_edit()
+# ---------------------------------------------------------------------------
+
+
+class TestStartFullEdit:
+    async def test_creates_doc_and_returns_url(
+        self,
+        editor: PromptEditorService,
+        mock_docs: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        _write_config(tmp_path)
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            url = await editor.start_full_edit("test-process")
+
+        assert url == "https://docs.google.com/document/d/doc-new-123/edit"
+        mock_docs.create_document.assert_awaited_once_with(
+            "[ICA Config] test-process — full edit"
+        )
+
+    async def test_populates_doc_with_all_sections(
+        self,
+        editor: PromptEditorService,
+        mock_docs: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        _write_config(tmp_path)
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            await editor.start_full_edit("test-process")
+
+        content = mock_docs.insert_content.call_args[0][1]
+        assert "## model" in content
+        assert "anthropic/claude-sonnet-4.5" in content
+        assert "## description" in content
+        assert "A test process" in content
+        assert "## system" in content
+        assert "You are a test system." in content
+        assert "## instruction" in content
+        assert "Follow test instructions." in content
+
+    async def test_saves_doc_id_to_metadata(
+        self,
+        editor: PromptEditorService,
+        mock_docs: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        _write_config(tmp_path)
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            await editor.start_full_edit("test-process")
+
+        saved = _read_saved_config(tmp_path)
+        assert saved["metadata"]["googleDocId"] == "doc-new-123"
+
+    async def test_warns_when_replacing_existing_session(
+        self,
+        editor: PromptEditorService,
+        mock_docs: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        _write_config(
+            tmp_path,
+            metadata={"googleDocId": "old-doc", "lastSyncedAt": None, "version": 1},
+        )
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            url = await editor.start_full_edit("test-process")
+
+        assert "doc-new-123" in url
+        saved = _read_saved_config(tmp_path)
+        assert saved["metadata"]["googleDocId"] == "doc-new-123"
+
+    async def test_inserts_content_into_created_doc(
+        self,
+        editor: PromptEditorService,
+        mock_docs: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        _write_config(tmp_path)
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            await editor.start_full_edit("test-process")
+
+        mock_docs.insert_content.assert_awaited_once()
+        doc_id_arg = mock_docs.insert_content.call_args[0][0]
+        assert doc_id_arg == "doc-new-123"
+
+
+# ---------------------------------------------------------------------------
+# PromptEditorService.sync_full_from_doc()
+# ---------------------------------------------------------------------------
+
+
+class TestSyncFullFromDoc:
+    def _build_doc_content(
+        self,
+        *,
+        model: str = "anthropic/claude-sonnet-4.5",
+        description: str = "A test process",
+        system: str = "You are a test system.",
+        instruction: str = "Follow test instructions.",
+    ) -> str:
+        """Build a full-edit doc content string with ## section markers."""
+        return (
+            "# test-process\n\n"
+            f"## model\n{model}\n\n"
+            f"## description\n{description}\n\n"
+            f"## system\n{system}\n\n"
+            f"## instruction\n{instruction}\n"
+        )
+
+    async def test_returns_updated_config(
+        self,
+        editor: PromptEditorService,
+        mock_docs: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        _write_config(
+            tmp_path,
+            metadata={"googleDocId": "doc-abc", "lastSyncedAt": None, "version": 1},
+        )
+        mock_docs.get_content.return_value = self._build_doc_content(
+            model="openai/gpt-4.1",
+            system="Updated system prompt.",
+        )
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            config = await editor.sync_full_from_doc("test-process")
+
+        assert config.model == "openai/gpt-4.1"
+        assert config.prompts.system == "Updated system prompt."
+
+    async def test_bumps_version(
+        self,
+        editor: PromptEditorService,
+        mock_docs: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        _write_config(
+            tmp_path,
+            metadata={"googleDocId": "doc-abc", "lastSyncedAt": None, "version": 3},
+        )
+        mock_docs.get_content.return_value = self._build_doc_content()
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            config = await editor.sync_full_from_doc("test-process")
+
+        assert config.metadata.version == 4
+
+    async def test_clears_google_doc_id(
+        self,
+        editor: PromptEditorService,
+        mock_docs: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        _write_config(
+            tmp_path,
+            metadata={"googleDocId": "doc-abc", "lastSyncedAt": None, "version": 1},
+        )
+        mock_docs.get_content.return_value = self._build_doc_content()
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            config = await editor.sync_full_from_doc("test-process")
+
+        assert config.metadata.google_doc_id is None
+        saved = _read_saved_config(tmp_path)
+        assert saved["metadata"]["googleDocId"] is None
+
+    async def test_sets_last_synced_at(
+        self,
+        editor: PromptEditorService,
+        mock_docs: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        _write_config(
+            tmp_path,
+            metadata={"googleDocId": "doc-abc", "lastSyncedAt": None, "version": 1},
+        )
+        mock_docs.get_content.return_value = self._build_doc_content()
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            config = await editor.sync_full_from_doc("test-process")
+
+        assert config.metadata.last_synced_at is not None
+
+    async def test_writes_config_to_disk(
+        self,
+        editor: PromptEditorService,
+        mock_docs: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        _write_config(
+            tmp_path,
+            metadata={"googleDocId": "doc-abc", "lastSyncedAt": None, "version": 1},
+        )
+        mock_docs.get_content.return_value = self._build_doc_content(
+            instruction="Brand new instruction.",
+        )
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            await editor.sync_full_from_doc("test-process")
+
+        saved = _read_saved_config(tmp_path)
+        assert saved["prompts"]["instruction"] == "Brand new instruction."
+        assert saved["metadata"]["version"] == 2
+        assert saved["metadata"]["googleDocId"] is None
+
+    async def test_preserves_unchanged_fields(
+        self,
+        editor: PromptEditorService,
+        mock_docs: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        _write_config(
+            tmp_path,
+            metadata={"googleDocId": "doc-abc", "lastSyncedAt": None, "version": 1},
+        )
+        # Doc content matches original config — no changes
+        mock_docs.get_content.return_value = self._build_doc_content()
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            config = await editor.sync_full_from_doc("test-process")
+
+        assert config.model == "anthropic/claude-sonnet-4.5"
+        assert config.prompts.system == "You are a test system."
+        assert config.prompts.instruction == "Follow test instructions."
+        assert config.description == "A test process"
+
+    async def test_applies_multiple_changes(
+        self,
+        editor: PromptEditorService,
+        mock_docs: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        _write_config(
+            tmp_path,
+            metadata={"googleDocId": "doc-abc", "lastSyncedAt": None, "version": 1},
+        )
+        mock_docs.get_content.return_value = self._build_doc_content(
+            model="google/gemini-2.5-flash",
+            description="Changed description.",
+            system="Changed system prompt.",
+            instruction="Changed instruction prompt.",
+        )
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            config = await editor.sync_full_from_doc("test-process")
+
+        assert config.model == "google/gemini-2.5-flash"
+        assert config.description == "Changed description."
+        assert config.prompts.system == "Changed system prompt."
+        assert config.prompts.instruction == "Changed instruction prompt."
+
+    async def test_raises_when_no_doc_linked(
+        self,
+        editor: PromptEditorService,
+        tmp_path: Path,
+    ) -> None:
+        _write_config(tmp_path)
+
+        with (
+            patch.object(loader, "_CONFIGS_DIR", tmp_path),
+            pytest.raises(ValueError, match="No Google Doc linked"),
+        ):
+            await editor.sync_full_from_doc("test-process")
+
+    async def test_reads_from_linked_doc_id(
+        self,
+        editor: PromptEditorService,
+        mock_docs: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        _write_config(
+            tmp_path,
+            metadata={"googleDocId": "doc-xyz-789", "lastSyncedAt": None, "version": 1},
+        )
+        mock_docs.get_content.return_value = self._build_doc_content()
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            await editor.sync_full_from_doc("test-process")
+
+        mock_docs.get_content.assert_awaited_once_with("doc-xyz-789")
