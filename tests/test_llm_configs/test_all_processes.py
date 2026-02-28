@@ -69,6 +69,7 @@ MIN_PROMPT_LENGTH = 300
 def _clear_caches() -> None:
     """Clear loader caches and LLMConfig cache between tests."""
     _cache.clear()
+    loader._system_prompt_cache = None
     loader._PROCESS_TO_FIELD = None
     get_llm_config.cache_clear()
 
@@ -97,9 +98,8 @@ class TestAllConfigsLoadAndValidate:
         assert len(config.model) > 0
 
     @pytest.mark.parametrize("process_name", ALL_PROCESS_NAMES)
-    def test_prompts_are_non_empty(self, process_name: str) -> None:
+    def test_instruction_prompt_is_non_empty(self, process_name: str) -> None:
         config = load_process_config(process_name)
-        assert len(config.prompts.system) > 0
         assert len(config.prompts.instruction) > 0
 
     @pytest.mark.parametrize("process_name", ALL_PROCESS_NAMES)
@@ -145,9 +145,11 @@ class TestGetProcessPromptsAllProcesses:
     @pytest.mark.parametrize("process_name", ALL_PROCESS_NAMES)
     def test_prompts_match_direct_config_load(self, process_name: str) -> None:
         """Prompts from get_process_prompts match those from load_process_config."""
+        from ica.llm_configs.loader import get_system_prompt
+
         config = load_process_config(process_name)
         system, instruction = get_process_prompts(process_name)
-        assert system == config.prompts.system
+        assert system == get_system_prompt()
         assert instruction == config.prompts.instruction
 
 
@@ -432,7 +434,7 @@ class TestGetModelJsonTier:
             "$schema": "ica-llm-config/v1",
             "processName": "summarization",
             "model": "test/json-tier-model",
-            "prompts": {"system": "sys", "instruction": "inst"},
+            "prompts": {"instruction": "inst"},
         }
         (tmp_path / "summarization-llm.json").write_text(json.dumps(data))
 
@@ -451,7 +453,7 @@ class TestGetModelJsonTier:
             "$schema": "ica-llm-config/v1",
             "processName": "summarization",
             "model": "test/json-model",
-            "prompts": {"system": "sys", "instruction": "inst"},
+            "prompts": {"instruction": "inst"},
         }
         (tmp_path / "summarization-llm.json").write_text(json.dumps(data))
 
@@ -522,7 +524,7 @@ class TestEdgeCases:
             "$schema": "ica-llm-config/v99",
             "processName": "test",
             "model": "test/model",
-            "prompts": {"system": "sys", "instruction": "inst"},
+            "prompts": {"instruction": "inst"},
         }
         (tmp_path / "test-llm.json").write_text(json.dumps(data))
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
@@ -542,26 +544,12 @@ class TestEdgeCases:
         ):
             load_process_config("test")
 
-    def test_empty_system_prompt_raises(self, tmp_path: Path) -> None:
-        data = {
-            "$schema": "ica-llm-config/v1",
-            "processName": "test",
-            "model": "test/model",
-            "prompts": {"system": "", "instruction": "inst"},
-        }
-        (tmp_path / "test-llm.json").write_text(json.dumps(data))
-        with (
-            patch.object(loader, "_CONFIGS_DIR", tmp_path),
-            pytest.raises(ValueError, match="Schema validation failed"),
-        ):
-            load_process_config("test")
-
     def test_empty_instruction_prompt_raises(self, tmp_path: Path) -> None:
         data = {
             "$schema": "ica-llm-config/v1",
             "processName": "test",
             "model": "test/model",
-            "prompts": {"system": "sys", "instruction": ""},
+            "prompts": {"instruction": ""},
         }
         (tmp_path / "test-llm.json").write_text(json.dumps(data))
         with (
@@ -575,7 +563,7 @@ class TestEdgeCases:
             "$schema": "ica-llm-config/v1",
             "processName": "test",
             "model": "",
-            "prompts": {"system": "sys", "instruction": "inst"},
+            "prompts": {"instruction": "inst"},
         }
         (tmp_path / "test-llm.json").write_text(json.dumps(data))
         with (
@@ -596,7 +584,7 @@ class TestEdgeCases:
             "$schema": "ica-llm-config/v1",
             "processName": "test",
             "model": "test/model",
-            "prompts": {"system": "sys", "instruction": "inst"},
+            "prompts": {"instruction": "inst"},
             "metadata": {"version": 0},
         }
         (tmp_path / "test-llm.json").write_text(json.dumps(data))
@@ -611,7 +599,7 @@ class TestEdgeCases:
             "$schema": "ica-llm-config/v1",
             "processName": "test",
             "model": "test/model",
-            "prompts": {"system": "sys", "instruction": "inst"},
+            "prompts": {"instruction": "inst"},
             "metadata": {"version": -1},
         }
         (tmp_path / "test-llm.json").write_text(json.dumps(data))
@@ -636,14 +624,12 @@ class TestEdgeCases:
             "processName": "unicode-test",
             "model": "test/model",
             "prompts": {
-                "system": "Analyse du contenu \u2014 r\u00e9sum\u00e9",
                 "instruction": "\u2022 bullet \u2013 dash \u201csmart quotes\u201d",
             },
         }
         (tmp_path / "unicode-test-llm.json").write_text(json.dumps(data, ensure_ascii=False))
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
             config = load_process_config("unicode-test")
-        assert "\u2014" in config.prompts.system
         assert "\u201c" in config.prompts.instruction
 
 

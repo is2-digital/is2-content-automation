@@ -1924,3 +1924,18 @@ After completing each task, add an entry below in this format:
 
 **Blockers:**
 - Docker containers not running — cannot run full test suite in-container
+
+---
+
+### 2026-02-28 — Update loader to serve shared system prompt (ica-52u)
+
+- Added `get_system_prompt()` function to `ica/llm_configs/loader.py` with mtime caching (mirrors existing `load_process_config` pattern)
+- Updated `get_process_prompts()` to return `(shared_system_prompt, instruction)` instead of the removed `config.prompts.system`
+- Exported `get_system_prompt` from `ica/llm_configs/__init__.py`
+- Updated `tests/test_llm_configs/test_loader.py`: added `TestGetSystemPrompt` class (6 tests: load, missing file, invalid JSON, schema failure, mtime cache, cache invalidation), updated `TestGetProcessPrompts` to use shared prompt
+- Updated `tests/test_llm_configs/test_all_processes.py`: fixed system prompt assertions, removed `test_empty_system_prompt_raises` (no longer per-process), cleaned up config dicts
+- Updated `tests/test_llm_configs/test_prompt_regression.py`: replaced per-process system prompt comparisons with shared prompt checks
+- Updated 11 prompt test files (`tests/test_prompts/`): replaced per-process system prompt content assertions with shared system prompt checks
+
+**Blockers:**
+- Docker containers not running — cannot run full test suite in-container

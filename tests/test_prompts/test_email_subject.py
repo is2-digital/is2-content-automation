@@ -18,39 +18,18 @@ _SYSTEM_PROMPT, _INSTRUCTION = get_process_prompts("email-subject")
 
 
 class TestEmailSubjectSystemPrompt:
-    """Verify the system prompt contains all required sections."""
+    """Verify the system prompt is the shared system prompt."""
 
-    def test_contains_role_preamble(self):
-        assert "professional AI research editor" in _SYSTEM_PROMPT
+    def test_is_shared_system_prompt(self):
+        from ica.llm_configs.loader import get_system_prompt
 
-    def test_contains_content_analyst(self):
-        assert "content analyst" in _SYSTEM_PROMPT
+        assert _SYSTEM_PROMPT == get_system_prompt()
 
-    def test_contains_10_subjects_instruction(self):
-        assert "up to 10" in _SYSTEM_PROMPT
+    def test_contains_data_integrity_section(self):
+        assert "Data Integrity" in _SYSTEM_PROMPT
 
-    def test_contains_definitive(self):
-        assert "definitive email subjects" in _SYSTEM_PROMPT
-
-    # --- Accuracy Control Protocol ---
-
-    def test_contains_accuracy_control(self):
-        assert "Accuracy Control Protocol" in _SYSTEM_PROMPT
-
-    def test_contains_mandatory_label(self):
-        assert "MANDATORY" in _SYSTEM_PROMPT
-
-    def test_contains_no_alternative_sources(self):
-        assert "Do NOT search for alternative sources" in _SYSTEM_PROMPT
-
-    def test_contains_trending_instruction(self):
-        assert "trending" in _SYSTEM_PROMPT
-
-    def test_contains_7_word_max(self):
-        assert "maximum is 7 words" in _SYSTEM_PROMPT
-
-    def test_contains_be_creative(self):
-        assert "Be creative" in _SYSTEM_PROMPT
+    def test_contains_output_integrity_section(self):
+        assert "Output Integrity" in _SYSTEM_PROMPT
 
     def test_is_string(self):
         assert isinstance(_SYSTEM_PROMPT, str)

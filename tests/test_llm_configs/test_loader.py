@@ -13,6 +13,7 @@ from ica.llm_configs.loader import (
     _cache,
     get_process_model,
     get_process_prompts,
+    get_system_prompt,
     load_process_config,
 )
 from ica.llm_configs.schema import ProcessConfig
@@ -26,7 +27,6 @@ def _valid_config_dict(**overrides: object) -> dict:
         "description": "A test process",
         "model": "anthropic/claude-sonnet-4.5",
         "prompts": {
-            "system": "You are a test system.",
             "instruction": "Follow test instructions.",
         },
         "metadata": {
@@ -39,10 +39,23 @@ def _valid_config_dict(**overrides: object) -> dict:
     return base
 
 
+def _valid_system_prompt_dict(**overrides: object) -> dict:
+    """Return a valid system prompt config dict with optional overrides."""
+    base = {
+        "$schema": "ica-system-prompt/v1",
+        "description": "Test shared system prompt",
+        "prompt": "You are a test system.",
+        "metadata": {"lastSyncedAt": None, "version": 1},
+    }
+    base.update(overrides)
+    return base
+
+
 @pytest.fixture(autouse=True)
 def _clear_caches() -> None:
     """Clear loader caches between tests."""
     _cache.clear()
+    loader._system_prompt_cache = None
     loader._PROCESS_TO_FIELD = None
 
 
@@ -131,34 +144,119 @@ class TestLoadProcessConfig:
 
 
 # ---------------------------------------------------------------------------
+# get_system_prompt()
+# ---------------------------------------------------------------------------
+
+
+class TestGetSystemPrompt:
+    def test_loads_shared_system_prompt(self, tmp_path: Path) -> None:
+        data = _valid_system_prompt_dict(prompt="Shared system prompt.")
+        (tmp_path / "system-prompt.json").write_text(json.dumps(data))
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            result = get_system_prompt()
+
+        assert result == "Shared system prompt."
+
+    def test_file_not_found_raises(self, tmp_path: Path) -> None:
+        with (
+            patch.object(loader, "_CONFIGS_DIR", tmp_path),
+            pytest.raises(FileNotFoundError, match="System prompt file not found"),
+        ):
+            get_system_prompt()
+
+    def test_invalid_json_raises_value_error(self, tmp_path: Path) -> None:
+        (tmp_path / "system-prompt.json").write_text("{bad json")
+
+        with (
+            patch.object(loader, "_CONFIGS_DIR", tmp_path),
+            pytest.raises(ValueError, match="Invalid JSON"),
+        ):
+            get_system_prompt()
+
+    def test_schema_validation_failure_raises_value_error(self, tmp_path: Path) -> None:
+        (tmp_path / "system-prompt.json").write_text(json.dumps({"bad": "schema"}))
+
+        with (
+            patch.object(loader, "_CONFIGS_DIR", tmp_path),
+            pytest.raises(ValueError, match="Schema validation failed"),
+        ):
+            get_system_prompt()
+
+    def test_caches_by_mtime(self, tmp_path: Path) -> None:
+        data = _valid_system_prompt_dict()
+        (tmp_path / "system-prompt.json").write_text(json.dumps(data))
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            first = get_system_prompt()
+            second = get_system_prompt()
+
+        assert first == second
+        # Verify cache was populated (not None after load).
+        assert loader._system_prompt_cache is not None
+
+    def test_cache_invalidated_on_mtime_change(self, tmp_path: Path) -> None:
+        import os
+
+        data = _valid_system_prompt_dict(prompt="Original prompt.")
+        sp_file = tmp_path / "system-prompt.json"
+        sp_file.write_text(json.dumps(data))
+
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
+            first = get_system_prompt()
+
+            updated = _valid_system_prompt_dict(prompt="Updated prompt.")
+            sp_file.write_text(json.dumps(updated))
+            current_stat = sp_file.stat()
+            os.utime(sp_file, (current_stat.st_atime, current_stat.st_mtime + 1))
+
+            second = get_system_prompt()
+
+        assert first == "Original prompt."
+        assert second == "Updated prompt."
+
+
+# ---------------------------------------------------------------------------
 # get_process_prompts()
 # ---------------------------------------------------------------------------
 
 
 class TestGetProcessPrompts:
-    def test_returns_system_and_instruction(self, tmp_path: Path) -> None:
-        data = _valid_config_dict(
+    def test_returns_shared_system_and_process_instruction(self, tmp_path: Path) -> None:
+        sp_data = _valid_system_prompt_dict(prompt="Shared system prompt.")
+        (tmp_path / "system-prompt.json").write_text(json.dumps(sp_data))
+
+        proc_data = _valid_config_dict(
             processName="prompt-test",
-            prompts={
-                "system": "System prompt content.",
-                "instruction": "Instruction prompt content.",
-            },
+            prompts={"instruction": "Instruction prompt content."},
         )
-        config_file = tmp_path / "prompt-test-llm.json"
-        config_file.write_text(json.dumps(data))
+        (tmp_path / "prompt-test-llm.json").write_text(json.dumps(proc_data))
 
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
             system, instruction = get_process_prompts("prompt-test")
 
-        assert system == "System prompt content."
+        assert system == "Shared system prompt."
         assert instruction == "Instruction prompt content."
 
-    def test_raises_for_missing_config(self, tmp_path: Path) -> None:
+    def test_raises_for_missing_process_config(self, tmp_path: Path) -> None:
+        sp_data = _valid_system_prompt_dict()
+        (tmp_path / "system-prompt.json").write_text(json.dumps(sp_data))
+
         with (
             patch.object(loader, "_CONFIGS_DIR", tmp_path),
-            pytest.raises(FileNotFoundError),
+            pytest.raises(FileNotFoundError, match="Config file not found"),
         ):
             get_process_prompts("nonexistent")
+
+    def test_raises_for_missing_system_prompt(self, tmp_path: Path) -> None:
+        proc_data = _valid_config_dict(processName="prompt-test")
+        (tmp_path / "prompt-test-llm.json").write_text(json.dumps(proc_data))
+
+        with (
+            patch.object(loader, "_CONFIGS_DIR", tmp_path),
+            pytest.raises(FileNotFoundError, match="System prompt file not found"),
+        ):
+            get_process_prompts("prompt-test")
 
 
 # ---------------------------------------------------------------------------
@@ -274,6 +372,11 @@ class TestPackageExports:
         from ica.llm_configs import get_process_model as f
 
         assert f is get_process_model
+
+    def test_import_get_system_prompt(self) -> None:
+        from ica.llm_configs import get_system_prompt as f
+
+        assert f is get_system_prompt
 
     def test_import_get_process_prompts(self) -> None:
         from ica.llm_configs import get_process_prompts as f

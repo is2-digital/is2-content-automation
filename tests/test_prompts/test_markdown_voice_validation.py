@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ica.llm_configs import get_process_prompts
+from ica.llm_configs.loader import get_system_prompt
 from ica.prompts.markdown_voice_validation import (
     build_voice_validation_prompt,
 )
@@ -10,6 +11,7 @@ from ica.prompts.markdown_voice_validation import (
 # Load prompts from JSON config (same source the builder function uses).
 _SYSTEM, _INSTRUCTION = get_process_prompts("markdown-voice-validation")
 _COMBINED = _SYSTEM + "\n" + _INSTRUCTION
+_SHARED_SYSTEM = get_system_prompt()
 
 
 # ---------------------------------------------------------------------------
@@ -44,7 +46,12 @@ EMPTY_PRIOR_ERRORS = '{"output": {"isValid": true, "errors": []}}'
 
 
 class TestVoiceValidationPromptConstant:
-    """Tests for the VOICE_VALIDATION_PROMPT constant."""
+    """Tests for the voice validation prompt constants.
+
+    After the shared system prompt refactoring, ``_SYSTEM`` contains the
+    application-wide shared system prompt and ``_INSTRUCTION`` contains the
+    per-process instruction template with input/prior-errors placeholders.
+    """
 
     def test_prompt_is_string(self) -> None:
         assert isinstance(_COMBINED, str)
@@ -52,77 +59,41 @@ class TestVoiceValidationPromptConstant:
     def test_prompt_is_not_empty(self) -> None:
         assert len(_COMBINED) > 0
 
-    def test_contains_voice_validator_role(self) -> None:
-        assert "strict newsletter voice validator" in _COMBINED
+    def test_system_is_shared_system_prompt(self) -> None:
+        assert _SYSTEM == _SHARED_SYSTEM
 
-    def test_contains_voice_tone_editorial(self) -> None:
-        assert "voice, tone, and editorial integrity" in _COMBINED
+    def test_system_contains_ai_system_role(self) -> None:
+        assert "AI system" in _SYSTEM
+        assert "IS2 Digital newsletter" in _SYSTEM
 
-    def test_contains_no_rewrite_directive(self) -> None:
-        assert "Do NOT re-write content" in _COMBINED
+    def test_system_contains_data_integrity(self) -> None:
+        assert "Data Integrity" in _SYSTEM
+        assert "Use ONLY the data and content explicitly provided" in _SYSTEM
 
-    def test_contains_introduction_check(self) -> None:
-        assert "Introduction Check" in _COMBINED
+    def test_system_contains_output_integrity(self) -> None:
+        assert "Output Integrity" in _SYSTEM
+        assert "exact format specified per process" in _SYSTEM
 
-    def test_contains_featured_article_check(self) -> None:
-        assert "Featured Article Check" in _COMBINED
+    def test_system_contains_audience_context(self) -> None:
+        assert "Audience Context" in _SYSTEM
+        assert "solopreneurs and SMB professionals" in _SYSTEM
 
-    def test_contains_main_articles_check(self) -> None:
-        assert "Main Articles Check" in _COMBINED
+    def test_instruction_contains_input_header(self) -> None:
+        assert "### INPUT" in _INSTRUCTION
 
-    def test_contains_overall_voice_check(self) -> None:
-        assert "Overall Voice Check" in _COMBINED
+    def test_instruction_contains_markdown_placeholder(self) -> None:
+        assert "{markdown_content}" in _INSTRUCTION
 
-    def test_introduction_check_rules(self) -> None:
-        assert "striking observation or bold statement" in _COMBINED
-        assert "declarative language without hedging" in _COMBINED
-        assert "2-3 strategic bold terms" in _COMBINED
+    def test_instruction_contains_prior_errors_header(self) -> None:
+        assert "PRIOR_ERRORS_JSON" in _INSTRUCTION
+        assert "DO NOT MODIFY" in _INSTRUCTION
 
-    def test_featured_article_check_rules(self) -> None:
-        assert "active voice, no hedging" in _COMBINED
-        assert "specific data, numbers, or concrete examples" in _COMBINED
-
-    def test_main_articles_check_rules(self) -> None:
-        assert "single focused point" in _COMBINED
-        assert "Callouts translate to strategic action" in _COMBINED
-
-    def test_overall_voice_rules(self) -> None:
-        assert "Contractions used consistently" in _COMBINED
-        assert "Direct address to reader" in _COMBINED
-        assert "Professional authority without arrogance" in _COMBINED
-        assert "concrete business outcome" in _COMBINED
-
-    def test_contains_voice_prefix_rule(self) -> None:
-        assert "VOICE:" in _COMBINED
-
-    def test_contains_prior_error_handling(self) -> None:
-        assert "PRIOR ERROR HANDLING" in _COMBINED
-        assert "copied verbatim" in _COMBINED
-
-    def test_contains_do_not_modify_prior_errors(self) -> None:
-        assert "Do NOT rewrite, summarize, deduplicate" in _COMBINED
-
-    def test_contains_output_format(self) -> None:
-        assert '"isValid"' in _COMBINED
-        assert '"errors"' in _COMBINED
-
-    def test_contains_one_violation_one_error(self) -> None:
-        assert "ONE violation = ONE error string" in _COMBINED
+    def test_instruction_contains_prior_errors_placeholder(self) -> None:
+        assert "{prior_errors_json}" in _INSTRUCTION
 
     def test_no_n8n_expression_syntax(self) -> None:
         assert "$json" not in _COMBINED
         assert "$(" not in _COMBINED
-
-    def test_hedging_examples(self) -> None:
-        assert '"might be"' in _COMBINED
-        assert '"could potentially"' in _COMBINED
-
-    def test_contraction_examples(self) -> None:
-        assert '"we\'re"' in _COMBINED
-        assert '"isn\'t"' in _COMBINED
-
-    def test_no_should_must_rule(self) -> None:
-        assert '"should" or "must" statements are avoided' in _COMBINED
 
 
 # ---------------------------------------------------------------------------
@@ -196,28 +167,26 @@ class TestBuildVoiceValidationPrompt:
 
 
 class TestVoiceRuleSections:
-    """Verify all required voice evaluation sections are covered."""
+    """Verify prompt structure after shared system prompt refactoring.
 
-    def test_four_section_checks(self) -> None:
-        sections = [
-            "Introduction Check",
-            "Featured Article Check",
-            "Main Articles Check",
-            "Overall Voice Check",
-        ]
-        for section in sections:
-            assert section in _COMBINED
+    Voice-specific evaluation rules (section checks, evaluation rules,
+    merge directives, etc.) were previously embedded in the per-process
+    system prompt. After the refactoring, ``_SYSTEM`` is the shared prompt
+    and ``_INSTRUCTION`` is the minimal input template. These tests verify
+    the current prompt structure.
+    """
 
-    def test_evaluation_rules_section(self) -> None:
-        assert "Evaluation rules" in _COMBINED
-        assert "evaluate mechanically" in _COMBINED
+    def test_shared_system_prompt_universal_protocols(self) -> None:
+        assert "Universal Protocols" in _SYSTEM
 
-    def test_merge_previous_errors_section(self) -> None:
-        assert "Merge previous errors" in _COMBINED
+    def test_instruction_has_input_section(self) -> None:
+        assert "### INPUT" in _INSTRUCTION
+        assert "newsletter content" in _INSTRUCTION
 
-    def test_json_only_output_directive(self) -> None:
-        assert "Do NOT include markdown, commentary" in _COMBINED
+    def test_instruction_has_prior_errors_section(self) -> None:
+        assert "PRIOR_ERRORS_JSON" in _INSTRUCTION
+        assert "AUTHORITATIVE" in _INSTRUCTION
 
-    def test_callout_boxes_evidence_rule(self) -> None:
-        assert "Recommendations appear only in callout boxes" in _COMBINED
-        assert "grounded in evidence" in _COMBINED
+    def test_combined_includes_both_prompts(self) -> None:
+        assert _SYSTEM in _COMBINED
+        assert _INSTRUCTION in _COMBINED

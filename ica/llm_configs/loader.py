@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from ica.llm_configs.schema import ProcessConfig
+from ica.llm_configs.schema import ProcessConfig, SystemPromptConfig
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +21,57 @@ _CONFIGS_DIR = Path(__file__).parent
 # Cache: process_name -> (mtime, ProcessConfig)
 _cache: dict[str, tuple[float, ProcessConfig]] = {}
 
+# Cache: (mtime, SystemPromptConfig) for the shared system prompt.
+_system_prompt_cache: tuple[float, SystemPromptConfig] | None = None
+
 
 def _config_path(process_name: str) -> Path:
     """Return the expected JSON file path for a process name."""
     return _CONFIGS_DIR / f"{process_name}-llm.json"
+
+
+def get_system_prompt() -> str:
+    """Load the shared system prompt from ``system-prompt.json``.
+
+    Results are cached and automatically invalidated when the file's
+    modification time changes.
+
+    Returns:
+        The system prompt string.
+
+    Raises:
+        FileNotFoundError: If ``system-prompt.json`` does not exist.
+        ValueError: If the JSON content fails schema validation.
+    """
+    global _system_prompt_cache
+
+    path = _CONFIGS_DIR / "system-prompt.json"
+
+    if not path.exists():
+        msg = f"System prompt file not found: {path}"
+        raise FileNotFoundError(msg)
+
+    mtime = path.stat().st_mtime
+
+    if _system_prompt_cache is not None and _system_prompt_cache[0] == mtime:
+        return _system_prompt_cache[1].prompt
+
+    raw = path.read_text(encoding="utf-8")
+    try:
+        data: dict[str, Any] = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        msg = f"Invalid JSON in {path}: {exc}"
+        raise ValueError(msg) from exc
+
+    try:
+        config = SystemPromptConfig.model_validate(data)
+    except Exception as exc:
+        msg = f"Schema validation failed for {path}: {exc}"
+        raise ValueError(msg) from exc
+
+    _system_prompt_cache = (mtime, config)
+    logger.debug("Loaded shared system prompt (version %d)", config.metadata.version)
+    return config.prompt
 
 
 def load_process_config(process_name: str) -> ProcessConfig:
@@ -188,7 +235,10 @@ def save_process_config(process_name: str, config: ProcessConfig) -> None:
 
 
 def get_process_prompts(process_name: str) -> tuple[str, str]:
-    """Return the system and instruction prompts from a process config.
+    """Return the system and instruction prompts for a process.
+
+    The system prompt comes from the shared ``system-prompt.json`` file,
+    while the instruction prompt comes from the per-process config.
 
     Args:
         process_name: The process identifier (e.g. ``"summarization"``).
@@ -196,5 +246,6 @@ def get_process_prompts(process_name: str) -> tuple[str, str]:
     Returns:
         Tuple of ``(system_prompt, instruction_prompt)`` strings.
     """
+    system_prompt = get_system_prompt()
     config = load_process_config(process_name)
-    return config.prompts.system, config.prompts.instruction
+    return system_prompt, config.prompts.instruction

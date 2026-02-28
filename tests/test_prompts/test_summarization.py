@@ -18,40 +18,21 @@ _SYSTEM_PROMPT, _INSTRUCTION = get_process_prompts("summarization")
 
 
 class TestSystemPrompt:
-    """Verify the system prompt contains all required protocol sections."""
+    """Verify the system prompt is the shared system prompt."""
 
-    def test_contains_accuracy_control_protocol(self):
-        assert "Accuracy Control Protocol (MANDATORY)" in _SYSTEM_PROMPT
+    def test_is_shared_system_prompt(self):
+        from ica.llm_configs.loader import get_system_prompt
 
-    def test_contains_do_not_search(self):
-        assert "Do NOT search for alternative sources" in _SYSTEM_PROMPT
+        assert _SYSTEM_PROMPT == get_system_prompt()
 
-    def test_contains_do_not_summarize_partial(self):
-        assert "Do NOT summarize partial or unavailable content" in _SYSTEM_PROMPT
+    def test_contains_data_integrity_section(self):
+        assert "Data Integrity" in _SYSTEM_PROMPT
 
-    def test_contains_do_not_infer(self):
-        assert "Do NOT generate or infer missing details" in _SYSTEM_PROMPT
+    def test_contains_output_integrity_section(self):
+        assert "Output Integrity" in _SYSTEM_PROMPT
 
-    def test_contains_article_summary_standards(self):
-        assert "Article Summary Standards" in _SYSTEM_PROMPT
-
-    def test_contains_summary_specifications(self):
-        assert "3-4 sentences per article" in _SYSTEM_PROMPT
-
-    def test_contains_business_relevance_specs(self):
-        assert "Business Relevance Specifications" in _SYSTEM_PROMPT
-
-    def test_contains_solopreneur_audience(self):
-        assert "solopreneurs and SMB professionals" in _SYSTEM_PROMPT
-
-    def test_contains_data_integrity_standards(self):
-        assert "Data Integrity Standards" in _SYSTEM_PROMPT
-
-    def test_contains_do_not_fabricate(self):
-        assert "Do NOT fabricate, infer, or supplement" in _SYSTEM_PROMPT
-
-    def test_contains_flag_unverifiable(self):
-        assert "Statistic requires verification" in _SYSTEM_PROMPT
+    def test_contains_audience_context_section(self):
+        assert "Audience Context" in _SYSTEM_PROMPT
 
     def test_no_feedback_section_in_system_prompt(self):
         """Feedback is injected in the user prompt, not the system prompt."""

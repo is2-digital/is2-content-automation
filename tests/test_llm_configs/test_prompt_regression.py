@@ -11,7 +11,8 @@ from __future__ import annotations
 
 import pytest
 
-from ica.llm_configs.loader import _cache
+from ica.llm_configs import loader
+from ica.llm_configs.loader import _cache, get_system_prompt
 
 # ---------------------------------------------------------------------------
 # Original hardcoded constants (verbatim from commit 646f1ec)
@@ -156,6 +157,7 @@ factual accuracy or deviating from the core standards above.
 def _clear_loader_cache() -> None:
     """Ensure JSON config is freshly loaded for each test."""
     _cache.clear()
+    loader._system_prompt_cache = None
 
 
 # ---------------------------------------------------------------------------
@@ -173,11 +175,11 @@ class TestSummarizationPromptRegression:
     )
     SAMPLE_FEEDBACK = "- Use shorter sentences\n- Avoid jargon"
 
-    def test_system_prompt_matches_original(self) -> None:
+    def test_system_prompt_is_shared(self) -> None:
         from ica.prompts.summarization import build_summarization_prompt
 
         system, _ = build_summarization_prompt(self.SAMPLE_ARTICLE)
-        assert system == _ORIG_SUMMARIZATION_SYSTEM_PROMPT
+        assert system == get_system_prompt()
 
     def test_user_prompt_without_feedback_matches_original(self) -> None:
         from ica.prompts.summarization import build_summarization_prompt
@@ -202,13 +204,6 @@ class TestSummarizationPromptRegression:
         )
         assert user == expected
 
-    def test_system_prompt_length_unchanged(self) -> None:
-        """Guard against truncation or whitespace drift."""
-        from ica.prompts.summarization import build_summarization_prompt
-
-        system, _ = build_summarization_prompt(self.SAMPLE_ARTICLE)
-        assert len(system) == 1427
-
     def test_instruction_template_length_unchanged(self) -> None:
         """Guard against truncation or whitespace drift in the raw template."""
         from ica.llm_configs import get_process_prompts
@@ -231,11 +226,11 @@ class TestEmailSubjectPromptRegression:
     )
     SAMPLE_FEEDBACK = "- Make subjects punchier\n- Focus on AI trends"
 
-    def test_system_prompt_matches_original(self) -> None:
+    def test_system_prompt_is_shared(self) -> None:
         from ica.prompts.email_subject import build_email_subject_prompt
 
         system, _ = build_email_subject_prompt(self.SAMPLE_NEWSLETTER)
-        assert system == _ORIG_EMAIL_SUBJECT_SYSTEM_PROMPT
+        assert system == get_system_prompt()
 
     def test_user_prompt_without_feedback_matches_original(self) -> None:
         from ica.prompts.email_subject import build_email_subject_prompt
@@ -260,12 +255,6 @@ class TestEmailSubjectPromptRegression:
         )
         assert user == expected
 
-    def test_system_prompt_length_unchanged(self) -> None:
-        from ica.prompts.email_subject import build_email_subject_prompt
-
-        system, _ = build_email_subject_prompt(self.SAMPLE_NEWSLETTER)
-        assert len(system) == 558
-
     def test_instruction_template_length_unchanged(self) -> None:
         from ica.llm_configs import get_process_prompts
 
@@ -285,11 +274,11 @@ class TestRawTemplateRegression:
     catching whitespace drift that might not surface in formatted output tests.
     """
 
-    def test_summarization_system_raw(self) -> None:
+    def test_summarization_system_is_shared(self) -> None:
         from ica.llm_configs import get_process_prompts
 
         system, _ = get_process_prompts("summarization")
-        assert system == _ORIG_SUMMARIZATION_SYSTEM_PROMPT
+        assert system == get_system_prompt()
 
     def test_summarization_instruction_raw(self) -> None:
         from ica.llm_configs import get_process_prompts
@@ -297,11 +286,11 @@ class TestRawTemplateRegression:
         _, instruction = get_process_prompts("summarization")
         assert instruction == _ORIG_SUMMARIZATION_USER_PROMPT
 
-    def test_email_subject_system_raw(self) -> None:
+    def test_email_subject_system_is_shared(self) -> None:
         from ica.llm_configs import get_process_prompts
 
         system, _ = get_process_prompts("email-subject")
-        assert system == _ORIG_EMAIL_SUBJECT_SYSTEM_PROMPT
+        assert system == get_system_prompt()
 
     def test_email_subject_instruction_raw(self) -> None:
         from ica.llm_configs import get_process_prompts

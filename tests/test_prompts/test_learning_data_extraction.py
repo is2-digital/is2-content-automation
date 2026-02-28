@@ -103,14 +103,14 @@ class TestBuildLearningDataExtractionPrompt:
         assert isinstance(system, str)
         assert isinstance(user, str)
 
-    def test_system_prompt_contains_role(self) -> None:
+    def test_system_prompt_is_shared_system_prompt(self) -> None:
         system, _ = build_learning_data_extraction_prompt(
             SAMPLE_FEEDBACK,
             SAMPLE_INPUT,
             SAMPLE_OUTPUT,
         )
-        assert "AI assistant" in system
-        assert "learning data" in system
+        assert "AI system" in system
+        assert "IS2 Digital newsletter" in system
 
     def test_user_prompt_contains_feedback(self) -> None:
         _, user = build_learning_data_extraction_prompt(

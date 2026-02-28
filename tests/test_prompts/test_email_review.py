@@ -18,128 +18,18 @@ _SYSTEM, _INSTRUCTION = get_process_prompts("email-preview")
 
 
 class TestEmailReviewSystemPrompt:
-    """Verify the system prompt contains all required strategic sections."""
+    """Verify the system prompt is the shared system prompt."""
 
-    def test_contains_role_preamble(self):
-        assert "professional AI research editor" in _SYSTEM
+    def test_is_shared_system_prompt(self):
+        from ica.llm_configs.loader import get_system_prompt
 
-    def test_contains_definitive_review_instruction(self):
-        assert "definitive review" in _SYSTEM
+        assert _SYSTEM == get_system_prompt()
 
-    # --- Strategic Purpose ---
+    def test_contains_data_integrity_section(self):
+        assert "Data Integrity" in _SYSTEM
 
-    def test_contains_strategic_purpose(self):
-        assert "Strategic Purpose and Function" in _SYSTEM
-
-    def test_contains_primary_function(self):
-        assert "subscriber relationship messages" in _SYSTEM
-
-    def test_contains_critical_distinction(self):
-        assert "Critical Distinction from Newsletter Content" in _SYSTEM
-
-    def test_contains_essential_rule(self):
-        assert "Email and newsletter introductions must serve distinct functions" in _SYSTEM
-
-    # --- Pre-Draft Analysis ---
-
-    def test_contains_pre_draft_analysis(self):
-        assert "Pre-Draft Analysis Process" in _SYSTEM
-
-    def test_contains_content_relationship_assessment(self):
-        assert "Content Relationship Assessment" in _SYSTEM
-
-    def test_contains_narrative_thread_evaluation(self):
-        assert "Narrative Thread Evaluation" in _SYSTEM
-
-    def test_contains_redundancy_prevention(self):
-        assert "Redundancy Prevention Check" in _SYSTEM
-
-    # --- Structure Framework ---
-
-    def test_contains_proven_structure_framework(self):
-        assert "Proven Structure Framework" in _SYSTEM
-
-    def test_contains_hi_friend_opening(self):
-        assert '"Hi Friend,"' in _SYSTEM
-
-    def test_contains_option_1_natural_narrative(self):
-        assert "Natural Narrative Connection" in _SYSTEM
-
-    def test_contains_option_2_responsive(self):
-        assert "Responsive Approach" in _SYSTEM
-
-    def test_contains_option_3_direct_subscriber(self):
-        assert "Direct Subscriber Request" in _SYSTEM
-
-    def test_contains_methodology_statement_variations(self):
-        assert "Methodology Statement Variations" in _SYSTEM
-
-    def test_contains_ps_element(self):
-        assert "P.S. Element" in _SYSTEM
-
-    # --- Voice and Tone ---
-
-    def test_contains_voice_and_tone_guidelines(self):
-        assert "Voice and Tone Guidelines" in _SYSTEM
-
-    def test_contains_reader_as_hero(self):
-        assert "Reader-as-Hero Positioning" in _SYSTEM
-
-    def test_contains_conversational_warmth(self):
-        assert "Conversational Warmth with Professional Authority" in _SYSTEM
-
-    def test_contains_authentic_responsiveness(self):
-        assert "Authentic Responsiveness" in _SYSTEM
-
-    def test_contains_never_fabricate(self):
-        assert "Never fabricate subscriber quotes" in _SYSTEM
-
-    # --- Content Adaptation ---
-
-    def test_contains_length_standard(self):
-        assert "100-120 words maximum" in _SYSTEM
-
-    def test_contains_technical_strategic_content(self):
-        assert "Technical/Strategic Content" in _SYSTEM
-
-    def test_contains_practical_implementation_content(self):
-        assert "Practical/Implementation Content" in _SYSTEM
-
-    # --- Quality Control ---
-
-    def test_contains_quality_control_framework(self):
-        assert "Quality Control Framework" in _SYSTEM
-
-    def test_contains_unique_value_question(self):
-        assert "Unique Value" in _SYSTEM
-
-    def test_contains_redundancy_check_question(self):
-        assert "Redundancy Check" in _SYSTEM
-
-    def test_contains_authentic_connection_question(self):
-        assert "Authentic Connection" in _SYSTEM
-
-    def test_contains_fresh_positioning_question(self):
-        assert "Fresh Positioning" in _SYSTEM
-
-    def test_contains_avoid_em_dashes(self):
-        assert "Avoids em-dashes" in _SYSTEM
-
-    # --- Success Indicators ---
-
-    def test_contains_success_indicators(self):
-        assert "Success Indicators" in _SYSTEM
-
-    def test_contains_common_issues_to_avoid(self):
-        assert "Common Issues to Avoid" in _SYSTEM
-
-    # --- Continuous Improvement ---
-
-    def test_contains_continuous_improvement(self):
-        assert "Continuous Improvement" in _SYSTEM
-
-    def test_contains_voice_evolution(self):
-        assert "Voice Evolution" in _SYSTEM
+    def test_contains_output_integrity_section(self):
+        assert "Output Integrity" in _SYSTEM
 
     def test_no_feedback_section_in_system_prompt(self):
         """Feedback is injected in the user prompt, not the system prompt."""

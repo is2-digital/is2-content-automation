@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ica.llm_configs import get_process_prompts
+from ica.llm_configs.loader import get_system_prompt
 from ica.prompts.linkedin_carousel import (
     build_linkedin_carousel_prompt,
     build_linkedin_regeneration_prompt,
@@ -19,117 +20,22 @@ _REGEN_SYSTEM, _REGEN_INSTRUCTION = get_process_prompts("linkedin-regeneration")
 
 
 class TestLinkedInCarouselSystemPrompt:
-    """Verify the generation system prompt contains all required sections."""
+    """Verify the generation system prompt is the shared system prompt."""
 
-    def test_contains_role(self):
-        assert "expert editorial AI" in _CAROUSEL_SYSTEM
+    def test_is_shared_system_prompt(self):
+        assert _CAROUSEL_SYSTEM == get_system_prompt()
 
-    def test_contains_b2b_context(self):
-        assert "B2B AI newsletters" in _CAROUSEL_SYSTEM
+    def test_is_string(self):
+        assert isinstance(_CAROUSEL_SYSTEM, str)
 
-    def test_contains_linkedin_carousel(self):
-        assert "LinkedIn carousel" in _CAROUSEL_SYSTEM
+    def test_not_empty(self):
+        assert len(_CAROUSEL_SYSTEM) > 0
 
-    # --- Source rules ---
+    def test_contains_data_integrity(self):
+        assert "Data Integrity" in _CAROUSEL_SYSTEM
 
-    def test_contains_critical_source_rules(self):
-        assert "CRITICAL SOURCE RULES" in _CAROUSEL_SYSTEM
-
-    def test_contains_formatted_theme_source_of_truth(self):
-        assert "formattedTheme is the source of truth" in _CAROUSEL_SYSTEM
-
-    def test_contains_no_invent_urls(self):
-        assert "DO NOT invent or infer URLs" in _CAROUSEL_SYSTEM
-
-    # --- Article order ---
-
-    def test_contains_article_order(self):
-        assert "ARTICLE ORDER (MUST BE PRESERVED)" in _CAROUSEL_SYSTEM
-
-    def test_contains_all_article_types(self):
-        assert "FEATURED ARTICLE" in _CAROUSEL_SYSTEM
-        assert "MAIN ARTICLE 1" in _CAROUSEL_SYSTEM
-        assert "MAIN ARTICLE 2" in _CAROUSEL_SYSTEM
-        assert "QUICK HIT 1" in _CAROUSEL_SYSTEM
-        assert "QUICK HIT 2" in _CAROUSEL_SYSTEM
-        assert "QUICK HIT 3" in _CAROUSEL_SYSTEM
-        assert "INDUSTRY DEVELOPMENT 1" in _CAROUSEL_SYSTEM
-        assert "INDUSTRY DEVELOPMENT 2" in _CAROUSEL_SYSTEM
-
-    # --- Voice & tone ---
-
-    def test_contains_voice_and_tone(self):
-        assert "VOICE & TONE" in _CAROUSEL_SYSTEM
-
-    def test_contains_professional_tone(self):
-        assert "Professional, conversational, and authoritative" in _CAROUSEL_SYSTEM
-
-    # --- Technical specifications ---
-
-    def test_contains_technical_specs(self):
-        assert "TECHNICAL SPECIFICATIONS" in _CAROUSEL_SYSTEM
-
-    def test_contains_slide_body_char_range(self):
-        assert "265-315 characters" in _CAROUSEL_SYSTEM
-
-    def test_contains_target_290(self):
-        assert "~290 characters" in _CAROUSEL_SYSTEM
-
-    def test_contains_paragraph_1_range(self):
-        assert "120-150 characters" in _CAROUSEL_SYSTEM
-
-    def test_contains_paragraph_2_range(self):
-        assert "130-150 characters" in _CAROUSEL_SYSTEM
-
-    def test_contains_tldr_bullet_target(self):
-        assert "~50 characters target" in _CAROUSEL_SYSTEM
-
-    # --- LinkedIn post copy ---
-
-    def test_contains_post_copy_section(self):
-        assert "LINKEDIN POST COPY (3 VERSIONS)" in _CAROUSEL_SYSTEM
-
-    def test_contains_feeling_behind_hook(self):
-        assert "Feeling behind on AI" in _CAROUSEL_SYSTEM
-
-    def test_contains_is2_digital(self):
-        assert "iS2 Digital" in _CAROUSEL_SYSTEM
-
-    def test_contains_3_4_lines(self):
-        assert "3-4 short, scannable lines" in _CAROUSEL_SYSTEM
-
-    # --- Carousel content ---
-
-    def test_contains_tldr_section(self):
-        assert "TL;DR SECTION" in _CAROUSEL_SYSTEM
-
-    def test_contains_8_bullets(self):
-        assert "8 bullets total" in _CAROUSEL_SYSTEM
-
-    def test_contains_slides_3_10(self):
-        assert "SLIDES 3-10" in _CAROUSEL_SYSTEM
-
-    def test_contains_character_errors_handling(self):
-        assert "character_errors" in _CAROUSEL_SYSTEM
-
-    # --- Slack formatting ---
-
-    def test_contains_slack_formatting_rules(self):
-        assert "SLACK FORMATTING RULES" in _CAROUSEL_SYSTEM
-
-    def test_contains_single_asterisks_rule(self):
-        assert "single asterisks" in _CAROUSEL_SYSTEM
-
-    def test_contains_no_double_asterisks(self):
-        assert "Do NOT use **double asterisks**" in _CAROUSEL_SYSTEM
-
-    # --- Final rules ---
-
-    def test_contains_final_execution_rules(self):
-        assert "FINAL EXECUTION RULES" in _CAROUSEL_SYSTEM
-
-    def test_contains_no_add_remove_slides(self):
-        assert "Do NOT add or remove slides" in _CAROUSEL_SYSTEM
+    def test_contains_output_integrity(self):
+        assert "Output Integrity" in _CAROUSEL_SYSTEM
 
 
 # ===========================================================================
@@ -170,49 +76,22 @@ class TestLinkedInCarouselUserPrompt:
 
 
 class TestLinkedInRegenerationSystemPrompt:
-    """Verify the regeneration system prompt."""
+    """Verify the regeneration system prompt is the shared system prompt."""
 
-    def test_contains_revision_pass(self):
-        assert "revision pass" in _REGEN_SYSTEM
+    def test_is_shared_system_prompt(self):
+        assert _REGEN_SYSTEM == get_system_prompt()
 
-    def test_contains_not_new_generation(self):
-        assert "not a new generation" in _REGEN_SYSTEM
+    def test_is_string(self):
+        assert isinstance(_REGEN_SYSTEM, str)
 
-    # --- Critical execution rules ---
+    def test_not_empty(self):
+        assert len(_REGEN_SYSTEM) > 0
 
-    def test_contains_critical_rules(self):
-        assert "CRITICAL EXECUTION RULES" in _REGEN_SYSTEM
+    def test_contains_data_integrity(self):
+        assert "Data Integrity" in _REGEN_SYSTEM
 
-    def test_contains_source_of_truth(self):
-        assert "source of truth" in _REGEN_SYSTEM
-
-    def test_contains_apply_only_feedback(self):
-        assert "Apply ONLY the feedback" in _REGEN_SYSTEM
-
-    def test_contains_do_not_recreate(self):
-        assert "Do NOT recreate content" in _REGEN_SYSTEM
-
-    def test_contains_preserve_voice(self):
-        assert "Preserve voice, tone, and framing" in _REGEN_SYSTEM
-
-    # --- Structure locked ---
-
-    def test_contains_structure_locked(self):
-        assert "STRUCTURE & ORDER (LOCKED)" in _REGEN_SYSTEM
-
-    def test_contains_unchanged_rules(self):
-        assert "Article order must remain unchanged" in _REGEN_SYSTEM
-        assert "Slide numbering must remain unchanged" in _REGEN_SYSTEM
-
-    # --- Technical specs ---
-
-    def test_contains_char_range(self):
-        assert "265-315 characters" in _REGEN_SYSTEM
-
-    # --- Slack formatting ---
-
-    def test_contains_slack_formatting(self):
-        assert "SLACK FORMATTING RULES" in _REGEN_SYSTEM
+    def test_contains_output_integrity(self):
+        assert "Output Integrity" in _REGEN_SYSTEM
 
 
 # ===========================================================================

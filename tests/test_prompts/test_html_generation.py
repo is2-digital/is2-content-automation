@@ -67,7 +67,12 @@ SAMPLE_PREVIOUS_HTML = """\
 
 
 class TestHtmlGenerationSystemPrompt:
-    """Tests for the _GEN_SYSTEM constant."""
+    """Tests for the _GEN_SYSTEM constant (shared system prompt)."""
+
+    def test_is_shared_system_prompt(self) -> None:
+        from ica.llm_configs.loader import get_system_prompt
+
+        assert _GEN_SYSTEM == get_system_prompt()
 
     def test_prompt_is_string(self) -> None:
         assert isinstance(_GEN_SYSTEM, str)
@@ -75,82 +80,11 @@ class TestHtmlGenerationSystemPrompt:
     def test_prompt_is_not_empty(self) -> None:
         assert len(_GEN_SYSTEM) > 0
 
-    def test_contains_role(self) -> None:
-        assert "HTML rendering engine" in _GEN_SYSTEM
+    def test_contains_data_integrity_section(self) -> None:
+        assert "Data Integrity" in _GEN_SYSTEM
 
-    def test_contains_feedback_placeholder(self) -> None:
-        assert "{feedback_section}" in _GEN_SYSTEM
-
-    def test_contains_template_preservation_rules(self) -> None:
-        assert "TEMPLATE PRESERVATION RULES" in _GEN_SYSTEM
-        assert "NON-NEGOTIABLE" in _GEN_SYSTEM
-
-    def test_contains_do_not_modify_list(self) -> None:
-        rules = [
-            "CSS class names",
-            "Inline style attributes",
-            "Table structures",
-            "HTML hierarchy or nesting",
-        ]
-        for rule in rules:
-            assert rule in _GEN_SYSTEM
-
-    def test_contains_all_seven_sections(self) -> None:
-        sections = [
-            "INTRODUCTION",
-            "QUICK HIGHLIGHTS",
-            "FEATURED ARTICLE",
-            "MAIN ARTICLES",
-            "QUICK HITS",
-            "INDUSTRY DEVELOPMENTS",
-            "FOOTER",
-        ]
-        for section in sections:
-            assert section in _GEN_SYSTEM
-
-    def test_contains_html_class_mappings(self) -> None:
-        classes = [
-            "nl-content nl-intro",
-            "nl-quick-highlights",
-            "nl-content nl-main",
-            "nl-article-box",
-            "nl-quick-hits",
-            "nl-industry",
-            "nl-footer",
-        ]
-        for cls in classes:
-            assert cls in _GEN_SYSTEM
-
-    def test_contains_link_requirement(self) -> None:
-        assert 'target="_blank"' in _GEN_SYSTEM
-
-    def test_contains_title_date_insertion(self) -> None:
-        assert "Artificially Intelligent, Actually Useful" in _GEN_SYSTEM
-        assert "nl-date" in _GEN_SYSTEM
-
-    def test_contains_self_check(self) -> None:
-        assert "FINAL SELF-CHECK" in _GEN_SYSTEM
-
-    def test_contains_output_requirements(self) -> None:
-        assert "Output only valid HTML" in _GEN_SYSTEM
-        assert "Do not include explanations" in _GEN_SYSTEM
-
-    def test_footer_rules(self) -> None:
-        assert "Alright, that's a wrap for the week!" in _GEN_SYSTEM
-        assert "Thoughts?" in _GEN_SYSTEM
-
-    def test_cta_button_rules(self) -> None:
-        assert "CTA button" in _GEN_SYSTEM
-
-    def test_source_link_rules(self) -> None:
-        assert "nl-source-link" in _GEN_SYSTEM
-
-    def test_bold_emphasis_rules(self) -> None:
-        assert "Preserve bold emphasis" in _GEN_SYSTEM
-
-    def test_no_n8n_expression_syntax(self) -> None:
-        assert "$json" not in _GEN_SYSTEM
-        assert "$(" not in _GEN_SYSTEM
+    def test_contains_output_integrity_section(self) -> None:
+        assert "Output Integrity" in _GEN_SYSTEM
 
 
 class TestHtmlGenerationUserPrompt:
@@ -175,54 +109,21 @@ class TestHtmlGenerationUserPrompt:
 
 
 class TestHtmlRegenerationSystemPrompt:
-    """Tests for the _REGEN_SYSTEM constant."""
+    """Tests for the _REGEN_SYSTEM constant (shared system prompt)."""
+
+    def test_is_shared_system_prompt(self) -> None:
+        from ica.llm_configs.loader import get_system_prompt
+
+        assert _REGEN_SYSTEM == get_system_prompt()
 
     def test_prompt_is_string(self) -> None:
         assert isinstance(_REGEN_SYSTEM, str)
 
-    def test_contains_scoped_update_role(self) -> None:
-        assert "scoped update mode" in _REGEN_SYSTEM
+    def test_contains_data_integrity_section(self) -> None:
+        assert "Data Integrity" in _REGEN_SYSTEM
 
-    def test_contains_not_full_regeneration(self) -> None:
-        assert "not a full regeneration" in _REGEN_SYSTEM
-
-    def test_contains_five_inputs(self) -> None:
-        assert "Previously Generated HTML" in _REGEN_SYSTEM
-        assert "Final Generated Markdown Content" in _REGEN_SYSTEM
-        assert "HTML Template" in _REGEN_SYSTEM
-        assert "User Feedback" in _REGEN_SYSTEM
-        assert "Newsletter Date" in _REGEN_SYSTEM
-
-    def test_contains_scope_enforcement(self) -> None:
-        assert "SCOPE ENFORCEMENT" in _REGEN_SYSTEM
-
-    def test_contains_must_rules(self) -> None:
-        assert "Identify which section(s) the feedback refers to" in _REGEN_SYSTEM
-        assert "Modify only those sections" in _REGEN_SYSTEM
-
-    def test_contains_must_not_rules(self) -> None:
-        assert "Re-render the entire newsletter" in _REGEN_SYSTEM
-        assert "Touch sections not mentioned in feedback" in _REGEN_SYSTEM
-
-    def test_contains_allowed_modifications(self) -> None:
-        assert "Text changes" in _REGEN_SYSTEM
-        assert "Link updates" in _REGEN_SYSTEM
-        assert "Emphasis changes" in _REGEN_SYSTEM
-
-    def test_contains_guarantee_clause(self) -> None:
-        assert "GUARANTEE CLAUSE" in _REGEN_SYSTEM
-        assert "make no modification" in _REGEN_SYSTEM
-
-    def test_contains_output_requirements(self) -> None:
-        assert "Output only valid HTML" in _REGEN_SYSTEM
-        assert "Return the entire HTML document" in _REGEN_SYSTEM
-
-    def test_contains_self_check(self) -> None:
-        assert "FINAL SELF-CHECK" in _REGEN_SYSTEM
-
-    def test_no_n8n_expression_syntax(self) -> None:
-        assert "$json" not in _REGEN_SYSTEM
-        assert "$(" not in _REGEN_SYSTEM
+    def test_contains_output_integrity_section(self) -> None:
+        assert "Output Integrity" in _REGEN_SYSTEM
 
 
 class TestHtmlRegenerationUserPrompt:
@@ -265,13 +166,15 @@ class TestBuildHtmlGenerationPrompt:
         assert isinstance(system, str)
         assert isinstance(user, str)
 
-    def test_system_prompt_contains_role(self) -> None:
+    def test_system_prompt_is_shared(self) -> None:
+        from ica.llm_configs.loader import get_system_prompt
+
         system, _ = build_html_generation_prompt(
             SAMPLE_MARKDOWN,
             SAMPLE_HTML_TEMPLATE,
             SAMPLE_DATE,
         )
-        assert "HTML rendering engine" in system
+        assert system == get_system_prompt()
 
     def test_user_prompt_contains_markdown(self) -> None:
         _, user = build_html_generation_prompt(
@@ -305,15 +208,16 @@ class TestBuildHtmlGenerationPrompt:
         )
         assert "Editorial Improvement Context" not in system
 
-    def test_feedback_section_with_feedback(self) -> None:
+    def test_feedback_does_not_alter_shared_system_prompt(self) -> None:
+        from ica.llm_configs.loader import get_system_prompt
+
         system, _ = build_html_generation_prompt(
             SAMPLE_MARKDOWN,
             SAMPLE_HTML_TEMPLATE,
             SAMPLE_DATE,
             aggregated_feedback=SAMPLE_AGGREGATED_FEEDBACK,
         )
-        assert "Editorial Improvement Context" in system
-        assert SAMPLE_AGGREGATED_FEEDBACK in system
+        assert system == get_system_prompt()
 
     def test_feedback_section_none(self) -> None:
         system, _ = build_html_generation_prompt(

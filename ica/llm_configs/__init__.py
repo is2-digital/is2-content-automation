@@ -7,6 +7,7 @@ files that externalize model selection and prompt content.
 from ica.llm_configs.loader import (
     get_process_model,
     get_process_prompts,
+    get_system_prompt,
     load_process_config,
 )
 from ica.llm_configs.schema import (
@@ -25,5 +26,6 @@ __all__ = [
     "SystemPromptMetadata",
     "get_process_model",
     "get_process_prompts",
+    "get_system_prompt",
     "load_process_config",
 ]

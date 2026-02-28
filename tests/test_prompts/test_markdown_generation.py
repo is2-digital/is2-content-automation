@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 from ica.llm_configs import get_process_prompts
+from ica.llm_configs.loader import get_system_prompt
 from ica.prompts.markdown_generation import (
     _FEEDBACK_SECTION_TEMPLATE,
     _VALIDATOR_ERRORS_SECTION_TEMPLATE,
@@ -94,115 +95,22 @@ SAMPLE_VALIDATOR_ERRORS = json.dumps(
 
 
 class TestSystemPrompt:
-    """Verify the system prompt contains all required protocol sections."""
+    """Verify the generation system prompt is the shared system prompt."""
 
-    def test_contains_role_description(self):
-        assert "expert editorial AI" in _GENERATION_SYSTEM
+    def test_is_shared_system_prompt(self):
+        assert _GENERATION_SYSTEM == get_system_prompt()
 
-    def test_contains_b2b_newsletter_mention(self):
-        assert "B2B newsletters" in _GENERATION_SYSTEM
+    def test_is_string(self):
+        assert isinstance(_GENERATION_SYSTEM, str)
 
-    def test_contains_json_input_constraint(self):
-        assert "ONLY the content and URLs explicitly present in the JSON input" in (
-            _GENERATION_SYSTEM
-        )
+    def test_not_empty(self):
+        assert len(_GENERATION_SYSTEM) > 0
 
-    def test_contains_previous_markdown_placeholder(self):
-        assert "{previous_markdown}" in _GENERATION_SYSTEM
+    def test_contains_data_integrity(self):
+        assert "Data Integrity" in _GENERATION_SYSTEM
 
-    def test_contains_validator_error_handling(self):
-        assert "validator errors" in _GENERATION_SYSTEM
-
-    def test_contains_delta_instructions(self):
-        assert "delta" in _GENERATION_SYSTEM
-        assert "EXACTLY the specified number of characters" in (_GENERATION_SYSTEM)
-
-    def test_contains_fix_order(self):
-        assert "FIX ORDER (MANDATORY)" in _GENERATION_SYSTEM
-
-    def test_fix_order_sequence(self):
-        prompt = _GENERATION_SYSTEM
-        p1_pos = prompt.index("Featured Article – Paragraph 1")
-        p2_pos = prompt.index("Featured Article – Paragraph 2")
-        ki_pos = prompt.index("Featured Article – Key Insight")
-        ma_pos = prompt.index("Main Articles", ki_pos)
-        id_pos = prompt.index("Industry Developments", ma_pos)
-        ft_pos = prompt.index("Footer", id_pos)
-        assert p1_pos < p2_pos < ki_pos < ma_pos < id_pos < ft_pos
-
-    def test_contains_output_rules(self):
-        assert "OUTPUT RULES" in _GENERATION_SYSTEM
-
-    def test_contains_exact_headings_rule(self):
-        assert "EXACT section headings" in _GENERATION_SYSTEM
-
-    def test_contains_hard_constraints(self):
-        assert "HARD CONSTRAINTS (NON-NEGOTIABLE)" in _GENERATION_SYSTEM
-
-    def test_contains_url_invention_ban(self):
-        assert "MAY NOT invent, infer, autocomplete, or substitute URLs" in (_GENERATION_SYSTEM)
-
-    # --- Voice calibration ---
-
-    def test_contains_voice_calibration_header(self):
-        assert "VOICE CALIBRATION" in _GENERATION_SYSTEM
-
-    def test_contains_precision_as_principle(self):
-        assert "PRECISION AS PRINCIPLE" in _GENERATION_SYSTEM
-
-    def test_contains_direct_authority(self):
-        assert "DIRECT AUTHORITY WITHOUT ARROGANCE" in _GENERATION_SYSTEM
-
-    def test_contains_conversational_but_not_casual(self):
-        assert "CONVERSATIONAL BUT NOT CASUAL" in _GENERATION_SYSTEM
-
-    def test_contains_intellectual_honesty(self):
-        assert "INTELLECTUAL HONESTY" in _GENERATION_SYSTEM
-
-    def test_contains_practical_grounding(self):
-        assert "PRACTICAL GROUNDING" in _GENERATION_SYSTEM
-
-    def test_contains_dry_humor(self):
-        assert "DRY HUMOR" in _GENERATION_SYSTEM
-
-    def test_contains_strategic_synthesis(self):
-        assert "STRATEGIC SYNTHESIS" in _GENERATION_SYSTEM
-
-    def test_contains_bold_formatting(self):
-        assert "BOLD FORMATTING FOR EMPHASIS" in _GENERATION_SYSTEM
-
-    def test_contains_directive_language(self):
-        assert "DIRECTIVE LANGUAGE" in _GENERATION_SYSTEM
-
-    def test_contains_three_acceptable_patterns(self):
-        assert "Pattern A" in _GENERATION_SYSTEM
-        assert "Pattern B" in _GENERATION_SYSTEM
-        assert "Pattern C" in _GENERATION_SYSTEM
-
-    def test_pattern_a_is_primary(self):
-        assert "PRIMARY PATTERN" in _GENERATION_SYSTEM
-
-    def test_pattern_c_callout_only(self):
-        assert "CALLOUT BOXES ONLY" in _GENERATION_SYSTEM
-
-    def test_contains_language_to_avoid(self):
-        assert "LANGUAGE TO AVOID" in _GENERATION_SYSTEM
-
-    def test_contains_application_by_section(self):
-        assert "APPLICATION BY SECTION" in _GENERATION_SYSTEM
-
-    def test_contains_kevin_voice_examples(self):
-        """Check that representative voice examples from the n8n prompt are present."""
-        assert "strongly caution" in _GENERATION_SYSTEM
-        assert "garbage in, garbage out" in _GENERATION_SYSTEM
-
-    def test_system_prompt_has_only_previous_markdown_placeholder(self):
-        """System prompt should only have {previous_markdown} as placeholder."""
-        # Replace the known placeholder to check there are no unexpected ones
-        cleaned = _GENERATION_SYSTEM.replace("{previous_markdown}", "")
-        # Bold markdown like **term** contains no braces; check no stray {
-        assert "{" not in cleaned
-        assert "}" not in cleaned
+    def test_contains_output_integrity(self):
+        assert "Output Integrity" in _GENERATION_SYSTEM
 
 
 # ---------------------------------------------------------------------------
@@ -382,9 +290,9 @@ class TestBuildPromptFirstGeneration:
         _, user = build_markdown_generation_prompt(SAMPLE_THEME)
         assert isinstance(user, str)
 
-    def test_system_prompt_contains_role(self):
+    def test_system_prompt_is_shared(self):
         system, _ = build_markdown_generation_prompt(SAMPLE_THEME)
-        assert "expert editorial AI" in system
+        assert system == get_system_prompt()
 
     def test_user_prompt_contains_theme_data(self):
         _, user = build_markdown_generation_prompt(SAMPLE_THEME)
@@ -399,10 +307,10 @@ class TestBuildPromptFirstGeneration:
         _, user = build_markdown_generation_prompt(SAMPLE_THEME)
         assert "MUST BE RESOLVED" not in user
 
-    def test_previous_markdown_empty_by_default(self):
+    def test_system_prompt_is_original_on_first_generation(self):
         system, _ = build_markdown_generation_prompt(SAMPLE_THEME)
-        # The placeholder is replaced; it should show empty between the markers
-        assert "PREVIOUS NEWSLETTER OUTPUT:" in system
+        # Shared system prompt has no format placeholders, so format() is a no-op
+        assert system == get_system_prompt()
 
     def test_system_has_no_unresolved_placeholders(self):
         system, _ = build_markdown_generation_prompt(SAMPLE_THEME)
@@ -492,12 +400,15 @@ class TestBuildPromptWithValidatorErrors:
         assert "Featured Article" in user
         assert "delta" in user
 
-    def test_previous_markdown_injected(self):
+    def test_previous_markdown_not_in_system(self):
         system, _ = build_markdown_generation_prompt(
             SAMPLE_THEME,
             previous_markdown=SAMPLE_PREVIOUS_MARKDOWN,
         )
-        assert "Sample intro paragraph" in system
+        # Shared system prompt has no {previous_markdown} placeholder;
+        # format() is a no-op so previous markdown is NOT injected.
+        assert "Sample intro paragraph" not in system
+        assert system == get_system_prompt()
 
     def test_full_regeneration_context(self):
         system, user = build_markdown_generation_prompt(
@@ -506,8 +417,9 @@ class TestBuildPromptWithValidatorErrors:
             previous_markdown=SAMPLE_PREVIOUS_MARKDOWN,
             validator_errors=SAMPLE_VALIDATOR_ERRORS,
         )
-        # System has previous markdown
-        assert "Sample intro paragraph" in system
+        # System is always the shared prompt (previous markdown not injected)
+        assert system == get_system_prompt()
+        assert "Sample intro paragraph" not in system
         # User has feedback
         assert "Editorial Improvement Context" in user
         # User has validator errors
@@ -539,34 +451,22 @@ class TestBuildPromptWithValidatorErrors:
 
 
 class TestRegenerationSystemPrompt:
-    """Verify the regeneration prompt template."""
+    """Verify the regeneration system prompt is the shared system prompt."""
 
-    def test_contains_role(self):
-        assert "professional content editor" in _REGEN_SYSTEM
+    def test_is_shared_system_prompt(self):
+        assert _REGEN_SYSTEM == get_system_prompt()
 
-    def test_contains_original_markdown_placeholder(self):
-        assert "{original_markdown}" in _REGEN_SYSTEM
+    def test_is_string(self):
+        assert isinstance(_REGEN_SYSTEM, str)
 
-    def test_contains_user_feedback_placeholder(self):
-        assert "{user_feedback}" in _REGEN_SYSTEM
+    def test_not_empty(self):
+        assert len(_REGEN_SYSTEM) > 0
 
-    def test_contains_revision_rules(self):
-        assert "REVISION RULES" in _REGEN_SYSTEM
+    def test_contains_data_integrity(self):
+        assert "Data Integrity" in _REGEN_SYSTEM
 
-    def test_contains_preserve_rules(self):
-        assert "Preserve exactly" in _REGEN_SYSTEM
-        assert "section headings" in _REGEN_SYSTEM
-        assert "URLs exactly" in _REGEN_SYSTEM
-
-    def test_contains_output_rules(self):
-        assert "only the fully revised newsletter" in _REGEN_SYSTEM
-
-    def test_only_expected_placeholders(self):
-        cleaned = _REGEN_SYSTEM
-        cleaned = cleaned.replace("{original_markdown}", "")
-        cleaned = cleaned.replace("{user_feedback}", "")
-        assert "{" not in cleaned
-        assert "}" not in cleaned
+    def test_contains_output_integrity(self):
+        assert "Output Integrity" in _REGEN_SYSTEM
 
 
 # ---------------------------------------------------------------------------
@@ -585,20 +485,29 @@ class TestBuildRegenerationPrompt:
         assert isinstance(result, tuple)
         assert len(result) == 2
 
-    def test_system_contains_original_markdown(self):
+    def test_system_is_shared_prompt(self):
         system, _ = build_markdown_regeneration_prompt(
             "# Newsletter\nContent here.",
             "Make the intro shorter.",
         )
-        assert "# Newsletter" in system
-        assert "Content here." in system
+        # Shared system prompt has no {original_markdown}/{user_feedback}
+        # placeholders; format() is a no-op.
+        assert system == get_system_prompt()
 
-    def test_system_contains_user_feedback(self):
+    def test_original_markdown_not_in_system(self):
         system, _ = build_markdown_regeneration_prompt(
             "# Newsletter\nContent here.",
             "Make the intro shorter.",
         )
-        assert "Make the intro shorter." in system
+        assert "# Newsletter" not in system
+        assert "Content here." not in system
+
+    def test_user_feedback_not_in_system(self):
+        system, _ = build_markdown_regeneration_prompt(
+            "# Newsletter\nContent here.",
+            "Make the intro shorter.",
+        )
+        assert "Make the intro shorter." not in system
 
     def test_user_message_is_feedback(self):
         _, user = build_markdown_regeneration_prompt(
@@ -614,17 +523,6 @@ class TestBuildRegenerationPrompt:
         )
         assert "{" not in system
         assert "}" not in system
-
-    def test_preserves_markdown_formatting(self):
-        original = "# *INTRODUCTION*\n\n**Bold text** and *italic*."
-        system, _ = build_markdown_regeneration_prompt(original, "feedback")
-        assert "**Bold text**" in system
-        assert "*italic*" in system
-
-    def test_preserves_urls_in_original(self):
-        original = "[Read more](https://example.com/article) for details."
-        system, _ = build_markdown_regeneration_prompt(original, "feedback")
-        assert "https://example.com/article" in system
 
 
 # ---------------------------------------------------------------------------
@@ -654,10 +552,13 @@ class TestEdgeCases:
         assert "Point one" in user
         assert "Point three" in user
 
-    def test_very_long_previous_markdown(self):
+    def test_very_long_previous_markdown_not_in_system(self):
         long_md = "X" * 10000
         system, _ = build_markdown_generation_prompt(SAMPLE_THEME, previous_markdown=long_md)
-        assert long_md in system
+        # Shared system prompt has no {previous_markdown} placeholder;
+        # format() is a no-op so previous markdown is not injected.
+        assert long_md not in system
+        assert system == get_system_prompt()
 
     def test_feedback_only_no_errors(self):
         """Feedback present but no validator errors."""

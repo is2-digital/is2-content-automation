@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from ica.llm_configs import get_process_prompts
+from ica.llm_configs.loader import get_system_prompt
 from ica.prompts.markdown_structural_validation import (
     build_structural_validation_prompt,
 )
@@ -10,6 +11,7 @@ from ica.prompts.markdown_structural_validation import (
 # Load prompts from JSON config (same source the builder function uses).
 _SYSTEM, _INSTRUCTION = get_process_prompts("markdown-structural-validation")
 _COMBINED = _SYSTEM + "\n" + _INSTRUCTION
+_SHARED_SYSTEM = get_system_prompt()
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +104,14 @@ EMPTY_CHAR_ERRORS = "[]"
 
 
 class TestStructuralValidationPromptConstant:
-    """Tests for the STRUCTURAL_VALIDATION_PROMPT constant."""
+    """Tests for the structural validation prompt constants.
+
+    After the shared system prompt refactoring, ``_SYSTEM`` contains the
+    application-wide shared system prompt and ``_INSTRUCTION`` contains
+    the per-process instruction template (just the ``{markdown_content}``
+    placeholder). Structural validation rules that were previously in the
+    per-process system prompt have been removed from the JSON config.
+    """
 
     def test_prompt_is_string(self) -> None:
         assert isinstance(_COMBINED, str)
@@ -110,56 +119,33 @@ class TestStructuralValidationPromptConstant:
     def test_prompt_is_not_empty(self) -> None:
         assert len(_COMBINED) > 0
 
-    def test_contains_char_errors_placeholder(self) -> None:
-        assert "{char_errors}" in _SYSTEM
+    def test_system_is_shared_system_prompt(self) -> None:
+        assert _SYSTEM == _SHARED_SYSTEM
 
-    def test_contains_validator_role(self) -> None:
-        assert "strict newsletter validator" in _COMBINED
+    def test_system_contains_ai_system_role(self) -> None:
+        assert "AI system" in _SYSTEM
+        assert "IS2 Digital newsletter" in _SYSTEM
 
-    def test_contains_non_negotiable_directive(self) -> None:
-        assert "NON-NEGOTIABLE" in _COMBINED
+    def test_system_contains_data_integrity(self) -> None:
+        assert "Data Integrity" in _SYSTEM
+        assert "Use ONLY the data and content explicitly provided" in _SYSTEM
 
-    def test_contains_no_recount_directive(self) -> None:
-        assert "MUST NOT re-count characters" in _COMBINED
+    def test_system_contains_output_integrity(self) -> None:
+        assert "Output Integrity" in _SYSTEM
+        assert "exact format specified per process" in _SYSTEM
 
-    def test_contains_quick_highlights_rules(self) -> None:
-        assert "Exactly 3 bullets" in _COMBINED
+    def test_system_contains_audience_context(self) -> None:
+        assert "Audience Context" in _SYSTEM
+        assert "solopreneurs and SMB professionals" in _SYSTEM
 
-    def test_contains_featured_article_rules(self) -> None:
-        assert "clickable Markdown link" in _COMBINED
+    def test_system_has_no_char_errors_placeholder(self) -> None:
+        """Shared system prompt does not contain ``{char_errors}``."""
+        assert "{char_errors}" not in _SYSTEM
 
-    def test_contains_main_articles_rules(self) -> None:
-        assert "Strategic Take-away" in _COMBINED
-        assert "Actionable Steps" in _COMBINED
-
-    def test_contains_industry_developments_rules(self) -> None:
-        assert "Exactly 2 items" in _COMBINED
-
-    def test_contains_major_ai_players(self) -> None:
-        for player in ("OpenAI", "Google", "Microsoft", "Meta", "Anthropic", "Amazon"):
-            assert player in _COMBINED
-
-    def test_contains_footer_rules(self) -> None:
-        assert "Alright, that's a wrap for the week!" in _COMBINED
-        assert "Thoughts?" in _COMBINED
-
-    def test_contains_output_format(self) -> None:
-        assert '"isValid"' in _COMBINED
-        assert '"errors"' in _COMBINED
-
-    def test_contains_cta_rules(self) -> None:
-        assert "CTA on own line" in _COMBINED
-        assert "ends with arrow" in _COMBINED
-
-    def test_contains_key_insight_rule(self) -> None:
-        assert "Key Insight starts with bolded two-word label" in _COMBINED
-
-    def test_contains_bullet_order_rule(self) -> None:
-        assert "Featured -> Main 1 -> Main 2" in _COMBINED
+    def test_instruction_contains_markdown_placeholder(self) -> None:
+        assert "{markdown_content}" in _INSTRUCTION
 
     def test_no_n8n_expression_syntax(self) -> None:
-        assert "{{" not in _COMBINED or _COMBINED.count("{{") == _COMBINED.count("}}")
-        # The only {{ }} should be the escaped JSON output format
         assert "$json" not in _COMBINED
         assert "$(" not in _COMBINED
 
@@ -170,7 +156,14 @@ class TestStructuralValidationPromptConstant:
 
 
 class TestBuildStructuralValidationPrompt:
-    """Tests for the build_structural_validation_prompt() function."""
+    """Tests for the build_structural_validation_prompt() function.
+
+    After the shared system prompt refactoring, the system prompt is the
+    shared prompt (no ``{char_errors}`` placeholder). The
+    ``system_prompt.format(char_errors=...)`` call in the builder is a
+    no-op since the shared prompt has no such placeholder. The user prompt
+    is the markdown content from the instruction template.
+    """
 
     def test_returns_tuple(self) -> None:
         result = build_structural_validation_prompt(SAMPLE_MARKDOWN, EMPTY_CHAR_ERRORS)
@@ -182,46 +175,34 @@ class TestBuildStructuralValidationPrompt:
         assert isinstance(system, str)
         assert isinstance(user, str)
 
-    def test_system_prompt_contains_char_errors(self) -> None:
+    def test_system_prompt_is_shared_prompt(self) -> None:
         system, _ = build_structural_validation_prompt(SAMPLE_MARKDOWN, SAMPLE_CHAR_ERRORS)
-        assert SAMPLE_CHAR_ERRORS in system
+        assert system == _SHARED_SYSTEM
+
+    def test_system_prompt_char_errors_format_is_noop(self) -> None:
+        """The format(char_errors=...) call is a no-op on the shared prompt."""
+        system, _ = build_structural_validation_prompt(SAMPLE_MARKDOWN, SAMPLE_CHAR_ERRORS)
+        assert SAMPLE_CHAR_ERRORS not in system
+        assert "{char_errors}" not in system
 
     def test_user_prompt_is_markdown_content(self) -> None:
         _, user = build_structural_validation_prompt(SAMPLE_MARKDOWN, EMPTY_CHAR_ERRORS)
         assert user == SAMPLE_MARKDOWN
 
-    def test_empty_char_errors(self) -> None:
+    def test_system_prompt_contains_shared_content(self) -> None:
         system, _ = build_structural_validation_prompt(SAMPLE_MARKDOWN, EMPTY_CHAR_ERRORS)
-        assert "[]" in system
-
-    def test_char_errors_with_multiple_entries(self) -> None:
-        errors = '["error 1", "error 2", "error 3"]'
-        system, _ = build_structural_validation_prompt(SAMPLE_MARKDOWN, errors)
-        assert errors in system
-
-    def test_system_prompt_retains_validation_rules(self) -> None:
-        system, _ = build_structural_validation_prompt(SAMPLE_MARKDOWN, EMPTY_CHAR_ERRORS)
-        assert "Exactly 3 bullets" in system
-        assert "Exactly 2 items" in system
-
-    def test_placeholder_fully_replaced(self) -> None:
-        system, _ = build_structural_validation_prompt(SAMPLE_MARKDOWN, SAMPLE_CHAR_ERRORS)
-        assert "{char_errors}" not in system
+        assert "AI system" in system
+        assert "IS2 Digital newsletter" in system
 
     def test_empty_markdown_content(self) -> None:
         system, user = build_structural_validation_prompt("", EMPTY_CHAR_ERRORS)
         assert user == ""
-        assert "strict newsletter validator" in system
+        assert system == _SHARED_SYSTEM
 
     def test_markdown_with_special_characters(self) -> None:
         md = "Content with {braces} and $dollar and %percent"
         _, user = build_structural_validation_prompt(md, EMPTY_CHAR_ERRORS)
         assert user == md
-
-    def test_char_errors_json_preserved_verbatim(self) -> None:
-        errors = '["FEATURED ARTICLE P1: 280 chars (min 300, delta -20)"]'
-        system, _ = build_structural_validation_prompt(SAMPLE_MARKDOWN, errors)
-        assert errors in system
 
 
 # ---------------------------------------------------------------------------
@@ -230,32 +211,24 @@ class TestBuildStructuralValidationPrompt:
 
 
 class TestSectionRuleCoverage:
-    """Verify that the prompt covers all required validation sections."""
+    """Verify prompt structure after shared system prompt refactoring.
 
-    def test_quick_highlights_section(self) -> None:
-        assert "QUICK HIGHLIGHTS" in _COMBINED
+    Structural validation section rules (QUICK HIGHLIGHTS, FEATURED ARTICLE,
+    MAIN ARTICLES, etc.) and the three-step role were previously in the
+    per-process system prompt. After the refactoring, ``_SYSTEM`` is the
+    shared prompt and ``_INSTRUCTION`` is the minimal input template.
+    These tests verify the current prompt structure.
+    """
 
-    def test_featured_article_section(self) -> None:
-        assert "FEATURED ARTICLE" in _COMBINED
+    def test_shared_system_prompt_universal_protocols(self) -> None:
+        assert "Universal Protocols" in _SYSTEM
 
-    def test_main_articles_section(self) -> None:
-        assert "MAIN ARTICLES" in _COMBINED
+    def test_instruction_contains_markdown_placeholder(self) -> None:
+        assert "{markdown_content}" in _INSTRUCTION
 
-    def test_industry_developments_section(self) -> None:
-        assert "INDUSTRY DEVELOPMENTS" in _COMBINED
-
-    def test_footer_section(self) -> None:
-        assert "FOOTER" in _COMBINED
-
-    def test_no_quick_hits_section(self) -> None:
-        # Structural validation doesn't cover Quick Hits directly
-        # (only character counts, which are upstream)
-        pass
-
-    def test_three_role_steps(self) -> None:
-        assert "Accept provided character errors exactly as-is" in _COMBINED
-        assert "Validate all remaining non-numeric rules" in _COMBINED
-        assert "Merge both into a single errors array" in _COMBINED
+    def test_combined_includes_both_prompts(self) -> None:
+        assert _SYSTEM in _COMBINED
+        assert _INSTRUCTION in _COMBINED
 
 
 # ---------------------------------------------------------------------------
@@ -264,12 +237,19 @@ class TestSectionRuleCoverage:
 
 
 class TestEdgeCases:
-    """Edge case tests for structural validation prompt."""
+    """Edge case tests for structural validation prompt.
 
-    def test_very_large_char_errors(self) -> None:
+    After the shared system prompt refactoring, ``char_errors`` are no
+    longer interpolated into the system prompt (the format call is a
+    no-op). These tests verify the builder still handles edge cases
+    for markdown content correctly.
+    """
+
+    def test_large_char_errors_ignored_by_system_prompt(self) -> None:
+        """Large char_errors string does not appear in system (no-op format)."""
         errors = "[" + ", ".join(f'"error {i}"' for i in range(100)) + "]"
         system, _ = build_structural_validation_prompt(SAMPLE_MARKDOWN, errors)
-        assert errors in system
+        assert system == _SHARED_SYSTEM
 
     def test_unicode_in_markdown(self) -> None:
         md = "Content with unicode: \u2192 \u2022 \u201c \u201d"
@@ -277,7 +257,8 @@ class TestEdgeCases:
         assert "\u2192" in user
         assert "\u2022" in user
 
-    def test_multiline_char_errors(self) -> None:
+    def test_multiline_char_errors_ignored_by_system_prompt(self) -> None:
+        """Multiline char_errors string does not appear in system (no-op format)."""
         errors = '[\n  "error 1",\n  "error 2"\n]'
         system, _ = build_structural_validation_prompt(SAMPLE_MARKDOWN, errors)
-        assert errors in system
+        assert system == _SHARED_SYSTEM

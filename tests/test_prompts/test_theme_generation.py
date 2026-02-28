@@ -20,39 +20,21 @@ _SYSTEM, _INSTRUCTION = get_process_prompts("theme-generation")
 
 
 class TestSystemPrompt:
-    """Verify the system prompt contains all required protocol sections."""
+    """Verify the system prompt is the shared system prompt."""
 
-    def test_contains_role_description(self):
-        assert "professional AI research editor" in _SYSTEM
+    def test_is_shared_system_prompt(self):
+        from ica.llm_configs.loader import get_system_prompt
 
-    def test_contains_json_format_mention(self):
-        assert "JSON" in _SYSTEM
+        assert _SYSTEM == get_system_prompt()
 
-    def test_contains_accuracy_control_protocol(self):
-        assert "Accuracy Control Protocol (MANDATORY)" in _SYSTEM
+    def test_contains_data_integrity_section(self):
+        assert "Data Integrity" in _SYSTEM
 
-    def test_contains_do_not_search(self):
-        assert "Do NOT search for alternative sources" in _SYSTEM
+    def test_contains_output_integrity_section(self):
+        assert "Output Integrity" in _SYSTEM
 
-    def test_contains_do_not_infer(self):
-        assert "Do NOT generate or infer missing details" in _SYSTEM
-
-    def test_contains_use_only_provided_data(self):
-        assert "Use ONLY provided data" in _SYSTEM
-
-    def test_contains_industry_news_rule(self):
-        assert "industry_news" in _SYSTEM
-        assert "%I1_" in _SYSTEM
-        assert "%I2_" in _SYSTEM
-
-    def test_mentions_two_themes(self):
-        assert "two themes" in _SYSTEM
-
-    def test_mentions_content_distribution(self):
-        assert "content distribution" in _SYSTEM
-
-    def test_mentions_source_mix(self):
-        assert "source mix" in _SYSTEM
+    def test_contains_audience_context_section(self):
+        assert "Audience Context" in _SYSTEM
 
     def test_no_feedback_in_system_prompt(self):
         """Feedback is injected into the user prompt, not the system prompt."""
