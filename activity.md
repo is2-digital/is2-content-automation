@@ -2,7 +2,21 @@
 
 ## Current Status
 **Last Updated:** 2026-02-28
-**Tasks Completed:** ica-dnm, ica-zo5
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys
+
+### 2026-02-28 — ica-45o, ica-6ys: Update PromptEditorService and config_editor for shared system prompt
+- Removed `system` from `_VALID_FIELDS` in `prompt_editor.py` — single-field edit now only supports `instruction`
+- Updated `get_config_summary()` to remove system prompt char count from per-process summaries
+- Added `start_system_edit()` and `sync_system_from_doc()` methods to `PromptEditorService` for editing the shared system prompt via Google Docs
+- Added `_build_system_edit_header()` and `_parse_system_doc_content()` helper functions
+- Added `google_doc_id` field to `SystemPromptMetadata` schema for editing workflow
+- Added `load_system_prompt_config()` and `save_system_prompt()` to loader (+ `__init__.py` exports)
+- Refactored `get_system_prompt()` as a convenience wrapper around `load_system_prompt_config()`
+- Removed `system` section from `build_full_doc_content()`, `apply_doc_changes()`, and `format_sync_summary()` in `config_editor.py`
+- Replaced "System Prompt" column with "Description" in `format_config_table()`
+- Updated `__main__.py`: removed `prompts.system` references from `_config_editor()`, converted `config` command to typer sub-app with `ica config system` subcommand
+- Docker containers not running; manual code review only, no linting/type-checking/tests executed
+- Unblocks ica-7md (test updates for shared system prompt refactoring)
 
 ### 2026-02-28 — ica-zo5: Update ProcessConfig schema to remove system prompt from Prompts model
 - Removed `system` field from `Prompts` Pydantic model in `ica/llm_configs/schema.py`; model now contains only `instruction`

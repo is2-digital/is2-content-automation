@@ -30,14 +30,19 @@ def _config_path(process_name: str) -> Path:
     return _CONFIGS_DIR / f"{process_name}-llm.json"
 
 
-def get_system_prompt() -> str:
-    """Load the shared system prompt from ``system-prompt.json``.
+def _system_prompt_path() -> Path:
+    """Return the path to the shared system prompt JSON file."""
+    return _CONFIGS_DIR / "system-prompt.json"
+
+
+def load_system_prompt_config() -> SystemPromptConfig:
+    """Load the shared system prompt config from ``system-prompt.json``.
 
     Results are cached and automatically invalidated when the file's
     modification time changes.
 
     Returns:
-        The system prompt string.
+        Validated :class:`SystemPromptConfig` instance.
 
     Raises:
         FileNotFoundError: If ``system-prompt.json`` does not exist.
@@ -45,7 +50,7 @@ def get_system_prompt() -> str:
     """
     global _system_prompt_cache
 
-    path = _CONFIGS_DIR / "system-prompt.json"
+    path = _system_prompt_path()
 
     if not path.exists():
         msg = f"System prompt file not found: {path}"
@@ -54,7 +59,7 @@ def get_system_prompt() -> str:
     mtime = path.stat().st_mtime
 
     if _system_prompt_cache is not None and _system_prompt_cache[0] == mtime:
-        return _system_prompt_cache[1].prompt
+        return _system_prompt_cache[1]
 
     raw = path.read_text(encoding="utf-8")
     try:
@@ -71,7 +76,40 @@ def get_system_prompt() -> str:
 
     _system_prompt_cache = (mtime, config)
     logger.debug("Loaded shared system prompt (version %d)", config.metadata.version)
-    return config.prompt
+    return config
+
+
+def get_system_prompt() -> str:
+    """Load the shared system prompt string from ``system-prompt.json``.
+
+    Convenience wrapper around :func:`load_system_prompt_config`.
+
+    Returns:
+        The system prompt string.
+
+    Raises:
+        FileNotFoundError: If ``system-prompt.json`` does not exist.
+        ValueError: If the JSON content fails schema validation.
+    """
+    return load_system_prompt_config().prompt
+
+
+def save_system_prompt(config: SystemPromptConfig) -> None:
+    """Write a SystemPromptConfig back to ``system-prompt.json``.
+
+    Serialises the model using camelCase aliases and invalidates the
+    in-memory cache so the next load reads fresh data.
+
+    Args:
+        config: The system prompt config to persist.
+    """
+    global _system_prompt_cache
+
+    path = _system_prompt_path()
+    data = config.model_dump(by_alias=True)
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    _system_prompt_cache = None
+    logger.debug("Saved shared system prompt (version %d)", config.metadata.version)
 
 
 def load_process_config(process_name: str) -> ProcessConfig:

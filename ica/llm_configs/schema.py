@@ -23,6 +23,7 @@ class Prompts(BaseModel):
 class SystemPromptMetadata(BaseModel):
     """Editing metadata for the shared system prompt config."""
 
+    google_doc_id: str | None = Field(default=None, alias="googleDocId")
     last_synced_at: str | None = Field(default=None, alias="lastSyncedAt")
     version: int = Field(default=1, ge=1)
 

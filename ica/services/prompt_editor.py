@@ -1,11 +1,13 @@
 """Prompt editor service for editing LLM config prompts via Google Docs.
 
-Provides :class:`PromptEditorService` with five operations:
+Provides :class:`PromptEditorService` with seven operations:
 
 * :meth:`start_edit` — open a Google Doc for editing a single prompt field
 * :meth:`sync_from_doc` — pull single-field edits from the Doc back into JSON
 * :meth:`start_full_edit` — open a Google Doc for editing all config fields
 * :meth:`sync_full_from_doc` — pull all-field edits from the Doc back into JSON
+* :meth:`start_system_edit` — open a Google Doc for editing the shared system prompt
+* :meth:`sync_system_from_doc` — pull the shared system prompt from the Doc back into JSON
 * :meth:`get_config_summary` — format config info for Slack display
 
 Usage::
@@ -16,7 +18,7 @@ Usage::
     docs = GoogleDocsService(credentials_path="/path/to/creds.json")
     editor = PromptEditorService(docs)
 
-    url = await editor.start_edit("summarization", "system")
+    url = await editor.start_edit("summarization", "instruction")
     # ... user edits the doc ...
     config = await editor.sync_from_doc("summarization")
 """
@@ -33,7 +35,9 @@ from ica.cli.config_editor import (
 from ica.llm_configs.loader import (
     get_process_model,
     load_process_config,
+    load_system_prompt_config,
     save_process_config,
+    save_system_prompt,
 )
 from ica.llm_configs.schema import ProcessConfig
 from ica.logging import get_logger
@@ -41,7 +45,7 @@ from ica.services.google_docs import GoogleDocsService
 
 logger = get_logger(__name__)
 
-_VALID_FIELDS = ("system", "instruction")
+_VALID_FIELDS = ("instruction",)
 _HEADER_END = "--- END HEADER ---"
 _DOC_URL_TEMPLATE = "https://docs.google.com/document/d/{doc_id}/edit"
 
@@ -55,6 +59,17 @@ def _build_edit_header(process_name: str, field: str, version: int) -> str:
         f"Version: {version}\n"
         "\n"
         "Edit the prompt content below. Do not modify this header.\n"
+        f"{_HEADER_END}\n\n"
+    )
+
+
+def _build_system_edit_header(version: int) -> str:
+    """Build the header block for shared system prompt editing."""
+    return (
+        "--- ICA SYSTEM PROMPT EDITOR ---\n"
+        f"Version: {version}\n"
+        "\n"
+        "Edit the system prompt below. Do not modify this header.\n"
         f"{_HEADER_END}\n\n"
     )
 
@@ -91,6 +106,24 @@ def _parse_doc_content(content: str) -> tuple[str, str]:
     raise ValueError("Doc header is missing the 'Field:' line")
 
 
+def _parse_system_doc_content(content: str) -> str:
+    """Extract the system prompt text from a Google Doc.
+
+    Returns:
+        The edited system prompt text.
+
+    Raises:
+        ValueError: If the header separator is missing.
+    """
+    idx = content.find(_HEADER_END)
+    if idx == -1:
+        raise ValueError(
+            f"Doc content is missing the header separator ({_HEADER_END!r}). "
+            "Was the header section removed?"
+        )
+    return content[idx + len(_HEADER_END) :].strip()
+
+
 class PromptEditorService:
     """Async service for editing LLM process prompts via Google Docs.
 
@@ -110,13 +143,13 @@ class PromptEditorService:
 
         Args:
             process_name: Process identifier (e.g. ``"summarization"``).
-            field: Prompt field to edit — ``"system"`` or ``"instruction"``.
+            field: Prompt field to edit — ``"instruction"``.
 
         Returns:
             The Google Doc URL for editing.
 
         Raises:
-            ValueError: If *field* is not ``"system"`` or ``"instruction"``.
+            ValueError: If *field* is not ``"instruction"``.
             FileNotFoundError: If the process config JSON does not exist.
         """
         if field not in _VALID_FIELDS:
@@ -197,8 +230,8 @@ class PromptEditorService:
         """Open a Google Doc for editing all config fields.
 
         Creates a new Google Doc populated with every editable field
-        (model, description, system prompt, instruction prompt) using
-        ``## section`` markers. Updates config metadata with the doc ID.
+        (model, description, instruction prompt) using ``## section``
+        markers. Updates config metadata with the doc ID.
 
         Args:
             process_name: Process identifier (e.g. ``"summarization"``).
@@ -278,6 +311,76 @@ class PromptEditorService:
         )
         return updated
 
+    async def start_system_edit(self) -> str:
+        """Open a Google Doc for editing the shared system prompt.
+
+        Creates a new Google Doc populated with the current system prompt
+        and a header section, then stores the doc ID in the system prompt
+        metadata.
+
+        Returns:
+            The Google Doc URL for editing.
+
+        Raises:
+            FileNotFoundError: If ``system-prompt.json`` does not exist.
+        """
+        config = load_system_prompt_config()
+
+        if config.metadata.google_doc_id is not None:
+            logger.warning(
+                "Replacing existing system prompt edit session",
+                extra={"old_doc_id": config.metadata.google_doc_id},
+            )
+
+        title = "[ICA] Shared System Prompt"
+        doc_id = await self._docs.create_document(title)
+
+        header = _build_system_edit_header(config.metadata.version)
+        await self._docs.insert_content(doc_id, header + config.prompt)
+
+        config.metadata.google_doc_id = doc_id
+        save_system_prompt(config)
+
+        url = _DOC_URL_TEMPLATE.format(doc_id=doc_id)
+        logger.info("System prompt edit session started", extra={"doc_url": url})
+        return url
+
+    async def sync_system_from_doc(self) -> str:
+        """Pull the shared system prompt from Google Doc back to JSON.
+
+        Reads the document, extracts the prompt text, updates the config,
+        bumps the version, and writes to disk.
+
+        Returns:
+            The updated system prompt string.
+
+        Raises:
+            ValueError: If no Google Doc is linked.
+        """
+        config = load_system_prompt_config()
+
+        if config.metadata.google_doc_id is None:
+            raise ValueError(
+                "No Google Doc linked for the system prompt. "
+                "Call start_system_edit() first."
+            )
+
+        content = await self._docs.get_content(config.metadata.google_doc_id)
+        prompt_text = _parse_system_doc_content(content)
+
+        config.prompt = prompt_text
+        config.metadata.version += 1
+        config.metadata.last_synced_at = datetime.now(UTC).isoformat()
+        config.metadata.google_doc_id = None
+
+        save_system_prompt(config)
+
+        logger.info(
+            "Synced system prompt from doc",
+            extra={"version": config.metadata.version},
+        )
+        return prompt_text
+
     def update_model(self, process_name: str, new_model: str) -> ProcessConfig:
         """Update the model for a process config directly (no Google Docs).
 
@@ -331,7 +434,6 @@ class PromptEditorService:
         config = load_process_config(process_name)
         model = get_process_model(process_name)
 
-        sys_len = len(config.prompts.system)
         inst_len = len(config.prompts.instruction)
         last_sync = config.metadata.last_synced_at or "Never"
         active_edit = "Yes" if config.metadata.google_doc_id else "No"
@@ -339,7 +441,6 @@ class PromptEditorService:
         return (
             f"*{process_name}*\n"
             f"Model: `{model}`\n"
-            f"System prompt: {sys_len:,} chars\n"
             f"Instruction prompt: {inst_len:,} chars\n"
             f"Version: {config.metadata.version}\n"
             f"Last synced: {last_sync}\n"

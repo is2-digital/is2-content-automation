@@ -39,7 +39,7 @@ def list_all_configs() -> list[tuple[str, ProcessConfig]]:
 def format_config_table(configs: list[tuple[str, ProcessConfig]]) -> Table:
     """Build a Rich :class:`Table` summarising all configs.
 
-    Columns: ``#``, ``Process``, ``Model``, ``System Prompt`` (truncated to 60 chars).
+    Columns: ``#``, ``Process``, ``Model``, ``Description`` (truncated to 60 chars).
 
     Args:
         configs: Output of :func:`list_all_configs`.
@@ -51,13 +51,13 @@ def format_config_table(configs: list[tuple[str, ProcessConfig]]) -> Table:
     table.add_column("#", justify="right", style="dim")
     table.add_column("Process", style="bold")
     table.add_column("Model")
-    table.add_column("System Prompt", max_width=60)
+    table.add_column("Description", max_width=60)
 
     for idx, (name, cfg) in enumerate(configs, 1):
-        prompt_preview = cfg.prompts.system[:60]
-        if len(cfg.prompts.system) > 60:
-            prompt_preview += "..."
-        table.add_row(str(idx), name, cfg.model, prompt_preview)
+        desc_preview = cfg.description[:60]
+        if len(cfg.description) > 60:
+            desc_preview += "..."
+        table.add_row(str(idx), name, cfg.model, desc_preview)
 
     return table
 
@@ -84,9 +84,6 @@ def build_full_doc_content(process_name: str, config: ProcessConfig) -> str:
         "## description",
         config.description,
         "",
-        "## system",
-        config.prompts.system,
-        "",
         "## instruction",
         config.prompts.instruction,
         "",
@@ -105,7 +102,7 @@ def parse_doc_sections(content: str) -> dict[str, str]:
 
     Returns:
         Dict mapping section names (``"model"``, ``"description"``,
-        ``"system"``, ``"instruction"``) to their text content.
+        ``"instruction"``) to their text content.
     """
     sections: dict[str, str] = {}
     matches = list(_SECTION_RE.finditer(content))
@@ -143,7 +140,6 @@ def apply_doc_changes(
     # Start from existing values.
     model = old.model
     description = old.description
-    system = old.prompts.system
     instruction = old.prompts.instruction
 
     if "model" in sections and sections["model"] != old.model:
@@ -154,12 +150,6 @@ def apply_doc_changes(
         description = sections["description"]
         changes["description"] = (
             f"{len(old.description)} chars -> {len(description)} chars"
-        )
-
-    if "system" in sections and sections["system"] != old.prompts.system:
-        system = sections["system"]
-        changes["system"] = (
-            f"{len(old.prompts.system)} chars -> {len(system)} chars"
         )
 
     if "instruction" in sections and sections["instruction"] != old.prompts.instruction:
@@ -177,7 +167,7 @@ def apply_doc_changes(
             "processName": old.process_name,
             "description": description,
             "model": model,
-            "prompts": {"system": system, "instruction": instruction},
+            "prompts": {"instruction": instruction},
             "metadata": {
                 "googleDocId": old.metadata.google_doc_id,
                 "lastSyncedAt": now_iso,
@@ -215,7 +205,7 @@ def format_sync_summary(
     if "model" in changes:
         lines.append(f"  model:   {changes['model']}")
 
-    for field in ("description", "system", "instruction"):
+    for field in ("description", "instruction"):
         if field in changes:
             lines.append(f"  {field}: {changes[field]}")
 

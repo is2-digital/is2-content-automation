@@ -9,6 +9,8 @@ from ica.llm_configs.loader import (
     get_process_prompts,
     get_system_prompt,
     load_process_config,
+    load_system_prompt_config,
+    save_system_prompt,
 )
 from ica.llm_configs.schema import (
     Metadata,
@@ -28,4 +30,6 @@ __all__ = [
     "get_process_prompts",
     "get_system_prompt",
     "load_process_config",
+    "load_system_prompt_config",
+    "save_system_prompt",
 ]

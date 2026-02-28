@@ -6,7 +6,8 @@ Usage::
     python -m ica run          # Trigger a pipeline run
     python -m ica status       # Show pipeline run status
     python -m ica collect-articles  # Manual article collection
-    python -m ica config       # Edit LLM process configs via Google Docs
+    python -m ica config        # Edit LLM process configs via Google Docs
+    python -m ica config system # Edit the shared system prompt via Google Docs
 
 PRD Section 11.1: Secondary CLI interface for on-demand interaction and debugging.
 """
@@ -275,10 +276,19 @@ def filter_logs(
         err_console.print("No matching log entries found.")
 
 
-@app.command()
-def config() -> None:
-    """Edit LLM process configs via Google Docs."""
-    asyncio.run(_config_editor())
+config_app = typer.Typer(
+    name="config",
+    help="Edit LLM process configs via Google Docs.",
+    invoke_without_command=True,
+)
+app.add_typer(config_app, name="config")
+
+
+@config_app.callback(invoke_without_command=True)
+def config_default(ctx: typer.Context) -> None:
+    """Edit LLM process configs via Google Docs (default: list and edit)."""
+    if ctx.invoked_subcommand is None:
+        asyncio.run(_config_editor())
 
 
 async def _config_editor() -> None:
@@ -354,10 +364,6 @@ async def _config_editor() -> None:
         changes["description"] = (
             f"{len(old_config.description)} chars -> {len(new_config.description)} chars"
         )
-    if old_config.prompts.system != new_config.prompts.system:
-        changes["system"] = (
-            f"{len(old_config.prompts.system)} chars -> {len(new_config.prompts.system)} chars"
-        )
     if old_config.prompts.instruction != new_config.prompts.instruction:
         changes["instruction"] = (
             f"{len(old_config.prompts.instruction)} chars"
@@ -373,6 +379,60 @@ async def _config_editor() -> None:
         f" git commit -m"
         f' "chore: update {process_name} LLM config v{new_config.metadata.version}"[/dim]'
     )
+
+
+@config_app.command(name="system")
+def config_system() -> None:
+    """Edit the shared system prompt via Google Docs."""
+    asyncio.run(_config_system_editor())
+
+
+async def _config_system_editor() -> None:
+    """Open the shared system prompt in Google Docs, then sync back."""
+    from ica.config.settings import get_settings
+    from ica.llm_configs.loader import load_system_prompt_config
+    from ica.services.google_docs import GoogleDocsService
+    from ica.services.prompt_editor import PromptEditorService
+
+    try:
+        settings = get_settings()
+    except Exception as exc:
+        err_console.print(f"[red]Configuration error:[/red] {exc}")
+        err_console.print("Ensure required environment variables are set (see .env.example).")
+        raise typer.Exit(code=1) from None
+
+    docs_service = GoogleDocsService(
+        credentials_path=settings.google_service_account_credentials_path,
+        drive_id=settings.google_shared_drive_id,
+    )
+    editor = PromptEditorService(docs_service)
+
+    # Show current system prompt info.
+    sp_config = load_system_prompt_config()
+    console.print("[bold]Shared System Prompt[/bold]")
+    console.print(f"  Length:  {len(sp_config.prompt):,} chars")
+    console.print(f"  Version: {sp_config.metadata.version}")
+
+    # Open in Google Docs.
+    url = await editor.start_system_edit()
+    console.print(f"\n[bold]Edit in Google Docs:[/bold] {url}")
+
+    # Wait for user to finish editing.
+    response = typer.prompt(
+        "\nPress Enter to sync or q to cancel", default="", show_default=False
+    )
+    if response.strip().lower() == "q":
+        console.print("[dim]Sync cancelled.[/dim]")
+        return
+
+    # Sync back.
+    old_len = len(sp_config.prompt)
+    prompt_text = await editor.sync_system_from_doc()
+
+    updated = load_system_prompt_config()
+    console.print("\n[bold]Sync complete[/bold]")
+    console.print(f"  version: {sp_config.metadata.version} -> {updated.metadata.version}")
+    console.print(f"  length:  {old_len:,} -> {len(prompt_text):,} chars")
 
 
 def main() -> None:
