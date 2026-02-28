@@ -47,8 +47,11 @@ class Settings(BaseSettings):
     )
 
     # --- Google Custom Search ---
-    google_cse_api_key: str
-    google_cse_cx: str
+    google_cse_api_key: str = ""
+    google_cse_cx: str = ""
+
+    # --- Brave Search ---
+    brave_api_key: str = ""
 
     # --- Google Sheets ---
     curated_articles_google_sheet_id: str = ""

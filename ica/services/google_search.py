@@ -19,6 +19,7 @@ class SearchResult:
     title: str
     date: str | None
     origin: str  # "daily" or "every_2_days"
+    excerpt: str = ""
 
 
 class HttpClient(Protocol):

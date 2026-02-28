@@ -2,7 +2,16 @@
 
 ## Current Status
 **Last Updated:** 2026-02-28
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf
+
+### 2026-02-28 — ica-brf: Create BraveSearchClient service
+- Created `ica/services/brave_search.py` with `BraveSearchClient` class following the same protocol pattern as `GoogleSearchClient`
+- Added `BraveSearchFlags` frozen dataclass for configurable API parameters (count, freshness, search_lang, country, safesearch, extra_snippets)
+- Added `excerpt: str = ""` field to `SearchResult` in `google_search.py` (Brave returns description per result)
+- Added `brave_api_key` to `Settings` in `settings.py`; made `google_cse_api_key` and `google_cse_cx` optional (defaulting to empty string) since they're being deprecated
+- Updated `.env-example` with `BRAVE_API_KEY` and marked Google CSE settings as deprecated
+- Updated test config fixtures to remove Google CSE keys from required env vars
+- All 3696 tests pass, mypy and ruff clean
 
 ### 2026-02-28 — ica-45o, ica-6ys: Update PromptEditorService and config_editor for shared system prompt
 - Removed `system` from `_VALID_FIELDS` in `prompt_editor.py` — single-field edit now only supports `instruction`

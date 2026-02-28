@@ -15,8 +15,6 @@ _VALID_ENV = {
     "SLACK_BOT_TOKEN": "xoxb-slack-bot",
     "SLACK_APP_TOKEN": "xapp-slack-app",
     "SLACK_CHANNEL": "C01234ABCDE",
-    "GOOGLE_CSE_API_KEY": "cse-key-123",
-    "GOOGLE_CSE_CX": "cse-cx-456",
 }
 
 
