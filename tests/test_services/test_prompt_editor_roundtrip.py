@@ -49,7 +49,6 @@ def _valid_config_dict(**overrides: object) -> dict[str, Any]:
         "description": "A test process",
         "model": "anthropic/claude-sonnet-4.5",
         "prompts": {
-            "system": "You are a test system.",
             "instruction": "Follow test instructions.",
         },
         "metadata": {
@@ -180,7 +179,7 @@ def mock_client() -> AsyncMock:
 class TestEditRoundTrip:
     """Integration tests chaining start_edit and sync_from_doc."""
 
-    async def test_system_prompt_round_trip(
+    async def test_instruction_prompt_round_trip(
         self,
         editor: PromptEditorService,
         mock_docs: MagicMock,
@@ -190,54 +189,29 @@ class TestEditRoundTrip:
         _write_config(tmp_path)
 
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
-            url = await editor.start_edit("test-process", "system")
+            url = await editor.start_edit("test-process", "instruction")
 
         assert "doc-rt-123" in url
 
         # Capture what was written to the doc during start_edit
         inserted = mock_docs.insert_content.call_args[0][1]
         assert _HEADER_END in inserted
-        assert "You are a test system." in inserted
+        assert "Follow test instructions." in inserted
 
         # Simulate user editing the prompt in Google Docs
         edited_content = inserted.replace(
-            "You are a test system.",
-            "You are an IMPROVED test system with new instructions.",
+            "Follow test instructions.",
+            "Follow IMPROVED instructions with new rules.",
         )
         mock_docs.get_content.return_value = edited_content
 
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
             config = await editor.sync_from_doc("test-process")
 
-        assert config.prompts.system == "You are an IMPROVED test system with new instructions."
+        assert config.prompts.instruction == "Follow IMPROVED instructions with new rules."
         assert config.metadata.version == 2
         assert config.metadata.last_synced_at is not None
         assert config.metadata.google_doc_id is None
-
-    async def test_instruction_prompt_round_trip(
-        self,
-        editor: PromptEditorService,
-        mock_docs: MagicMock,
-        tmp_path: Path,
-    ) -> None:
-        """Round-trip for instruction field preserves edits."""
-        _write_config(tmp_path)
-
-        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
-            await editor.start_edit("test-process", "instruction")
-
-        inserted = mock_docs.insert_content.call_args[0][1]
-        edited = inserted.replace(
-            "Follow test instructions.",
-            "Follow updated instructions carefully.",
-        )
-        mock_docs.get_content.return_value = edited
-
-        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
-            config = await editor.sync_from_doc("test-process")
-
-        assert config.prompts.instruction == "Follow updated instructions carefully."
-        assert config.prompts.system == "You are a test system."  # unchanged
 
     async def test_version_increments_across_multiple_round_trips(
         self,
@@ -250,11 +224,11 @@ class TestEditRoundTrip:
 
         # First round-trip: v1 → v2
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
-            await editor.start_edit("test-process", "system")
+            await editor.start_edit("test-process", "instruction")
 
         inserted_1 = mock_docs.insert_content.call_args[0][1]
         mock_docs.get_content.return_value = inserted_1.replace(
-            "You are a test system.", "Edit 1."
+            "Follow test instructions.", "Edit 1."
         )
         mock_docs.create_document.return_value = "doc-rt-456"
 
@@ -265,7 +239,7 @@ class TestEditRoundTrip:
 
         # Second round-trip: v2 → v3
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
-            await editor.start_edit("test-process", "system")
+            await editor.start_edit("test-process", "instruction")
 
         inserted_2 = mock_docs.insert_content.call_args[0][1]
         assert "Version: 2" in inserted_2
@@ -275,7 +249,7 @@ class TestEditRoundTrip:
             config_2 = await editor.sync_from_doc("test-process")
 
         assert config_2.metadata.version == 3
-        assert config_2.prompts.system == "Edit 2."
+        assert config_2.prompts.instruction == "Edit 2."
 
     async def test_round_trip_persists_to_disk(
         self,
@@ -288,7 +262,7 @@ class TestEditRoundTrip:
 
         # After start_edit: doc_id saved
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
-            await editor.start_edit("test-process", "system")
+            await editor.start_edit("test-process", "instruction")
 
         saved_mid = _read_saved_config(tmp_path)
         assert saved_mid["metadata"]["googleDocId"] == "doc-rt-123"
@@ -296,7 +270,7 @@ class TestEditRoundTrip:
         # After sync: doc_id cleared, content updated
         inserted = mock_docs.insert_content.call_args[0][1]
         mock_docs.get_content.return_value = inserted.replace(
-            "You are a test system.", "Final prompt."
+            "Follow test instructions.", "Final prompt."
         )
 
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
@@ -304,7 +278,7 @@ class TestEditRoundTrip:
 
         saved_final = _read_saved_config(tmp_path)
         assert saved_final["metadata"]["googleDocId"] is None
-        assert saved_final["prompts"]["system"] == "Final prompt."
+        assert saved_final["prompts"]["instruction"] == "Final prompt."
         assert saved_final["metadata"]["version"] == 2
 
 
@@ -338,14 +312,14 @@ class TestPlainTextPreservation:
             "Output format: <section>\n  <title>Newsletter</title>\n</section>",
             # Special characters: pipes, brackets, parentheses
             "| Column A | Column B |\n|----------|----------|\n(see [docs](link))",
-            # Mixed: real-world prompt excerpt
+            # Mixed: real-world prompt excerpt (no trailing newline — stripped by parser)
             (
                 "You are a newsletter editor.\n\n"
                 "## Rules\n"
                 "1. Keep summaries under {max_chars} characters\n"
                 "2. Use **active voice**\n"
                 "3. Format: %FA_TITLE: <title>\n"
-                "4. Escape `{braces}` when literal\n"
+                "4. Escape `{braces}` when literal"
             ),
         ],
         ids=[
@@ -368,14 +342,13 @@ class TestPlainTextPreservation:
         _write_config(
             tmp_path,
             prompts={
-                "system": prompt_content,
-                "instruction": "Follow test instructions.",
+                "instruction": prompt_content,
             },
         )
         editor = PromptEditorService(mock_docs)
 
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
-            await editor.start_edit("test-process", "system")
+            await editor.start_edit("test-process", "instruction")
 
         # Feed back exactly what was written (unmodified round-trip)
         inserted = mock_docs.insert_content.call_args[0][1]
@@ -384,7 +357,7 @@ class TestPlainTextPreservation:
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
             config = await editor.sync_from_doc("test-process")
 
-        assert config.prompts.system == prompt_content
+        assert config.prompts.instruction == prompt_content
 
     async def test_multiline_instruction_with_markers_preserved(
         self,
@@ -404,12 +377,11 @@ class TestPlainTextPreservation:
             "%RV_VERIFIED: Verified resource\n\n"
             "Rules:\n"
             "- Keep **all markers** on their own line\n"
-            "- Do NOT modify the `%XX_` prefix format\n"
+            "- Do NOT modify the `%XX_` prefix format"
         )
         _write_config(
             tmp_path,
             prompts={
-                "system": "You are a test system.",
                 "instruction": instruction,
             },
         )
@@ -450,7 +422,7 @@ class TestConcurrentEditDetection:
             patch.object(loader, "_CONFIGS_DIR", tmp_path),
             patch("ica.services.prompt_editor.logger") as mock_logger,
         ):
-            url = await editor.start_edit("test-process", "system")
+            url = await editor.start_edit("test-process", "instruction")
 
         assert "doc-rt-123" in url
         mock_logger.warning.assert_called_once()
@@ -468,7 +440,7 @@ class TestConcurrentEditDetection:
         _write_config(tmp_path)
 
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
-            await editor.start_edit("test-process", "system")
+            await editor.start_edit("test-process", "instruction")
             summary = editor.get_config_summary("test-process")
 
         assert "Active edit: Yes" in summary
@@ -483,7 +455,7 @@ class TestConcurrentEditDetection:
         _write_config(tmp_path)
 
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
-            await editor.start_edit("test-process", "system")
+            await editor.start_edit("test-process", "instruction")
 
         inserted = mock_docs.insert_content.call_args[0][1]
         mock_docs.get_content.return_value = inserted
@@ -507,7 +479,7 @@ class TestConcurrentEditDetection:
             patch.object(loader, "_CONFIGS_DIR", tmp_path),
             patch("ica.services.prompt_editor.logger") as mock_logger,
         ):
-            await editor.start_edit("test-process", "system")
+            await editor.start_edit("test-process", "instruction")
 
         mock_logger.warning.assert_not_called()
 
@@ -672,7 +644,7 @@ class TestSlackInteractionHandlers:
             tmp_path,
             metadata={"googleDocId": "doc-sync", "lastSyncedAt": None, "version": 3},
         )
-        header = _build_edit_header("test-process", "system", 3)
+        header = _build_edit_header("test-process", "instruction", 3)
         mock_docs.get_content.return_value = header + "Synced prompt from Slack."
 
         bolt_app = MagicMock()
@@ -698,7 +670,7 @@ class TestSlackInteractionHandlers:
         assert "v4" in call_kwargs["text"]
 
         saved = _read_saved_config(tmp_path)
-        assert saved["prompts"]["system"] == "Synced prompt from Slack."
+        assert saved["prompts"]["instruction"] == "Synced prompt from Slack."
         assert saved["metadata"]["version"] == 4
         assert saved["metadata"]["googleDocId"] is None
 

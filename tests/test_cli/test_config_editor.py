@@ -34,7 +34,6 @@ def _valid_config_dict(**overrides: object) -> dict:
         "description": "A test process",
         "model": "anthropic/claude-sonnet-4.5",
         "prompts": {
-            "system": "You are a test system.",
             "instruction": "Follow test instructions.",
         },
         "metadata": {
@@ -51,7 +50,6 @@ def _make_config(
     *,
     name: str = "test-process",
     model: str = "anthropic/claude-sonnet-4.5",
-    system: str = "You are a test system.",
     instruction: str = "Follow test instructions.",
     description: str = "A test process",
     version: int = 1,
@@ -63,7 +61,7 @@ def _make_config(
             "processName": name,
             "description": description,
             "model": model,
-            "prompts": {"system": system, "instruction": instruction},
+            "prompts": {"instruction": instruction},
             "metadata": {
                 "googleDocId": None,
                 "lastSyncedAt": None,
@@ -191,7 +189,7 @@ class TestFormatConfigTable:
         configs = [("summarization", _make_config(name="summarization"))]
         table = format_config_table(configs)
         col_names = [col.header for col in table.columns]
-        assert col_names == ["#", "Process", "Model", "System Prompt"]
+        assert col_names == ["#", "Process", "Model", "Description"]
 
     def test_row_count_matches_configs(self) -> None:
         configs = [
@@ -201,32 +199,32 @@ class TestFormatConfigTable:
         table = format_config_table(configs)
         assert table.row_count == 2
 
-    def test_truncates_long_prompts(self) -> None:
-        long_prompt = "A" * 100
+    def test_truncates_long_descriptions(self) -> None:
+        long_desc = "A" * 100
         configs = [
             (
                 "summarization",
-                _make_config(name="summarization", system=long_prompt),
+                _make_config(name="summarization", description=long_desc),
             )
         ]
         table = format_config_table(configs)
-        # Access rendered cell data — column 3 is "System Prompt"
+        # Access rendered cell data — column 3 is "Description"
         cells = table.columns[3]._cells
         assert cells[0].endswith("...")
         # 60 chars of 'A' plus '...'
         assert len(cells[0]) == 63
 
-    def test_short_prompt_not_truncated(self) -> None:
-        short_prompt = "Short system prompt."
+    def test_short_description_not_truncated(self) -> None:
+        short_desc = "Short description."
         configs = [
             (
                 "summarization",
-                _make_config(name="summarization", system=short_prompt),
+                _make_config(name="summarization", description=short_desc),
             )
         ]
         table = format_config_table(configs)
         cells = table.columns[3]._cells
-        assert cells[0] == short_prompt
+        assert cells[0] == short_desc
         assert not cells[0].endswith("...")
 
     def test_empty_configs_produces_empty_table(self) -> None:
@@ -257,29 +255,28 @@ class TestBuildFullDocContent:
         content = build_full_doc_content("test", config)
         assert "## description\nSummarizes articles" in content
 
-    def test_contains_system_section(self) -> None:
-        config = _make_config(system="You are an expert.")
-        content = build_full_doc_content("test", config)
-        assert "## system\nYou are an expert." in content
-
     def test_contains_instruction_section(self) -> None:
         config = _make_config(instruction="Do the thing.")
         content = build_full_doc_content("test", config)
         assert "## instruction\nDo the thing." in content
+
+    def test_does_not_contain_system_section(self) -> None:
+        config = _make_config()
+        content = build_full_doc_content("test", config)
+        assert "## system" not in content
 
     def test_section_order(self) -> None:
         config = _make_config()
         content = build_full_doc_content("test", config)
         model_pos = content.index("## model")
         desc_pos = content.index("## description")
-        system_pos = content.index("## system")
         instr_pos = content.index("## instruction")
-        assert model_pos < desc_pos < system_pos < instr_pos
+        assert model_pos < desc_pos < instr_pos
 
-    def test_all_four_sections_present(self) -> None:
+    def test_all_three_sections_present(self) -> None:
         config = _make_config()
         content = build_full_doc_content("test", config)
-        for section in ("## model", "## description", "## system", "## instruction"):
+        for section in ("## model", "## description", "## instruction"):
             assert section in content
 
 
@@ -301,7 +298,6 @@ class TestParseDocSections:
         config = _make_config(
             model="openai/gpt-4.1",
             description="Summarizes articles.",
-            system="You are an AI assistant.",
             instruction="Summarize the article.",
         )
         content = build_full_doc_content("test", config)
@@ -309,8 +305,8 @@ class TestParseDocSections:
 
         assert sections["model"] == "openai/gpt-4.1"
         assert sections["description"] == "Summarizes articles."
-        assert sections["system"] == "You are an AI assistant."
         assert sections["instruction"] == "Summarize the article."
+        assert "system" not in sections
 
     def test_handles_missing_sections(self) -> None:
         content = "## model\nsome-model\n"
@@ -319,14 +315,14 @@ class TestParseDocSections:
         assert "description" not in sections
 
     def test_handles_extra_whitespace(self) -> None:
-        content = "## model\n  openai/gpt-4.1  \n\n## system\n  Hello.  \n"
+        content = "## model\n  openai/gpt-4.1  \n\n## description\n  Hello.  \n"
         sections = parse_doc_sections(content)
         assert sections["model"] == "openai/gpt-4.1"
-        assert sections["system"] == "Hello."
+        assert sections["description"] == "Hello."
 
     def test_handles_multiline_content(self) -> None:
         content = (
-            "## system\n"
+            "## description\n"
             "Line one.\n"
             "Line two.\n"
             "Line three.\n"
@@ -335,13 +331,13 @@ class TestParseDocSections:
             "Do stuff."
         )
         sections = parse_doc_sections(content)
-        assert sections["system"] == "Line one.\nLine two.\nLine three."
+        assert sections["description"] == "Line one.\nLine two.\nLine three."
         assert sections["instruction"] == "Do stuff."
 
     def test_handles_hash_inside_prompt_text(self) -> None:
         """A ## inside prompt text that doesn't match the section pattern is kept."""
         content = (
-            "## system\n"
+            "## description\n"
             "Use ## markdown headers in your output.\n"
             "But not at line start as a section.\n"
             "\n"
@@ -355,7 +351,7 @@ class TestParseDocSections:
         # "## markdown headers in your output." -> \w[\w\s]* would match
         # "markdown headers in your output." — wait, the '.' at end is not \w or \s.
         # So the regex won't match this line. The '.' breaks the pattern.
-        assert "## markdown headers in your output." in sections["system"]
+        assert "## markdown headers in your output." in sections["description"]
 
     def test_empty_content(self) -> None:
         sections = parse_doc_sections("")
@@ -399,18 +395,6 @@ class TestApplyDocChanges:
         assert updated.description == "New description text"
         assert "description" in changes
 
-    def test_updates_system_prompt(self, tmp_path: Path) -> None:
-        _write_config(tmp_path)
-        sections = {"system": "New system prompt."}
-
-        with patch("ica.cli.config_editor._CONFIGS_DIR", tmp_path), patch.object(
-            loader, "_CONFIGS_DIR", tmp_path
-        ):
-            updated, changes = apply_doc_changes("test-process", sections)
-
-        assert updated.prompts.system == "New system prompt."
-        assert "system" in changes
-
     def test_updates_instruction_prompt(self, tmp_path: Path) -> None:
         _write_config(tmp_path)
         sections = {"instruction": "New instruction."}
@@ -452,7 +436,7 @@ class TestApplyDocChanges:
         # Pass same values as existing config
         sections = {
             "model": "anthropic/claude-sonnet-4.5",
-            "system": "You are a test system.",
+            "instruction": "Follow test instructions.",
         }
 
         with patch("ica.cli.config_editor._CONFIGS_DIR", tmp_path), patch.object(
@@ -462,7 +446,7 @@ class TestApplyDocChanges:
 
         assert changes == {}
         assert updated.model == "anthropic/claude-sonnet-4.5"
-        assert updated.prompts.system == "You are a test system."
+        assert updated.prompts.instruction == "Follow test instructions."
 
     def test_saves_to_disk(self, tmp_path: Path) -> None:
         _write_config(tmp_path)
@@ -479,14 +463,14 @@ class TestApplyDocChanges:
 
     def test_changes_dict_shows_char_counts(self, tmp_path: Path) -> None:
         _write_config(tmp_path)
-        sections = {"system": "A much longer system prompt for testing character counts."}
+        sections = {"instruction": "A much longer instruction prompt for testing character counts."}
 
         with patch("ica.cli.config_editor._CONFIGS_DIR", tmp_path), patch.object(
             loader, "_CONFIGS_DIR", tmp_path
         ):
             _updated, changes = apply_doc_changes("test-process", sections)
 
-        assert "chars" in changes["system"]
+        assert "chars" in changes["instruction"]
 
 
 # ---------------------------------------------------------------------------
@@ -518,10 +502,10 @@ class TestFormatSyncSummary:
 
     def test_shows_field_char_diffs(self) -> None:
         old = _make_config(version=1)
-        new = _make_config(version=2, system="New system text.")
-        changes = {"system": "24 chars -> 16 chars"}
+        new = _make_config(version=2, instruction="New instruction text.")
+        changes = {"instruction": "24 chars -> 21 chars"}
         summary = format_sync_summary("test", old, new, changes)
-        assert "24 chars -> 16 chars" in summary
+        assert "24 chars -> 21 chars" in summary
 
     def test_shows_no_changes_message(self) -> None:
         old = _make_config(version=1)
@@ -535,12 +519,12 @@ class TestFormatSyncSummary:
         changes = {
             "model": "old-model -> new-model",
             "description": "10 chars -> 20 chars",
-            "system": "50 chars -> 80 chars",
+            "instruction": "50 chars -> 80 chars",
         }
         summary = format_sync_summary("test", old, new, changes)
         assert "model" in summary
         assert "description" in summary
-        assert "system" in summary
+        assert "instruction" in summary
 
     def test_no_changes_does_not_show_field_lines(self) -> None:
         old = _make_config(version=1)

@@ -30,7 +30,6 @@ def _valid_config_dict(**overrides: object) -> dict:
         "description": "A test process",
         "model": "anthropic/claude-sonnet-4.5",
         "prompts": {
-            "system": "You are a test system.",
             "instruction": "Follow test instructions.",
         },
         "metadata": {
@@ -92,9 +91,9 @@ def editor(mock_docs: MagicMock) -> PromptEditorService:
 
 class TestBuildEditHeader:
     def test_includes_process_and_field(self) -> None:
-        header = _build_edit_header("summarization", "system", 3)
+        header = _build_edit_header("summarization", "instruction", 3)
         assert "Process: summarization" in header
-        assert "Field: system" in header
+        assert "Field: instruction" in header
         assert "Version: 3" in header
 
     def test_ends_with_header_separator(self) -> None:
@@ -112,14 +111,14 @@ class TestParseDocContent:
         content = (
             "--- ICA PROMPT EDITOR ---\n"
             "Process: summarization\n"
-            "Field: system\n"
+            "Field: instruction\n"
             "Version: 1\n"
             f"\n{_HEADER_END}\n\n"
-            "You are a helpful assistant."
+            "Follow these rules carefully."
         )
         field, text = _parse_doc_content(content)
-        assert field == "system"
-        assert text == "You are a helpful assistant."
+        assert field == "instruction"
+        assert text == "Follow these rules carefully."
 
     def test_extracts_instruction_field(self) -> None:
         content = (
@@ -172,27 +171,11 @@ class TestStartEdit:
         _write_config(tmp_path)
 
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
-            url = await editor.start_edit("test-process", "system")
+            url = await editor.start_edit("test-process", "instruction")
 
         assert url == "https://docs.google.com/document/d/doc-new-123/edit"
         mock_docs.create_document.assert_awaited_once()
         mock_docs.insert_content.assert_awaited_once()
-
-    async def test_populates_doc_with_system_prompt(
-        self,
-        editor: PromptEditorService,
-        mock_docs: MagicMock,
-        tmp_path: Path,
-    ) -> None:
-        _write_config(tmp_path)
-
-        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
-            await editor.start_edit("test-process", "system")
-
-        content = mock_docs.insert_content.call_args[0][1]
-        assert "You are a test system." in content
-        assert _HEADER_END in content
-        assert "Field: system" in content
 
     async def test_populates_doc_with_instruction_prompt(
         self,
@@ -207,6 +190,7 @@ class TestStartEdit:
 
         content = mock_docs.insert_content.call_args[0][1]
         assert "Follow test instructions." in content
+        assert _HEADER_END in content
         assert "Field: instruction" in content
 
     async def test_saves_doc_id_to_metadata(
@@ -218,7 +202,7 @@ class TestStartEdit:
         _write_config(tmp_path)
 
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
-            await editor.start_edit("test-process", "system")
+            await editor.start_edit("test-process", "instruction")
 
         saved = _read_saved_config(tmp_path)
         assert saved["metadata"]["googleDocId"] == "doc-new-123"
@@ -235,7 +219,7 @@ class TestStartEdit:
         )
 
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
-            url = await editor.start_edit("test-process", "system")
+            url = await editor.start_edit("test-process", "instruction")
 
         assert "doc-new-123" in url
         saved = _read_saved_config(tmp_path)
@@ -245,6 +229,10 @@ class TestStartEdit:
         with pytest.raises(ValueError, match="Invalid field"):
             await editor.start_edit("test-process", "bogus")
 
+    async def test_system_field_raises(self, editor: PromptEditorService) -> None:
+        with pytest.raises(ValueError, match="Invalid field"):
+            await editor.start_edit("test-process", "system")
+
 
 # ---------------------------------------------------------------------------
 # PromptEditorService.sync_from_doc()
@@ -252,25 +240,6 @@ class TestStartEdit:
 
 
 class TestSyncFromDoc:
-    async def test_syncs_system_prompt(
-        self,
-        editor: PromptEditorService,
-        mock_docs: MagicMock,
-        tmp_path: Path,
-    ) -> None:
-        _write_config(
-            tmp_path,
-            metadata={"googleDocId": "doc-abc", "lastSyncedAt": None, "version": 2},
-        )
-        header = _build_edit_header("test-process", "system", 2)
-        mock_docs.get_content.return_value = header + "Updated system prompt."
-
-        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
-            config = await editor.sync_from_doc("test-process")
-
-        assert config.prompts.system == "Updated system prompt."
-        assert config.metadata.version == 3
-
     async def test_syncs_instruction_prompt(
         self,
         editor: PromptEditorService,
@@ -299,7 +268,7 @@ class TestSyncFromDoc:
             tmp_path,
             metadata={"googleDocId": "doc-abc", "lastSyncedAt": None, "version": 5},
         )
-        header = _build_edit_header("test-process", "system", 5)
+        header = _build_edit_header("test-process", "instruction", 5)
         mock_docs.get_content.return_value = header + "Content."
 
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
@@ -318,7 +287,7 @@ class TestSyncFromDoc:
             tmp_path,
             metadata={"googleDocId": "doc-abc", "lastSyncedAt": None, "version": 1},
         )
-        header = _build_edit_header("test-process", "system", 1)
+        header = _build_edit_header("test-process", "instruction", 1)
         mock_docs.get_content.return_value = header + "Content."
 
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
@@ -338,14 +307,14 @@ class TestSyncFromDoc:
             tmp_path,
             metadata={"googleDocId": "doc-abc", "lastSyncedAt": None, "version": 1},
         )
-        header = _build_edit_header("test-process", "system", 1)
+        header = _build_edit_header("test-process", "instruction", 1)
         mock_docs.get_content.return_value = header + "Persisted prompt."
 
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
             await editor.sync_from_doc("test-process")
 
         saved = _read_saved_config(tmp_path)
-        assert saved["prompts"]["system"] == "Persisted prompt."
+        assert saved["prompts"]["instruction"] == "Persisted prompt."
         assert saved["metadata"]["version"] == 2
 
     async def test_raises_when_no_doc_linked(
@@ -486,7 +455,6 @@ class TestGetConfigSummary:
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
             summary = editor.get_config_summary("test-process")
 
-        assert "System prompt:" in summary
         assert "Instruction prompt:" in summary
         assert "chars" in summary
 
@@ -529,10 +497,9 @@ class TestStartFullEdit:
         assert "anthropic/claude-sonnet-4.5" in content
         assert "## description" in content
         assert "A test process" in content
-        assert "## system" in content
-        assert "You are a test system." in content
         assert "## instruction" in content
         assert "Follow test instructions." in content
+        assert "## system" not in content
 
     async def test_saves_doc_id_to_metadata(
         self,
@@ -593,7 +560,6 @@ class TestSyncFullFromDoc:
         *,
         model: str = "anthropic/claude-sonnet-4.5",
         description: str = "A test process",
-        system: str = "You are a test system.",
         instruction: str = "Follow test instructions.",
     ) -> str:
         """Build a full-edit doc content string with ## section markers."""
@@ -601,7 +567,6 @@ class TestSyncFullFromDoc:
             "# test-process\n\n"
             f"## model\n{model}\n\n"
             f"## description\n{description}\n\n"
-            f"## system\n{system}\n\n"
             f"## instruction\n{instruction}\n"
         )
 
@@ -617,14 +582,14 @@ class TestSyncFullFromDoc:
         )
         mock_docs.get_content.return_value = self._build_doc_content(
             model="openai/gpt-4.1",
-            system="Updated system prompt.",
+            instruction="Updated instruction prompt.",
         )
 
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):
             config = await editor.sync_full_from_doc("test-process")
 
         assert config.model == "openai/gpt-4.1"
-        assert config.prompts.system == "Updated system prompt."
+        assert config.prompts.instruction == "Updated instruction prompt."
 
     async def test_bumps_version(
         self,
@@ -718,7 +683,6 @@ class TestSyncFullFromDoc:
             config = await editor.sync_full_from_doc("test-process")
 
         assert config.model == "anthropic/claude-sonnet-4.5"
-        assert config.prompts.system == "You are a test system."
         assert config.prompts.instruction == "Follow test instructions."
         assert config.description == "A test process"
 
@@ -735,7 +699,6 @@ class TestSyncFullFromDoc:
         mock_docs.get_content.return_value = self._build_doc_content(
             model="google/gemini-2.5-flash",
             description="Changed description.",
-            system="Changed system prompt.",
             instruction="Changed instruction prompt.",
         )
 
@@ -744,7 +707,6 @@ class TestSyncFullFromDoc:
 
         assert config.model == "google/gemini-2.5-flash"
         assert config.description == "Changed description."
-        assert config.prompts.system == "Changed system prompt."
         assert config.prompts.instruction == "Changed instruction prompt."
 
     async def test_raises_when_no_doc_linked(

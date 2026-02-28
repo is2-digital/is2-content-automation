@@ -581,7 +581,6 @@ def _make_process_config(
     *,
     name: str = "test-process",
     model: str = "anthropic/claude-sonnet-4.5",
-    system: str = "You are a helpful assistant.",
     instruction: str = "Summarize the content.",
     description: str = "Test process",
     version: int = 1,
@@ -596,7 +595,7 @@ def _make_process_config(
             "processName": name,
             "description": description,
             "model": model,
-            "prompts": {"system": system, "instruction": instruction},
+            "prompts": {"instruction": instruction},
             "metadata": {
                 "googleDocId": google_doc_id,
                 "lastSyncedAt": None,
