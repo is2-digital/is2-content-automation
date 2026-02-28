@@ -4,11 +4,7 @@
   "description": "LinkedIn carousel regeneration — surgically applies user feedback to carousel content while locking the existing structure and verbatim sections.",
   "model": "anthropic/claude-3-5-sonnet-20240620",
   "prompts": {
-<<<<<<< Updated upstream
-    "instruction": "OUTPUT FORMAT (STRICT - DO NOT DEVIATE)\nOutput ONLY the final revised content.\nNo analysis, no explanations, no meta commentary.\nUse the exact same structure as the original output.\n\n*LinkedIn Post Copy*\n\n*Version 1*\n[Full post text]\n\n*Version 2*\n[Full post text]\n\n*Version 3*\n[Full post text]\n\n---\n\n*Carousel Slides*\n\n*TL;DR Section for Title Slide*\n*Headline:* TL;DR\n\n*Bullets:*\n[8 bullets, one per article]\n\n---\n\n*Slide 3: [Featured article title]*\n*Title:* [Featured article title]\n\n*Body:*\n[Paragraph 1]\n\n[Paragraph 2]\n\n[Repeat for Slides 4-10]\n\n---\n\nInputs:\n\n1. Previously generated output (PRIMARY SOURCE):\n{previous_output}\n\n2. User feedback (PRIMARY AUTHORITY FOR CHANGES):\n{feedback_text}\n\n3. Reference: Article structure & URLs (READ-ONLY):\n{formatted_theme}\n\n4. Reference: Narrative context (READ-ONLY):\n{newsletter_content}"
-=======
     "instruction": "<Task_Context>\nSurgically revise the LinkedIn carousel content based on explicit user feedback. This is a precision revision, not a total rewrite.\n</Task_Context>\n\n<Critical_Rules>\n1. PRIMARY AUTHORITY: {feedback_text} is the only reason to change content.\n2. VERBATIM LOCK: Do NOT alter any slides, bullets, or post copy not mentioned in the feedback. Copy them verbatim from {previous_output}.\n3. TECHNICAL RE-VALIDATION: Ensure any revised slide bodies still fall within the 265-315 character limit.\n4. FORMATTING: Maintain *single asterisk* bolding and Slack-compatible spacing.\n</Critical_Rules>\n\n<Data_Inputs>\n- Current Draft: {previous_output}\n- User Feedback: {feedback_text}\n- Reference Data: {formatted_theme}\n</Data_Inputs>\n\n<Output_Constraint>\nOutput ONLY the revised LinkedIn carousel package. Maintain the exact same numbering and labeling structure as the original. No meta-commentary."
->>>>>>> Stashed changes
   },
   "metadata": {
     "googleDocId": null,

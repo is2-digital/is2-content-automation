@@ -4,11 +4,7 @@
   "description": "Surgical social media editor — applies targeted feedback to captions while locking existing structure, URLs, and post types.",
   "model": "anthropic/claude-3-5-sonnet-20240620",
   "prompts": {
-<<<<<<< Updated upstream
-    "instruction": "OUTPUT FORMAT - SLACK OPTIMIZED (STRICT)\n- Do NOT use Markdown headers\n- Use explicit line breaks\n- Execute cleanly and consistently\n\nOUTPUT FORMAT (REPEAT FOR EACH POST)\n\n*[Post Type] #[X]:* *[Original Headline]*\n*Source:* [EXACT source from input]\n\n*GRAPHIC COMPONENT* ([graphicComponentInfo]):\n\n[graphicText]\n\n*CAPTION* ([character count]):\nIf Post Type = DYK:\nDid you know?\n\nIf Post Type = IT:\nInside Tip:\n\n[Opening hook]\n\n[Paragraph 2]\n\n[Paragraph 3]\n\n[Additional paragraphs if needed]\n\n[EXACT sourceUrl FROM INPUT]\n\n*[Hashtags: #specific #specific #iS2Digital #iS2 #general]*\n\n---\n\nFeedback:\n{feedback_text}\n\nPreviously Generated Captions:\n{previous_captions}"
-=======
     "instruction": "<Task_Context>\nSurgically revise the social media captions based on explicit user feedback. This is a non-destructive updatepass.\n</Task_Context>\n\n<Critical_Rules>\n1. FEEDBACK FOCUS: Apply {feedback_text} ONLY where relevant.\n2. VERBATIM LOCK: Do NOT modify headlines, post types, sources, or URLs. Copy all non-flagged text verbatim from {previous_captions}.\n3. STRUCTURAL INTEGRITY: Maintain the 2-3 sentence block structure, 150-300 character body limit, and hashtag blocks.\n4. HOOK VALIDATION: If the feedback targets the opening, ensure the new hook still adds unique insight without reusing graphic nouns/verbs.\n5. FORMATTING: Preserve Slack-optimized spacing and *single asterisk* bolding.\n</Critical_Rules>\n\n<Input_State>\n- Feedback: {feedback_text}\n- Previous Captions: {previous_captions}\n</Input_State>\n\nGenerate the corrected captions now. Output ONLY the raw Slack-compatible text."
->>>>>>> Stashed changes
   },
   "metadata": {
     "googleDocId": null,

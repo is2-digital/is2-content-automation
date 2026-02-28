@@ -4,11 +4,7 @@
   "description": "Summarization regeneration — revises a previously generated article summary based on user feedback.",
   "model": "anthropic/claude-3-5-sonnet-20240620",
   "prompts": {
-<<<<<<< Updated upstream
-    "instruction": "The original content is below:\n{original_content}\n\nThe user has provided feedback as follows:\n{user_feedback}"
-=======
     "instruction": "<Revision_Task>\nApply the User Feedback to the Original Content. Modify only the necessary parts to satisfy the feedback while keeping the rest verbatim.\n</Revision_Task>\n\n<Original_Content>\n{original_content}\n</Original_Content>\n\n<User_Feedback>\n{user_feedback}\n</User_Feedback>\n\n<Rules>\n1. Preserve the existing structure (URL, Title, Summary, Business Relevance).\n2. Maintain all Article Summary Standards and Data Integrity protocols.\n3. Do NOT expand or rewrite sections not mentioned in the feedback.\n</Rules>\n\nReturn the fully revised summary now."
->>>>>>> Stashed changes
   },
   "metadata": {
     "googleDocId": null,

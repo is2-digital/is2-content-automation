@@ -4,11 +4,7 @@
   "description": "Article summarization — processes a single news or blog article into a structured summary with business relevance commentary for the iS2 newsletter.",
   "model": "google/gemini-1.5-flash",
   "prompts": {
-<<<<<<< Updated upstream
-    "instruction": "{feedback_section}\n## Output Format (MANDATORY)\nReturn clean plain text output (no markdown or bullet points) in this format:\n\nURL: [article URL]\nTitle: [article title]\nSummary: [3-4 sentence factual summary following Article Summary Standards]\nBusiness Relevance: [2-3 sentence business relevance commentary following the same standards]\n\nNow process the following content accordingly. The input may be HTML, Markdown, or plain text — automatically detect the format. If the content cannot be fully accessed, follow the Accuracy Control Protocol.\n\nKeep the output format consistent as plain text and not JSON object.\n\nInput:\n{article_content}"
-=======
     "instruction": "<Task_Context>\nAnalyze the provided article data (which includes the URL, Title, and Body) and generate a structured summary for the iS2 Digital newsletter. \n</Task_Context>\n\n<Input_Data>\n{article_content}\n</Input_Data>\n\n<Constraint_Rules>\n1. SUMMARY: 3-4 sentences. Focus on factual content, technical details, and key findings.\n2. BUSINESS_RELEVANCE: 2-3 sentences. Explain strategic relevance for SMB professionals and operations.\n3. INTEGRITY: No external research. Use ONLY the provided data. If content is inaccessible, output \"DATA_INCOMPLETE\".\n4. VOICE: Use the declarative patterns defined in your Master System Instruction. Describe reality directly without hedging.\n</Constraint_Rules>\n\n<Output_Schema>\nURL: [Extract URL from input]\nTitle: [Extract Title from input]\nSummary: [Insert 3-4 sentence factual summary]\nBusiness Relevance: [Insert 2-3 sentence business relevance commentary]\n</Output_Schema>\n\n<Feedback_Adjustment>\n{feedback_section}\n</Feedback_Adjustment>\n\nGenerate the structured summary now."
->>>>>>> Stashed changes
   },
   "metadata": {
     "googleDocId": null,

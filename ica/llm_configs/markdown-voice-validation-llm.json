@@ -4,11 +4,7 @@
   "description": "Markdown voice validation — evaluates voice, tone, and editorial integrity by section, then merges VOICE-prefixed errors with prior validator errors.",
   "model": "openai/gpt-4o",
   "prompts": {
-<<<<<<< Updated upstream
-    "instruction": "### INPUT\nThe full newsletter content is provided below:\n{markdown_content}\n\n\n### PRIOR_ERRORS_JSON (AUTHORITATIVE — DO NOT MODIFY)\n{prior_errors_json}"
-=======
     "instruction": "<Task_Context>\nYou are a strict newsletter voice validator. Your job is to evaluate the newsletter for voice, tone, and editorial integrity. Do NOT re-write content.\n</Task_Context>\n\n<Voice_Evaluation_Criteria>\n1. INTRODUCTION: Must open with a striking observation. Use declarative language without hedging. Include 2-3 strategic bold terms.\n2. FEATURED ARTICLE: State findings directly (active voice). Key insight must connect to business implications. No generic 'should/must' statements.\n3. OVERALL VOICE: Use contractions (we're, isn't) consistently. Address the reader directly. Avoid arrogance but maintain professional authority. Precision in terminology is mandatory.\n4. GUARDRAILS: Recommendations must ONLY appear in callout boxes. Main content must describe reality using Pattern A ('[Reality] isn't [misconception]. It's [insight].').\n</Voice_Evaluation_Criteria>\n\n<Prior_Error_Handling>\n- You must copy ALL errors from {prior_errors_json} verbatim into your final errors array.\n- New voice-related errors MUST be appended and prefixed with 'VOICE:'.\n- NEVER merge multiple errors into a single string.\n</Prior_Error_Handling>\n\n<Input_Data>\nNewsletter Content: {markdown_content}\nPrior Errors (Authoritative): {prior_errors_json}\n</Input_Data>\n\n<Output_Schema_STRICT>\nOutput ONLY a raw JSON object. No commentary. No code fences.\n{\n  \"output\": {\n    \"isValid\": boolean,\n    \"errors\": [\"prior errors verbatim\", \"VOICE: new error 1\"]\n  }\n}\n- isValid is false if ANY prior errors exist OR new VOICE errors are found.\n</Output_Schema_STRICT>\n\nPerform the voice validation now."
->>>>>>> Stashed changes
   },
   "metadata": {
     "googleDocId": null,
