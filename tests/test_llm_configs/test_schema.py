@@ -22,7 +22,6 @@ def _valid_config_data() -> dict:
         "description": "Article summarization",
         "model": "anthropic/claude-sonnet-4.5",
         "prompts": {
-            "system": "You are a professional editor.",
             "instruction": "Follow these rules.",
         },
         "metadata": {
@@ -40,17 +39,12 @@ def _valid_config_data() -> dict:
 
 class TestPrompts:
     def test_valid_prompts(self) -> None:
-        p = Prompts(system="system text", instruction="instruction text")
-        assert p.system == "system text"
+        p = Prompts(instruction="instruction text")
         assert p.instruction == "instruction text"
-
-    def test_empty_system_rejected(self) -> None:
-        with pytest.raises(ValidationError):
-            Prompts(system="", instruction="ok")
 
     def test_empty_instruction_rejected(self) -> None:
         with pytest.raises(ValidationError):
-            Prompts(system="ok", instruction="")
+            Prompts(instruction="")
 
 
 # ---------------------------------------------------------------------------
@@ -190,7 +184,6 @@ class TestProcessConfig:
         assert config.schema_version == "ica-llm-config/v1"
         assert config.process_name == "summarization"
         assert config.model == "anthropic/claude-sonnet-4.5"
-        assert config.prompts.system == "You are a professional editor."
         assert config.prompts.instruction == "Follow these rules."
         assert config.metadata.version == 1
 

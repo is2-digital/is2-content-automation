@@ -2,7 +2,14 @@
 
 ## Current Status
 **Last Updated:** 2026-02-28
-**Tasks Completed:** ica-dnm (Create shared system prompt JSON file and schema)
+**Tasks Completed:** ica-dnm, ica-zo5
+
+### 2026-02-28 — ica-zo5: Update ProcessConfig schema to remove system prompt from Prompts model
+- Removed `system` field from `Prompts` Pydantic model in `ica/llm_configs/schema.py`; model now contains only `instruction`
+- Updated `Prompts` docstring to clarify system prompt is application-wide via `SystemPromptConfig`
+- Updated `ProcessConfig` docstring example JSON to remove `system` from `prompts`
+- Updated `tests/test_llm_configs/test_schema.py`: removed system field from test data, removed `test_empty_system_rejected`, updated assertions
+- Unblocks ica-4cg (remove system from JSON configs) and ica-52u (update loader)
 
 ### 2026-02-28 — ica-dnm: Create shared system prompt JSON file and schema
 - Created `ica/llm_configs/system-prompt.json` with application-wide system prompt (IS2 identity, data integrity, output integrity, audience context protocols)

@@ -11,9 +11,12 @@ from pydantic import BaseModel, Field
 
 
 class Prompts(BaseModel):
-    """System and instruction prompt content."""
+    """Instruction prompt content for a pipeline process.
 
-    system: str = Field(min_length=1)
+    The system prompt is application-wide and managed separately
+    via :class:`SystemPromptConfig`.
+    """
+
     instruction: str = Field(min_length=1)
 
 
@@ -71,7 +74,7 @@ class ProcessConfig(BaseModel):
             "processName": "summarization",
             "description": "Article summarization ...",
             "model": "anthropic/claude-sonnet-4.5",
-            "prompts": { "system": "...", "instruction": "..." },
+            "prompts": { "instruction": "..." },
             "metadata": { "googleDocId": null, "lastSyncedAt": null, "version": 1 }
         }
     """
