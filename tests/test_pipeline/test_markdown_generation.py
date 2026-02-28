@@ -292,7 +292,9 @@ class TestCallMarkdownLlm:
                 validator_errors="err1\nerr2",
                 model="test-model",
             )
-            assert "old markdown" in mock_call.call_args.kwargs["system_prompt"]
+            # Shared system prompt has no {previous_markdown} placeholder;
+            # format() is a no-op so previous markdown is NOT in system prompt.
+            assert "old markdown" not in mock_call.call_args.kwargs["system_prompt"]
             assert "err1" in mock_call.call_args.kwargs["user_prompt"]
 
     @pytest.mark.asyncio

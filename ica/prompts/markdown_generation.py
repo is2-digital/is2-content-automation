@@ -50,7 +50,7 @@ def build_markdown_generation_prompt(
     formatted_theme: str,
     *,
     aggregated_feedback: str = "",
-    previous_markdown: str = "",
+    previous_markdown: str = "NO_PREVIOUS_DRAFT",
     validator_errors: str = "",
 ) -> tuple[str, str]:
     """Build the system and user messages for the markdown generation call.
@@ -65,8 +65,8 @@ def build_markdown_generation_prompt(
             from the ``notes`` table (type ``user_markdowngenerator``).
             Empty string when no prior feedback exists.
         previous_markdown: The previously generated newsletter markdown.
-            Empty string on the first generation attempt; populated on
-            validator-driven regeneration attempts.
+            ``"NO_PREVIOUS_DRAFT"`` on the first generation attempt;
+            populated on validator-driven regeneration attempts.
         validator_errors: JSON-formatted validator errors from the
             character-count, structural, and voice validators. Empty string
             on the first generation attempt.
@@ -89,7 +89,7 @@ def build_markdown_generation_prompt(
     )
 
     system_prompt = system_prompt.format(
-        previous_markdown=previous_markdown or "",
+        previous_markdown=previous_markdown or "NO_PREVIOUS_DRAFT",
     )
 
     user_prompt = instruction.format(

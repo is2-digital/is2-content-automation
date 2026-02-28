@@ -210,7 +210,7 @@ async def call_markdown_llm(
     formatted_theme: str,
     *,
     aggregated_feedback: str | None = None,
-    previous_markdown: str = "",
+    previous_markdown: str = "NO_PREVIOUS_DRAFT",
     validator_errors: str = "",
     model: str | None = None,
 ) -> str:
@@ -220,6 +220,7 @@ async def call_markdown_llm(
         formatted_theme: JSON string of the formatted theme data.
         aggregated_feedback: Optional aggregated learning data.
         previous_markdown: Previous output (for validator-driven regen).
+            Defaults to ``"NO_PREVIOUS_DRAFT"`` on the first attempt.
         validator_errors: Merged validator error string (for regen).
         model: Override model identifier.
 
