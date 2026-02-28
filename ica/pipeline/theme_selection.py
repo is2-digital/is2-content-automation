@@ -28,10 +28,10 @@ import re
 from dataclasses import dataclass
 from enum import StrEnum
 
-import litellm
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ica.config.llm_config import LLMPurpose, get_model
+from ica.config.llm_config import LLMPurpose
+from ica.services.llm import completion
 from ica.db.crud import add_note, upsert_theme
 from ica.pipeline.theme_generation import GeneratedTheme, ThemeGenerationResult
 from ica.prompts.freshness_check import build_freshness_check_prompt
@@ -552,22 +552,17 @@ async def run_freshness_check(
     Raises:
         RuntimeError: If the LLM returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.THEME_FRESHNESS_CHECK)
     system_prompt, user_prompt = build_freshness_check_prompt(theme_body)
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.THEME_FRESHNESS_CHECK,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="theme_freshness",
     )
 
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for freshness check")
-
-    return content.strip()
+    return result.text
 
 
 async def extract_learning_data(
@@ -598,26 +593,21 @@ async def extract_learning_data(
     Raises:
         RuntimeError: If the LLM returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.THEME_LEARNING_DATA)
     system_prompt, user_prompt = build_learning_data_extraction_prompt(
         feedback=feedback,
         input_text=input_text,
         model_output=model_output,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.THEME_LEARNING_DATA,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="theme_learning_data",
     )
 
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for learning data extraction")
-
-    text = content.strip()
+    text = result.text
 
     # Try to parse JSON and extract the learning_feedback field.
     try:

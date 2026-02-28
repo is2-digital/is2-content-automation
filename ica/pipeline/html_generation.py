@@ -23,10 +23,10 @@ import json
 from dataclasses import dataclass
 from typing import Protocol
 
-import litellm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ica.config.llm_config import LLMPurpose, get_model
+from ica.services.llm import completion
 from ica.db.crud import add_note, get_recent_notes
 from ica.db.models import Note
 from ica.prompts.html_generation import (
@@ -204,7 +204,6 @@ async def call_html_llm(
     Raises:
         RuntimeError: If the LLM returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.HTML)
     system_prompt, user_prompt = build_html_generation_prompt(
         markdown_content=markdown_content,
         html_template=html_template,
@@ -212,19 +211,15 @@ async def call_html_llm(
         aggregated_feedback=aggregated_feedback,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.HTML,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="html_generation",
     )
 
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for HTML generation")
-
-    return content.strip()
+    return result.text
 
 
 async def call_html_regeneration(
@@ -255,7 +250,6 @@ async def call_html_regeneration(
     Raises:
         RuntimeError: If the LLM returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.HTML_REGENERATION)
     system_prompt, user_prompt = build_html_regeneration_prompt(
         previous_html=previous_html,
         markdown_content=markdown_content,
@@ -264,19 +258,15 @@ async def call_html_regeneration(
         newsletter_date=newsletter_date,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.HTML_REGENERATION,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="html_regeneration",
     )
 
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for HTML regeneration")
-
-    return content.strip()
+    return result.text
 
 
 # ---------------------------------------------------------------------------
@@ -308,26 +298,21 @@ async def extract_html_learning_data(
     Raises:
         RuntimeError: If the LLM returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.HTML_LEARNING_DATA)
     system_prompt, user_prompt = build_learning_data_extraction_prompt(
         feedback=feedback,
         input_text=input_text,
         model_output=model_output,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.HTML_LEARNING_DATA,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="html_learning_data",
     )
 
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for learning data extraction")
-
-    text = content.strip()
+    text = result.text
 
     # Try to parse JSON and extract the learning_feedback field.
     try:

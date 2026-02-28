@@ -13,9 +13,12 @@ Covers:
 from __future__ import annotations
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
+
+from ica.errors import LLMError
+from ica.services.llm import LLMResponse
 
 from ica.pipeline.linkedin_carousel import (
     APPROVAL_MESSAGE,
@@ -129,15 +132,9 @@ def _make_long_body() -> str:
     return _make_body(400)
 
 
-def _mock_llm_response(text: str) -> MagicMock:
-    """Build a mock litellm.acompletion response."""
-    msg = MagicMock()
-    msg.content = text
-    choice = MagicMock()
-    choice.message = msg
-    resp = MagicMock()
-    resp.choices = [choice]
-    return resp
+def _mock_llm_response(text: str) -> LLMResponse:
+    """Build a mock LLMResponse for the completion() wrapper."""
+    return LLMResponse(text=text, model="test-model")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -391,10 +388,13 @@ class TestCallCarouselLlm:
     """Tests for the LLM generation call."""
 
     @pytest.mark.asyncio
-    async def test_returns_stripped_content(self) -> None:
-        mock_resp = _mock_llm_response("  carousel output  ")
-        with patch("ica.pipeline.linkedin_carousel.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_resp)
+    async def test_returns_content(self) -> None:
+        mock_resp = _mock_llm_response("carousel output")
+        with patch(
+            "ica.pipeline.linkedin_carousel.completion",
+            new_callable=AsyncMock,
+            return_value=mock_resp,
+        ):
             result = await call_carousel_llm(
                 formatted_theme="{}",
                 newsletter_content="<html>content</html>",
@@ -403,10 +403,12 @@ class TestCallCarouselLlm:
 
     @pytest.mark.asyncio
     async def test_raises_on_empty_response(self) -> None:
-        mock_resp = _mock_llm_response("")
-        with patch("ica.pipeline.linkedin_carousel.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_resp)
-            with pytest.raises(RuntimeError, match="empty response"):
+        with patch(
+            "ica.pipeline.linkedin_carousel.completion",
+            new_callable=AsyncMock,
+            side_effect=LLMError("linkedin_carousel", "empty response"),
+        ):
+            with pytest.raises(LLMError, match="empty response"):
                 await call_carousel_llm(
                     formatted_theme="{}",
                     newsletter_content="content",
@@ -414,73 +416,86 @@ class TestCallCarouselLlm:
 
     @pytest.mark.asyncio
     async def test_raises_on_whitespace_only(self) -> None:
-        mock_resp = _mock_llm_response("   \n  ")
-        with patch("ica.pipeline.linkedin_carousel.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_resp)
-            with pytest.raises(RuntimeError, match="empty response"):
+        with patch(
+            "ica.pipeline.linkedin_carousel.completion",
+            new_callable=AsyncMock,
+            side_effect=LLMError("linkedin_carousel", "empty response"),
+        ):
+            with pytest.raises(LLMError, match="empty response"):
                 await call_carousel_llm(
                     formatted_theme="{}",
                     newsletter_content="content",
                 )
 
     @pytest.mark.asyncio
-    async def test_uses_default_model(self) -> None:
+    async def test_passes_purpose_and_step(self) -> None:
         mock_resp = _mock_llm_response("output")
-        with (
-            patch("ica.pipeline.linkedin_carousel.litellm") as mock_litellm,
-            patch("ica.pipeline.linkedin_carousel.get_model", return_value="test-model"),
-        ):
-            mock_litellm.acompletion = AsyncMock(return_value=mock_resp)
+        with patch(
+            "ica.pipeline.linkedin_carousel.completion",
+            new_callable=AsyncMock,
+            return_value=mock_resp,
+        ) as mock_completion:
             await call_carousel_llm(
                 formatted_theme="{}",
                 newsletter_content="content",
             )
-            call_args = mock_litellm.acompletion.call_args
-            assert call_args.kwargs["model"] == "test-model"
+            call_args = mock_completion.call_args
+            from ica.config.llm_config import LLMPurpose
+
+            assert call_args.kwargs["purpose"] == LLMPurpose.LINKEDIN
+            assert call_args.kwargs["step"] == "linkedin_carousel"
 
     @pytest.mark.asyncio
     async def test_model_override(self) -> None:
         mock_resp = _mock_llm_response("output")
-        with patch("ica.pipeline.linkedin_carousel.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_resp)
+        with patch(
+            "ica.pipeline.linkedin_carousel.completion",
+            new_callable=AsyncMock,
+            return_value=mock_resp,
+        ) as mock_completion:
             await call_carousel_llm(
                 formatted_theme="{}",
                 newsletter_content="content",
                 model="custom/model",
             )
-            call_args = mock_litellm.acompletion.call_args
+            call_args = mock_completion.call_args
             assert call_args.kwargs["model"] == "custom/model"
 
     @pytest.mark.asyncio
     async def test_passes_previous_output(self) -> None:
         """When previous_output is provided, it should appear in the prompt."""
         mock_resp = _mock_llm_response("output")
-        with patch("ica.pipeline.linkedin_carousel.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_resp)
+        with patch(
+            "ica.pipeline.linkedin_carousel.completion",
+            new_callable=AsyncMock,
+            return_value=mock_resp,
+        ) as mock_completion:
             await call_carousel_llm(
                 formatted_theme="{}",
                 newsletter_content="content",
                 previous_output="previous content with errors",
             )
-            call_args = mock_litellm.acompletion.call_args
-            messages = call_args.kwargs["messages"]
-            user_msg = messages[1]["content"]
-            assert "previous content with errors" in user_msg
+            call_args = mock_completion.call_args
+            user_prompt = call_args.kwargs["user_prompt"]
+            assert "previous content with errors" in user_prompt
 
     @pytest.mark.asyncio
-    async def test_system_and_user_messages(self) -> None:
+    async def test_system_and_user_prompts(self) -> None:
         mock_resp = _mock_llm_response("output")
-        with patch("ica.pipeline.linkedin_carousel.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_resp)
+        with patch(
+            "ica.pipeline.linkedin_carousel.completion",
+            new_callable=AsyncMock,
+            return_value=mock_resp,
+        ) as mock_completion:
             await call_carousel_llm(
                 formatted_theme="theme data",
                 newsletter_content="html content",
             )
-            call_args = mock_litellm.acompletion.call_args
-            messages = call_args.kwargs["messages"]
-            assert len(messages) == 2
-            assert messages[0]["role"] == "system"
-            assert messages[1]["role"] == "user"
+            call_args = mock_completion.call_args
+            assert "system_prompt" in call_args.kwargs
+            assert "user_prompt" in call_args.kwargs
+            assert isinstance(call_args.kwargs["system_prompt"], str)
+            assert isinstance(call_args.kwargs["user_prompt"], str)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -492,10 +507,13 @@ class TestCallRegenerationLlm:
     """Tests for the feedback-driven regeneration LLM call."""
 
     @pytest.mark.asyncio
-    async def test_returns_stripped_content(self) -> None:
-        mock_resp = _mock_llm_response("  regenerated output  ")
-        with patch("ica.pipeline.linkedin_carousel.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_resp)
+    async def test_returns_content(self) -> None:
+        mock_resp = _mock_llm_response("regenerated output")
+        with patch(
+            "ica.pipeline.linkedin_carousel.completion",
+            new_callable=AsyncMock,
+            return_value=mock_resp,
+        ):
             result = await call_regeneration_llm(
                 previous_output="original",
                 feedback_text="fix the title",
@@ -506,10 +524,12 @@ class TestCallRegenerationLlm:
 
     @pytest.mark.asyncio
     async def test_raises_on_empty_response(self) -> None:
-        mock_resp = _mock_llm_response("")
-        with patch("ica.pipeline.linkedin_carousel.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_resp)
-            with pytest.raises(RuntimeError, match="empty response"):
+        with patch(
+            "ica.pipeline.linkedin_carousel.completion",
+            new_callable=AsyncMock,
+            side_effect=LLMError("linkedin_regeneration", "empty response"),
+        ):
+            with pytest.raises(LLMError, match="empty response"):
                 await call_regeneration_llm(
                     previous_output="original",
                     feedback_text="fix it",
@@ -518,30 +538,33 @@ class TestCallRegenerationLlm:
                 )
 
     @pytest.mark.asyncio
-    async def test_uses_regeneration_model(self) -> None:
+    async def test_passes_purpose_and_step(self) -> None:
         mock_resp = _mock_llm_response("output")
-        with (
-            patch("ica.pipeline.linkedin_carousel.litellm") as mock_litellm,
-            patch(
-                "ica.pipeline.linkedin_carousel.get_model",
-                return_value="regen-model",
-            ),
-        ):
-            mock_litellm.acompletion = AsyncMock(return_value=mock_resp)
+        with patch(
+            "ica.pipeline.linkedin_carousel.completion",
+            new_callable=AsyncMock,
+            return_value=mock_resp,
+        ) as mock_completion:
             await call_regeneration_llm(
                 previous_output="original",
                 feedback_text="fix",
                 formatted_theme="{}",
                 newsletter_content="html",
             )
-            call_args = mock_litellm.acompletion.call_args
-            assert call_args.kwargs["model"] == "regen-model"
+            call_args = mock_completion.call_args
+            from ica.config.llm_config import LLMPurpose
+
+            assert call_args.kwargs["purpose"] == LLMPurpose.LINKEDIN_REGENERATION
+            assert call_args.kwargs["step"] == "linkedin_regeneration"
 
     @pytest.mark.asyncio
     async def test_model_override(self) -> None:
         mock_resp = _mock_llm_response("output")
-        with patch("ica.pipeline.linkedin_carousel.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_resp)
+        with patch(
+            "ica.pipeline.linkedin_carousel.completion",
+            new_callable=AsyncMock,
+            return_value=mock_resp,
+        ) as mock_completion:
             await call_regeneration_llm(
                 previous_output="original",
                 feedback_text="fix",
@@ -549,24 +572,26 @@ class TestCallRegenerationLlm:
                 newsletter_content="html",
                 model="my/custom",
             )
-            call_args = mock_litellm.acompletion.call_args
+            call_args = mock_completion.call_args
             assert call_args.kwargs["model"] == "my/custom"
 
     @pytest.mark.asyncio
     async def test_passes_feedback_in_prompt(self) -> None:
         mock_resp = _mock_llm_response("output")
-        with patch("ica.pipeline.linkedin_carousel.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_resp)
+        with patch(
+            "ica.pipeline.linkedin_carousel.completion",
+            new_callable=AsyncMock,
+            return_value=mock_resp,
+        ) as mock_completion:
             await call_regeneration_llm(
                 previous_output="original",
                 feedback_text="make slide 5 shorter",
                 formatted_theme="{}",
                 newsletter_content="html",
             )
-            call_args = mock_litellm.acompletion.call_args
-            messages = call_args.kwargs["messages"]
-            user_msg = messages[1]["content"]
-            assert "make slide 5 shorter" in user_msg
+            call_args = mock_completion.call_args
+            user_prompt = call_args.kwargs["user_prompt"]
+            assert "make slide 5 shorter" in user_prompt
 
 
 # ═══════════════════════════════════════════════════════════════════════════

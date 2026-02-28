@@ -32,6 +32,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from ica.errors import LLMError
+from ica.services.llm import LLMResponse
+
 from ica.pipeline.email_subject import (
     FEEDBACK_FIELD_LABEL,
     GOOGLE_DOC_TITLE,
@@ -103,14 +106,6 @@ Explanation: This subject captures the core tension of the newsletter.
 """
 
 SAMPLE_NEWSLETTER_TEXT = "AI Newsletter This week's content about artificial intelligence."
-
-
-def _mock_llm_response(content: str) -> MagicMock:
-    """Create a mock litellm.acompletion response."""
-    response = MagicMock()
-    response.choices = [MagicMock()]
-    response.choices[0].message.content = content
-    return response
 
 
 def _make_note(feedback_text: str | None) -> MagicMock:
@@ -268,59 +263,54 @@ class TestAggregateFeedback:
 class TestCallEmailSubjectLlm:
     @pytest.mark.asyncio
     async def test_basic_call(self) -> None:
-        with (
-            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
-            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
-        ):
-            mock_litellm.acompletion = AsyncMock(
-                return_value=_mock_llm_response(SAMPLE_LLM_OUTPUT)
-            )
+        with patch(
+            "ica.pipeline.email_subject.completion",
+            new_callable=AsyncMock,
+            return_value=LLMResponse(text=SAMPLE_LLM_OUTPUT, model="test-model"),
+        ) as mock_completion:
             result = await call_email_subject_llm("newsletter text")
             assert "Subject_1" in result
-            mock_litellm.acompletion.assert_called_once()
+            mock_completion.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_with_feedback(self) -> None:
-        with (
-            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
-            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        with patch(
+            "ica.pipeline.email_subject.completion",
+            new_callable=AsyncMock,
+            return_value=LLMResponse(text="Subject_1: Test\n-----", model="test-model"),
         ):
-            mock_litellm.acompletion = AsyncMock(
-                return_value=_mock_llm_response("Subject_1: Test\n-----")
-            )
             result = await call_email_subject_llm("text", aggregated_feedback="Be creative")
             assert "Subject_1" in result
 
     @pytest.mark.asyncio
     async def test_custom_model(self) -> None:
-        with patch("ica.pipeline.email_subject.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(
-                return_value=_mock_llm_response("Subject_1: Custom\n-----")
-            )
+        with patch(
+            "ica.pipeline.email_subject.completion",
+            new_callable=AsyncMock,
+            return_value=LLMResponse(text="Subject_1: Custom\n-----", model="custom/model"),
+        ) as mock_completion:
             await call_email_subject_llm("text", model="custom/model")
-            call_args = mock_litellm.acompletion.call_args
+            call_args = mock_completion.call_args
             assert call_args.kwargs["model"] == "custom/model"
 
     @pytest.mark.asyncio
     async def test_empty_response_raises(self) -> None:
-        with (
-            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
-            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        with patch(
+            "ica.pipeline.email_subject.completion",
+            new_callable=AsyncMock,
+            side_effect=LLMError("email_subject", "empty response"),
         ):
-            mock_litellm.acompletion = AsyncMock(return_value=_mock_llm_response(""))
-            with pytest.raises(RuntimeError, match="empty response"):
+            with pytest.raises(LLMError, match="empty response"):
                 await call_email_subject_llm("text")
 
     @pytest.mark.asyncio
     async def test_none_response_raises(self) -> None:
-        with (
-            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
-            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        with patch(
+            "ica.pipeline.email_subject.completion",
+            new_callable=AsyncMock,
+            side_effect=LLMError("email_subject", "empty response"),
         ):
-            mock_litellm.acompletion = AsyncMock(
-                return_value=_mock_llm_response(None)  # type: ignore[arg-type]
-            )
-            with pytest.raises(RuntimeError, match="empty response"):
+            with pytest.raises(LLMError, match="empty response"):
                 await call_email_subject_llm("text")
 
 
@@ -573,34 +563,32 @@ class TestExtractSelectedSubject:
 class TestCallEmailReviewLlm:
     @pytest.mark.asyncio
     async def test_basic_call(self) -> None:
-        with (
-            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
-            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        with patch(
+            "ica.pipeline.email_subject.completion",
+            new_callable=AsyncMock,
+            return_value=LLMResponse(text="Hi Friend, great newsletter", model="test-model"),
         ):
-            mock_litellm.acompletion = AsyncMock(
-                return_value=_mock_llm_response("Hi Friend, great newsletter")
-            )
             result = await call_email_review_llm("newsletter text")
             assert "Hi Friend" in result
 
     @pytest.mark.asyncio
     async def test_with_feedback(self) -> None:
-        with (
-            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
-            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        with patch(
+            "ica.pipeline.email_subject.completion",
+            new_callable=AsyncMock,
+            return_value=LLMResponse(text="Updated review", model="test-model"),
         ):
-            mock_litellm.acompletion = AsyncMock(return_value=_mock_llm_response("Updated review"))
             result = await call_email_review_llm("text", user_review_feedback="Be warmer")
             assert result == "Updated review"
 
     @pytest.mark.asyncio
     async def test_empty_response_raises(self) -> None:
-        with (
-            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
-            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        with patch(
+            "ica.pipeline.email_subject.completion",
+            new_callable=AsyncMock,
+            side_effect=LLMError("email_review", "empty response"),
         ):
-            mock_litellm.acompletion = AsyncMock(return_value=_mock_llm_response(""))
-            with pytest.raises(RuntimeError, match="empty response"):
+            with pytest.raises(LLMError, match="empty response"):
                 await call_email_review_llm("text")
 
 
@@ -715,43 +703,41 @@ class TestExtractEmailLearningData:
     @pytest.mark.asyncio
     async def test_json_response(self) -> None:
         json_data = json.dumps({"learning_feedback": "Be more concise"})
-        with (
-            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
-            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        with patch(
+            "ica.pipeline.email_subject.completion",
+            new_callable=AsyncMock,
+            return_value=LLMResponse(text=json_data, model="test-model"),
         ):
-            mock_litellm.acompletion = AsyncMock(return_value=_mock_llm_response(json_data))
             result = await extract_email_learning_data("feedback", "output")
             assert result == "Be more concise"
 
     @pytest.mark.asyncio
     async def test_plain_text_fallback(self) -> None:
-        with (
-            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
-            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        with patch(
+            "ica.pipeline.email_subject.completion",
+            new_callable=AsyncMock,
+            return_value=LLMResponse(text="Plain learning note", model="test-model"),
         ):
-            mock_litellm.acompletion = AsyncMock(
-                return_value=_mock_llm_response("Plain learning note")
-            )
             result = await extract_email_learning_data("feedback", "output")
             assert result == "Plain learning note"
 
     @pytest.mark.asyncio
     async def test_empty_response_raises(self) -> None:
-        with (
-            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
-            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        with patch(
+            "ica.pipeline.email_subject.completion",
+            new_callable=AsyncMock,
+            side_effect=LLMError("email_learning_data", "empty response"),
         ):
-            mock_litellm.acompletion = AsyncMock(return_value=_mock_llm_response(""))
-            with pytest.raises(RuntimeError, match="empty response"):
+            with pytest.raises(LLMError, match="empty response"):
                 await extract_email_learning_data("feedback", "output")
 
     @pytest.mark.asyncio
     async def test_invalid_json_fallback(self) -> None:
-        with (
-            patch("ica.pipeline.email_subject.litellm") as mock_litellm,
-            patch("ica.pipeline.email_subject.get_model", return_value="test-model"),
+        with patch(
+            "ica.pipeline.email_subject.completion",
+            new_callable=AsyncMock,
+            return_value=LLMResponse(text="{invalid json", model="test-model"),
         ):
-            mock_litellm.acompletion = AsyncMock(return_value=_mock_llm_response("{invalid json"))
             result = await extract_email_learning_data("feedback", "output")
             assert result == "{invalid json"
 

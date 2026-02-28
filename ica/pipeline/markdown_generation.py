@@ -32,10 +32,10 @@ import json
 from dataclasses import dataclass
 from typing import Protocol
 
-import litellm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ica.config.llm_config import LLMPurpose, get_model
+from ica.services.llm import completion
 from ica.db.crud import add_note
 from ica.db.models import Note
 from ica.errors import ValidationLoopCounter
@@ -229,7 +229,6 @@ async def call_markdown_llm(
     Raises:
         RuntimeError: If the LLM returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.MARKDOWN)
     system_prompt, user_prompt = build_markdown_generation_prompt(
         formatted_theme=formatted_theme,
         aggregated_feedback=aggregated_feedback or "",
@@ -237,19 +236,15 @@ async def call_markdown_llm(
         validator_errors=validator_errors,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.MARKDOWN,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="markdown_generation",
     )
 
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for markdown generation")
-
-    return content.strip()
+    return result.text
 
 
 # ---------------------------------------------------------------------------
@@ -289,22 +284,20 @@ async def run_structural_validation(
         ``(is_valid, errors)`` tuple.  Errors include both character-count
         and structural findings.
     """
-    model_id = model or get_model(LLMPurpose.MARKDOWN_VALIDATOR)
     system_prompt, user_prompt = build_structural_validation_prompt(
         markdown_content=markdown,
         char_errors=char_errors_json,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.MARKDOWN_VALIDATOR,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="structural_validation",
     )
 
-    content: str | None = response.choices[0].message.content
-    return _parse_validation_response(content or "")
+    return _parse_validation_response(result.text)
 
 
 async def run_voice_validation(
@@ -328,22 +321,20 @@ async def run_voice_validation(
         ``(is_valid, errors)`` tuple.  Errors include all prior errors
         plus any new VOICE errors.
     """
-    model_id = model or get_model(LLMPurpose.MARKDOWN_VALIDATOR)
     system_prompt, user_prompt = build_voice_validation_prompt(
         markdown_content=markdown,
         prior_errors_json=prior_errors_json,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.MARKDOWN_VALIDATOR,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="voice_validation",
     )
 
-    content: str | None = response.choices[0].message.content
-    return _parse_validation_response(content or "")
+    return _parse_validation_response(result.text)
 
 
 def _parse_validation_response(raw: str) -> tuple[bool, list[str]]:
@@ -578,25 +569,20 @@ async def call_user_feedback_regeneration(
     Raises:
         RuntimeError: If the LLM returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.MARKDOWN_REGENERATION)
     system_prompt, user_prompt = build_markdown_regeneration_prompt(
         original_markdown=original_markdown,
         user_feedback=user_feedback,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.MARKDOWN_REGENERATION,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="markdown_regeneration",
     )
 
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for markdown regeneration")
-
-    return content.strip()
+    return result.text
 
 
 async def extract_markdown_learning_data(
@@ -623,26 +609,21 @@ async def extract_markdown_learning_data(
     Raises:
         RuntimeError: If the LLM returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.MARKDOWN_LEARNING_DATA)
     system_prompt, user_prompt = build_learning_data_extraction_prompt(
         feedback=feedback,
         input_text=input_text,
         model_output=model_output,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.MARKDOWN_LEARNING_DATA,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="markdown_learning_data",
     )
 
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for learning data extraction")
-
-    text = content.strip()
+    text = result.text
 
     # Try to parse JSON and extract the learning_feedback field.
     try:

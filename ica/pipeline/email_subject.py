@@ -26,10 +26,10 @@ import re
 from dataclasses import dataclass
 from typing import Protocol
 
-import litellm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ica.config.llm_config import LLMPurpose, get_model
+from ica.services.llm import completion
 from ica.db.crud import add_note, get_recent_notes
 from ica.db.models import Note
 from ica.prompts.email_review import build_email_review_prompt
@@ -253,25 +253,20 @@ async def call_email_subject_llm(
     Raises:
         RuntimeError: If the LLM returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.EMAIL_SUBJECT)
     system_prompt, user_prompt = build_email_subject_prompt(
         newsletter_text=newsletter_text,
         aggregated_feedback=aggregated_feedback,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.EMAIL_SUBJECT,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="email_subject",
     )
 
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for email subject generation")
-
-    return content.strip()
+    return result.text
 
 
 # ---------------------------------------------------------------------------
@@ -530,25 +525,20 @@ async def call_email_review_llm(
     Raises:
         RuntimeError: If the LLM returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.EMAIL_PREVIEW)
     system_prompt, user_prompt = build_email_review_prompt(
         newsletter_text=newsletter_text,
         user_review_feedback=user_review_feedback,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.EMAIL_PREVIEW,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="email_review",
     )
 
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for email review generation")
-
-    return content.strip()
+    return result.text
 
 
 # ---------------------------------------------------------------------------
@@ -692,26 +682,21 @@ async def extract_email_learning_data(
     Raises:
         RuntimeError: If the LLM returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.EMAIL_SUBJECT_REGENERATION)
     system_prompt, user_prompt = build_learning_data_extraction_prompt(
         feedback=feedback,
         input_text=model_output,
         model_output=model_output,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.EMAIL_SUBJECT_REGENERATION,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="email_learning_data",
     )
 
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for learning data extraction")
-
-    text = content.strip()
+    text = result.text
 
     # Try to parse JSON and extract the learning_feedback field.
     try:

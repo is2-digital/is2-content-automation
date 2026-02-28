@@ -8,7 +8,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from ica.config.llm_config import LLMPurpose
+from ica.errors import LLMError
 from ica.pipeline.theme_generation import GeneratedTheme, ThemeGenerationResult
+from ica.services.llm import LLMResponse
 from ica.pipeline.theme_selection import (
     ADD_FEEDBACK_OPTION,
     APPROVAL_FIELD_LABEL,
@@ -769,96 +771,67 @@ class TestRunFreshnessCheck:
 
     @pytest.mark.asyncio
     async def test_calls_llm(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Theme is fresh and unique."
-
-        with patch("ica.pipeline.theme_selection.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.theme_selection.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text="Theme is fresh and unique.", model="test-model"
+            )
             result = await run_freshness_check("theme body text")
 
         assert result == "Theme is fresh and unique."
-        mock_litellm.acompletion.assert_awaited_once()
+        mock_completion.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_uses_default_model(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Fresh"
-
-        with (
-            patch("ica.pipeline.theme_selection.litellm") as mock_litellm,
-            patch("ica.pipeline.theme_selection.get_model") as mock_get_model,
-        ):
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
-            mock_get_model.return_value = "google/gemini-2.5-flash"
+    async def test_uses_freshness_check_purpose(self):
+        with patch("ica.pipeline.theme_selection.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(text="Fresh", model="test-model")
             await run_freshness_check("body")
 
-        mock_get_model.assert_called_once_with(LLMPurpose.THEME_FRESHNESS_CHECK)
-        call_kwargs = mock_litellm.acompletion.call_args
-        assert call_kwargs.kwargs["model"] == "google/gemini-2.5-flash"
+        assert mock_completion.call_args.kwargs["purpose"] == LLMPurpose.THEME_FRESHNESS_CHECK
 
     @pytest.mark.asyncio
     async def test_uses_override_model(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Fresh"
-
-        with patch("ica.pipeline.theme_selection.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.theme_selection.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(text="Fresh", model="custom/model")
             await run_freshness_check("body", model="custom/model")
 
-        call_kwargs = mock_litellm.acompletion.call_args
-        assert call_kwargs.kwargs["model"] == "custom/model"
+        assert mock_completion.call_args.kwargs["model"] == "custom/model"
 
     @pytest.mark.asyncio
     async def test_raises_on_empty_response(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = ""
-
-        with patch("ica.pipeline.theme_selection.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
-            with pytest.raises(RuntimeError, match="empty response"):
+        with patch("ica.pipeline.theme_selection.completion") as mock_completion:
+            mock_completion.side_effect = LLMError(
+                "theme_freshness", "LLM returned an empty response"
+            )
+            with pytest.raises(LLMError, match="empty response"):
                 await run_freshness_check("body")
 
     @pytest.mark.asyncio
     async def test_raises_on_whitespace_response(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "   \n  "
-
-        with patch("ica.pipeline.theme_selection.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
-            with pytest.raises(RuntimeError, match="empty response"):
+        with patch("ica.pipeline.theme_selection.completion") as mock_completion:
+            mock_completion.side_effect = LLMError(
+                "theme_freshness", "LLM returned an empty response"
+            )
+            with pytest.raises(LLMError, match="empty response"):
                 await run_freshness_check("body")
 
     @pytest.mark.asyncio
-    async def test_strips_whitespace_from_response(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "  Fresh theme  \n"
-
-        with patch("ica.pipeline.theme_selection.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+    async def test_returns_text_directly(self):
+        with patch("ica.pipeline.theme_selection.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text="Fresh theme", model="test-model"
+            )
             result = await run_freshness_check("body")
 
         assert result == "Fresh theme"
 
     @pytest.mark.asyncio
     async def test_passes_theme_body_to_prompt(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Fresh"
-
-        with patch("ica.pipeline.theme_selection.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.theme_selection.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(text="Fresh", model="test-model")
             await run_freshness_check("My unique theme body")
 
-        call_args = mock_litellm.acompletion.call_args
-        messages = call_args.kwargs["messages"]
-        user_msg = messages[1]["content"]
-        assert "My unique theme body" in user_msg
+        user_prompt = mock_completion.call_args.kwargs["user_prompt"]
+        assert "My unique theme body" in user_prompt
 
 
 # =========================================================================
@@ -874,24 +847,21 @@ class TestExtractLearningData:
         json_response = json.dumps(
             {"learning_feedback": "Future responses should be more concise."}
         )
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = json_response
 
-        with patch("ica.pipeline.theme_selection.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.theme_selection.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text=json_response, model="test-model"
+            )
             result = await extract_learning_data("too long", "input", "output")
 
         assert result == "Future responses should be more concise."
 
     @pytest.mark.asyncio
     async def test_returns_raw_text_on_invalid_json(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Just some plain feedback text"
-
-        with patch("ica.pipeline.theme_selection.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.theme_selection.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text="Just some plain feedback text", model="test-model"
+            )
             result = await extract_learning_data("feedback", "input", "output")
 
         assert result == "Just some plain feedback text"
@@ -899,72 +869,52 @@ class TestExtractLearningData:
     @pytest.mark.asyncio
     async def test_returns_raw_text_on_json_without_key(self):
         json_response = json.dumps({"other_key": "value"})
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = json_response
 
-        with patch("ica.pipeline.theme_selection.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.theme_selection.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text=json_response, model="test-model"
+            )
             result = await extract_learning_data("fb", "in", "out")
 
         assert result == json_response
 
     @pytest.mark.asyncio
-    async def test_uses_default_model(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "feedback"
-
-        with (
-            patch("ica.pipeline.theme_selection.litellm") as mock_litellm,
-            patch("ica.pipeline.theme_selection.get_model") as mock_get_model,
-        ):
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
-            mock_get_model.return_value = "anthropic/claude-sonnet-4.5"
+    async def test_uses_learning_data_purpose(self):
+        with patch("ica.pipeline.theme_selection.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(text="feedback", model="test-model")
             await extract_learning_data("fb", "in", "out")
 
-        mock_get_model.assert_called_once_with(LLMPurpose.THEME_LEARNING_DATA)
+        assert mock_completion.call_args.kwargs["purpose"] == LLMPurpose.THEME_LEARNING_DATA
 
     @pytest.mark.asyncio
     async def test_uses_override_model(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "feedback"
-
-        with patch("ica.pipeline.theme_selection.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.theme_selection.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text="feedback", model="custom/model"
+            )
             await extract_learning_data("fb", "in", "out", model="custom/model")
 
-        call_kwargs = mock_litellm.acompletion.call_args
-        assert call_kwargs.kwargs["model"] == "custom/model"
+        assert mock_completion.call_args.kwargs["model"] == "custom/model"
 
     @pytest.mark.asyncio
     async def test_raises_on_empty_response(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = ""
-
-        with patch("ica.pipeline.theme_selection.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
-            with pytest.raises(RuntimeError, match="empty response"):
+        with patch("ica.pipeline.theme_selection.completion") as mock_completion:
+            mock_completion.side_effect = LLMError(
+                "theme_learning_data", "LLM returned an empty response"
+            )
+            with pytest.raises(LLMError, match="empty response"):
                 await extract_learning_data("fb", "in", "out")
 
     @pytest.mark.asyncio
     async def test_passes_all_params_to_prompt(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "result"
-
-        with patch("ica.pipeline.theme_selection.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.theme_selection.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(text="result", model="test-model")
             await extract_learning_data("my feedback", "my input", "my output")
 
-        call_args = mock_litellm.acompletion.call_args
-        messages = call_args.kwargs["messages"]
-        user_msg = messages[1]["content"]
-        assert "my feedback" in user_msg
-        assert "my input" in user_msg
-        assert "my output" in user_msg
+        user_prompt = mock_completion.call_args.kwargs["user_prompt"]
+        assert "my feedback" in user_prompt
+        assert "my input" in user_prompt
+        assert "my output" in user_prompt
 
 
 # =========================================================================
@@ -1141,15 +1091,13 @@ class TestEndToEndScenarios:
 
     @pytest.mark.asyncio
     async def test_freshness_to_approval_flow(self):
-        """Selected theme → freshness check → format message → approval."""
+        """Selected theme -> freshness check -> format message -> approval."""
         theme = _make_theme("AI Adoption")
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Theme is fresh and unique."
-
-        with patch("ica.pipeline.theme_selection.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.theme_selection.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text="Theme is fresh and unique.", model="test-model"
+            )
             freshness = await run_freshness_check(theme.theme_body)
 
         message = format_freshness_slack_message(
@@ -1164,14 +1112,13 @@ class TestEndToEndScenarios:
 
     @pytest.mark.asyncio
     async def test_feedback_learning_data_flow(self):
-        """Feedback → extract learning data → store in DB."""
+        """Feedback -> extract learning data -> store in DB."""
         json_response = json.dumps({"learning_feedback": "Use more diverse sources next time."})
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = json_response
 
-        with patch("ica.pipeline.theme_selection.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.theme_selection.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text=json_response, model="test-model"
+            )
             learning = await extract_learning_data(
                 "Need more diversity", "articles json", "theme output"
             )

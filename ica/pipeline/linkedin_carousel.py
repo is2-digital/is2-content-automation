@@ -27,9 +27,8 @@ import re
 from dataclasses import dataclass
 from typing import Protocol
 
-import litellm
-
 from ica.config.llm_config import LLMPurpose, get_model
+from ica.services.llm import completion
 from ica.prompts.linkedin_carousel import (
     build_linkedin_carousel_prompt,
     build_linkedin_regeneration_prompt,
@@ -320,26 +319,21 @@ async def call_carousel_llm(
     Raises:
         RuntimeError: If the LLM returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.LINKEDIN)
     system_prompt, user_prompt = build_linkedin_carousel_prompt(
         formatted_theme=formatted_theme,
         newsletter_content=newsletter_content,
         previous_output=previous_output,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.LINKEDIN,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="linkedin_carousel",
     )
 
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for LinkedIn carousel generation")
-
-    return content.strip()
+    return result.text
 
 
 async def call_regeneration_llm(
@@ -367,7 +361,6 @@ async def call_regeneration_llm(
     Raises:
         RuntimeError: If the LLM returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.LINKEDIN_REGENERATION)
     system_prompt, user_prompt = build_linkedin_regeneration_prompt(
         previous_output=previous_output,
         feedback_text=feedback_text,
@@ -375,19 +368,15 @@ async def call_regeneration_llm(
         newsletter_content=newsletter_content,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.LINKEDIN_REGENERATION,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="linkedin_regeneration",
     )
 
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for LinkedIn carousel regeneration")
-
-    return content.strip()
+    return result.text
 
 
 # ---------------------------------------------------------------------------

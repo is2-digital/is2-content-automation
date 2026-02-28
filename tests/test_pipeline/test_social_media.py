@@ -15,9 +15,12 @@ Covers:
 from __future__ import annotations
 
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
+
+from ica.errors import LLMError
+from ica.services.llm import LLMResponse
 
 from ica.pipeline.social_media import (
     APPROVAL_MESSAGE,
@@ -595,12 +598,10 @@ class TestParseCheckboxResponse:
 class TestCallSocialMediaPostLLM:
     @pytest.mark.asyncio
     async def test_returns_content(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Generated posts"
-
-        with patch("ica.pipeline.social_media.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.social_media.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text="Generated posts", model="test-model"
+            )
             result = await call_social_media_post_llm(
                 newsletter_content="<html>test</html>",
                 formatted_theme='{"THEME": "test"}',
@@ -609,26 +610,22 @@ class TestCallSocialMediaPostLLM:
 
     @pytest.mark.asyncio
     async def test_raises_on_empty_response(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = ""
-
-        with patch("ica.pipeline.social_media.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
-            with pytest.raises(RuntimeError, match="empty response"):
+        with patch("ica.pipeline.social_media.completion") as mock_completion:
+            mock_completion.side_effect = LLMError(
+                "social_media_posts", "LLM returned an empty response"
+            )
+            with pytest.raises(LLMError, match="empty response"):
                 await call_social_media_post_llm(
                     newsletter_content="test",
                     formatted_theme="test",
                 )
 
     @pytest.mark.asyncio
-    async def test_strips_whitespace(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "  content  \n"
-
-        with patch("ica.pipeline.social_media.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+    async def test_returns_text_as_is(self):
+        with patch("ica.pipeline.social_media.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text="content", model="test-model"
+            )
             result = await call_social_media_post_llm(
                 newsletter_content="test",
                 formatted_theme="test",
@@ -637,28 +634,22 @@ class TestCallSocialMediaPostLLM:
 
     @pytest.mark.asyncio
     async def test_uses_custom_model(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "output"
-
-        with patch("ica.pipeline.social_media.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.social_media.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text="output", model="custom/model"
+            )
             await call_social_media_post_llm(
                 newsletter_content="test",
                 formatted_theme="test",
                 model="custom/model",
             )
-            call_kwargs = mock_litellm.acompletion.call_args
+            call_kwargs = mock_completion.call_args
             assert call_kwargs.kwargs["model"] == "custom/model"
 
 
 class TestCallCaptionLLM:
     @pytest.mark.asyncio
     async def test_returns_content(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Generated captions"
-
         posts = [
             ParsedPost(
                 title="DYK #1 — Test",
@@ -673,28 +664,24 @@ class TestCallCaptionLLM:
             ),
         ]
 
-        with patch("ica.pipeline.social_media.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.social_media.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text="Generated captions", model="test-model"
+            )
             result = await call_caption_llm(posts, SAMPLE_FORMATTED_THEME)
         assert result == "Generated captions"
 
     @pytest.mark.asyncio
     async def test_raises_on_empty_response(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = ""
-
-        with patch("ica.pipeline.social_media.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
-            with pytest.raises(RuntimeError, match="empty response"):
+        with patch("ica.pipeline.social_media.completion") as mock_completion:
+            mock_completion.side_effect = LLMError(
+                "social_media_captions", "LLM returned an empty response"
+            )
+            with pytest.raises(LLMError, match="empty response"):
                 await call_caption_llm([], SAMPLE_FORMATTED_THEME)
 
     @pytest.mark.asyncio
     async def test_posts_json_includes_fields(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "output"
-
         posts = [
             ParsedPost(
                 title="IT #1 — Test",
@@ -709,26 +696,25 @@ class TestCallCaptionLLM:
             ),
         ]
 
-        with patch("ica.pipeline.social_media.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.social_media.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text="output", model="test-model"
+            )
             await call_caption_llm(posts, SAMPLE_FORMATTED_THEME)
-            call_args = mock_litellm.acompletion.call_args
-            user_msg = call_args.kwargs["messages"][1]["content"]
-            # Em-dash may be JSON-encoded as \u2014
-            assert "IT #1" in user_msg
-            assert "Test" in user_msg
-            assert "https://example.com" in user_msg
+            call_kwargs = mock_completion.call_args.kwargs
+            # The user_prompt should contain the post data
+            assert "IT #1" in call_kwargs["user_prompt"]
+            assert "Test" in call_kwargs["user_prompt"]
+            assert "https://example.com" in call_kwargs["user_prompt"]
 
 
 class TestCallCaptionRegenerationLLM:
     @pytest.mark.asyncio
     async def test_returns_content(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Regenerated captions"
-
-        with patch("ica.pipeline.social_media.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.social_media.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text="Regenerated captions", model="test-model"
+            )
             result = await call_caption_regeneration_llm(
                 feedback_text="Make it better",
                 previous_captions="Old captions",
@@ -737,13 +723,11 @@ class TestCallCaptionRegenerationLLM:
 
     @pytest.mark.asyncio
     async def test_raises_on_empty_response(self):
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = None
-
-        with patch("ica.pipeline.social_media.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
-            with pytest.raises(RuntimeError, match="empty response"):
+        with patch("ica.pipeline.social_media.completion") as mock_completion:
+            mock_completion.side_effect = LLMError(
+                "social_media_regeneration", "LLM returned an empty response"
+            )
+            with pytest.raises(LLMError, match="empty response"):
                 await call_caption_regeneration_llm(
                     feedback_text="feedback",
                     previous_captions="old",
@@ -841,12 +825,6 @@ class TestRunSocialMediaGeneration:
         docs.create_document.return_value = "doc-final"
         return docs
 
-    def _mock_llm_response(self, content: str) -> MagicMock:
-        resp = MagicMock()
-        resp.choices = [MagicMock()]
-        resp.choices[0].message.content = content
-        return resp
-
     @pytest.mark.asyncio
     async def test_happy_path(self):
         """Full flow: approve, generate, approve, select, captions, approve, final select, doc."""
@@ -866,14 +844,12 @@ class TestRunSocialMediaGeneration:
             {FINAL_SELECTION_FIELD: json.dumps(["DYK #1 — AI Governance ROI"])},
         ]
 
-        with patch("ica.pipeline.social_media.litellm") as mock_litellm:
+        with patch("ica.pipeline.social_media.completion") as mock_completion:
             # Phase 1 LLM call, then Phase 2 LLM call
-            mock_litellm.acompletion = AsyncMock(
-                side_effect=[
-                    self._mock_llm_response(SAMPLE_PHASE1_OUTPUT),
-                    self._mock_llm_response(SAMPLE_PHASE2_OUTPUT),
-                ]
-            )
+            mock_completion.side_effect = [
+                LLMResponse(text=SAMPLE_PHASE1_OUTPUT, model="test-model"),
+                LLMResponse(text=SAMPLE_PHASE2_OUTPUT, model="test-model"),
+            ]
 
             result = await run_social_media_generation(
                 html_doc_id="html-doc-id",
@@ -913,14 +889,12 @@ class TestRunSocialMediaGeneration:
             {FINAL_SELECTION_FIELD: json.dumps(["DYK #1 — AI Governance ROI"])},
         ]
 
-        with patch("ica.pipeline.social_media.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(
-                side_effect=[
-                    self._mock_llm_response(SAMPLE_PHASE1_OUTPUT),
-                    self._mock_llm_response(SAMPLE_PHASE1_OUTPUT),  # regen
-                    self._mock_llm_response(SAMPLE_PHASE2_OUTPUT),
-                ]
-            )
+        with patch("ica.pipeline.social_media.completion") as mock_completion:
+            mock_completion.side_effect = [
+                LLMResponse(text=SAMPLE_PHASE1_OUTPUT, model="test-model"),
+                LLMResponse(text=SAMPLE_PHASE1_OUTPUT, model="test-model"),  # regen
+                LLMResponse(text=SAMPLE_PHASE2_OUTPUT, model="test-model"),
+            ]
 
             result = await run_social_media_generation(
                 html_doc_id="html-doc-id",
@@ -930,8 +904,8 @@ class TestRunSocialMediaGeneration:
             )
 
         assert result.doc_id == "doc-final"
-        # Phase 1 LLM called twice (initial + regen)
-        assert mock_litellm.acompletion.await_count == 3
+        # Phase 1 LLM called twice (initial + regen) + Phase 2 = 3
+        assert mock_completion.call_count == 3
 
     @pytest.mark.asyncio
     async def test_phase2_feedback_then_approve(self):
@@ -954,14 +928,12 @@ class TestRunSocialMediaGeneration:
             {FINAL_SELECTION_FIELD: json.dumps(["DYK #1 — AI Governance ROI"])},
         ]
 
-        with patch("ica.pipeline.social_media.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(
-                side_effect=[
-                    self._mock_llm_response(SAMPLE_PHASE1_OUTPUT),
-                    self._mock_llm_response(SAMPLE_PHASE2_OUTPUT),
-                    self._mock_llm_response(SAMPLE_PHASE2_OUTPUT),  # regen
-                ]
-            )
+        with patch("ica.pipeline.social_media.completion") as mock_completion:
+            mock_completion.side_effect = [
+                LLMResponse(text=SAMPLE_PHASE1_OUTPUT, model="test-model"),
+                LLMResponse(text=SAMPLE_PHASE2_OUTPUT, model="test-model"),
+                LLMResponse(text=SAMPLE_PHASE2_OUTPUT, model="test-model"),  # regen
+            ]
 
             result = await run_social_media_generation(
                 html_doc_id="html-doc-id",
@@ -993,14 +965,12 @@ class TestRunSocialMediaGeneration:
             {FINAL_SELECTION_FIELD: json.dumps(["DYK #1 — AI Governance ROI"])},
         ]
 
-        with patch("ica.pipeline.social_media.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(
-                side_effect=[
-                    self._mock_llm_response(SAMPLE_PHASE1_OUTPUT),
-                    self._mock_llm_response(SAMPLE_PHASE2_OUTPUT),
-                    self._mock_llm_response(SAMPLE_PHASE2_OUTPUT),  # restart regen
-                ]
-            )
+        with patch("ica.pipeline.social_media.completion") as mock_completion:
+            mock_completion.side_effect = [
+                LLMResponse(text=SAMPLE_PHASE1_OUTPUT, model="test-model"),
+                LLMResponse(text=SAMPLE_PHASE2_OUTPUT, model="test-model"),
+                LLMResponse(text=SAMPLE_PHASE2_OUTPUT, model="test-model"),  # restart regen
+            ]
 
             result = await run_social_media_generation(
                 html_doc_id="html-doc-id",
@@ -1024,13 +994,11 @@ class TestRunSocialMediaGeneration:
             {FINAL_SELECTION_FIELD: json.dumps(["DYK #1 — AI Governance ROI"])},
         ]
 
-        with patch("ica.pipeline.social_media.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(
-                side_effect=[
-                    self._mock_llm_response(SAMPLE_PHASE1_OUTPUT),
-                    self._mock_llm_response(SAMPLE_PHASE2_OUTPUT),
-                ]
-            )
+        with patch("ica.pipeline.social_media.completion") as mock_completion:
+            mock_completion.side_effect = [
+                LLMResponse(text=SAMPLE_PHASE1_OUTPUT, model="test-model"),
+                LLMResponse(text=SAMPLE_PHASE2_OUTPUT, model="test-model"),
+            ]
 
             result = await run_social_media_generation(
                 html_doc_id="html-doc-id",
@@ -1057,13 +1025,11 @@ class TestRunSocialMediaGeneration:
             {FINAL_SELECTION_FIELD: json.dumps(["DYK #1 — AI Governance ROI"])},
         ]
 
-        with patch("ica.pipeline.social_media.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(
-                side_effect=[
-                    self._mock_llm_response(SAMPLE_PHASE1_OUTPUT),
-                    self._mock_llm_response(SAMPLE_PHASE2_OUTPUT),
-                ]
-            )
+        with patch("ica.pipeline.social_media.completion") as mock_completion:
+            mock_completion.side_effect = [
+                LLMResponse(text=SAMPLE_PHASE1_OUTPUT, model="test-model"),
+                LLMResponse(text=SAMPLE_PHASE2_OUTPUT, model="test-model"),
+            ]
 
             await run_social_media_generation(
                 html_doc_id="html-doc-id",
@@ -1090,13 +1056,11 @@ class TestRunSocialMediaGeneration:
             {FINAL_SELECTION_FIELD: json.dumps(["DYK #1 — AI Governance ROI"])},
         ]
 
-        with patch("ica.pipeline.social_media.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(
-                side_effect=[
-                    self._mock_llm_response(SAMPLE_PHASE1_OUTPUT),
-                    self._mock_llm_response(SAMPLE_PHASE2_OUTPUT),
-                ]
-            )
+        with patch("ica.pipeline.social_media.completion") as mock_completion:
+            mock_completion.side_effect = [
+                LLMResponse(text=SAMPLE_PHASE1_OUTPUT, model="test-model"),
+                LLMResponse(text=SAMPLE_PHASE2_OUTPUT, model="test-model"),
+            ]
 
             await run_social_media_generation(
                 html_doc_id="html-doc-id",
@@ -1126,13 +1090,11 @@ class TestRunSocialMediaGeneration:
             {FINAL_SELECTION_FIELD: "DYK #1 — AI Governance ROI"},
         ]
 
-        with patch("ica.pipeline.social_media.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(
-                side_effect=[
-                    self._mock_llm_response(SAMPLE_PHASE1_OUTPUT),
-                    self._mock_llm_response(SAMPLE_PHASE2_OUTPUT),
-                ]
-            )
+        with patch("ica.pipeline.social_media.completion") as mock_completion:
+            mock_completion.side_effect = [
+                LLMResponse(text=SAMPLE_PHASE1_OUTPUT, model="test-model"),
+                LLMResponse(text=SAMPLE_PHASE2_OUTPUT, model="test-model"),
+            ]
 
             result = await run_social_media_generation(
                 html_doc_id="html-doc-id",

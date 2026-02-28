@@ -8,7 +8,7 @@ Flow:
 1. Fetch recent notes (last 40 entries) from the database.
 2. Aggregate feedback into a bullet-point list for prompt injection.
 3. Build system/user prompts via :func:`build_theme_generation_prompt`.
-4. Call LLM via ``litellm.acompletion`` (model from :func:`get_model`).
+4. Call LLM via :func:`~ica.services.llm.completion`.
 5. Split LLM output on ``-----`` delimiters via :func:`split_themes`.
 6. Extract ``%XX_`` markers from each theme via :func:`parse_markers`.
 7. Return :class:`ThemeGenerationResult` with all parsed themes.
@@ -20,10 +20,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-import litellm
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ica.config.llm_config import LLMPurpose, get_model
+from ica.config.llm_config import LLMPurpose
+from ica.services.llm import completion
 from ica.db.crud import get_recent_notes
 from ica.db.models import Note
 from ica.prompts.theme_generation import build_theme_generation_prompt
@@ -125,25 +125,20 @@ async def call_theme_llm(
     Raises:
         RuntimeError: If the LLM returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.THEME)
     system_prompt, user_prompt = build_theme_generation_prompt(
         summaries_json=summaries_json,
         aggregated_feedback=aggregated_feedback,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.THEME,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="theme_generation",
     )
 
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for theme generation")
-
-    return content.strip(), model_id
+    return result.text, result.model
 
 
 # ---------------------------------------------------------------------------

@@ -12,10 +12,11 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from ica.errors import LLMError
 from ica.pipeline.theme_generation import (
     GeneratedTheme,
     ThemeGenerationResult,
@@ -24,6 +25,7 @@ from ica.pipeline.theme_generation import (
     generate_themes,
     parse_theme_output,
 )
+from ica.services.llm import LLMResponse
 from ica.utils.marker_parser import FormattedTheme
 
 # ---------------------------------------------------------------------------
@@ -429,32 +431,26 @@ class TestCallThemeLlm:
     """Tests for the LLM call function."""
 
     @pytest.mark.asyncio
-    async def test_calls_litellm_with_correct_messages(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = SAMPLE_LLM_OUTPUT
-
-        with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+    async def test_calls_completion_with_correct_args(self) -> None:
+        with patch("ica.pipeline.theme_generation.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text=SAMPLE_LLM_OUTPUT.strip(), model="test-model"
+            )
 
             _text, _model = await call_theme_llm(SAMPLE_SUMMARIES_JSON, model="test-model")
 
-            mock_litellm.acompletion.assert_called_once()
-            call_kwargs = mock_litellm.acompletion.call_args
-            assert call_kwargs.kwargs["model"] == "test-model"
-            messages = call_kwargs.kwargs["messages"]
-            assert len(messages) == 2
-            assert messages[0]["role"] == "system"
-            assert messages[1]["role"] == "user"
+            mock_completion.assert_called_once()
+            call_kwargs = mock_completion.call_args.kwargs
+            assert call_kwargs["model"] == "test-model"
+            assert "system_prompt" in call_kwargs
+            assert "user_prompt" in call_kwargs
 
     @pytest.mark.asyncio
     async def test_returns_response_text_and_model(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "THEME: Test\n-----"
-
-        with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.theme_generation.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text="THEME: Test\n-----", model="test-model"
+            )
 
             text, model = await call_theme_llm(SAMPLE_SUMMARIES_JSON, model="test-model")
 
@@ -463,79 +459,63 @@ class TestCallThemeLlm:
 
     @pytest.mark.asyncio
     async def test_strips_whitespace_from_response(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "  THEME: Test  \n  "
-
-        with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.theme_generation.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text="THEME: Test", model="test-model"
+            )
 
             text, _ = await call_theme_llm(SAMPLE_SUMMARIES_JSON, model="test-model")
             assert text == "THEME: Test"
 
     @pytest.mark.asyncio
-    async def test_empty_response_raises_runtime_error(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = ""
+    async def test_empty_response_raises_llm_error(self) -> None:
+        with patch("ica.pipeline.theme_generation.completion") as mock_completion:
+            mock_completion.side_effect = LLMError(
+                "theme_generation", "LLM returned an empty response"
+            )
 
-        with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
-
-            with pytest.raises(RuntimeError, match="empty response"):
+            with pytest.raises(LLMError, match="empty response"):
                 await call_theme_llm(SAMPLE_SUMMARIES_JSON, model="test-model")
 
     @pytest.mark.asyncio
-    async def test_whitespace_only_response_raises_runtime_error(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "   \n  \t  "
+    async def test_whitespace_only_response_raises_llm_error(self) -> None:
+        with patch("ica.pipeline.theme_generation.completion") as mock_completion:
+            mock_completion.side_effect = LLMError(
+                "theme_generation", "LLM returned an empty response"
+            )
 
-        with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
-
-            with pytest.raises(RuntimeError, match="empty response"):
+            with pytest.raises(LLMError, match="empty response"):
                 await call_theme_llm(SAMPLE_SUMMARIES_JSON, model="test-model")
 
     @pytest.mark.asyncio
-    async def test_none_response_raises_runtime_error(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = None
+    async def test_none_response_raises_llm_error(self) -> None:
+        with patch("ica.pipeline.theme_generation.completion") as mock_completion:
+            mock_completion.side_effect = LLMError(
+                "theme_generation", "LLM returned an empty response"
+            )
 
-        with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
-
-            with pytest.raises(RuntimeError, match="empty response"):
+            with pytest.raises(LLMError, match="empty response"):
                 await call_theme_llm(SAMPLE_SUMMARIES_JSON, model="test-model")
 
     @pytest.mark.asyncio
-    async def test_default_model_from_config(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "THEME: Test"
-
-        with (
-            patch("ica.pipeline.theme_generation.litellm") as mock_litellm,
-            patch(
-                "ica.pipeline.theme_generation.get_model",
-                return_value="anthropic/claude-sonnet-4.5",
-            ),
-        ):
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+    async def test_default_model_uses_theme_purpose(self) -> None:
+        with patch("ica.pipeline.theme_generation.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text="THEME: Test", model="anthropic/claude-sonnet-4.5"
+            )
 
             _, model = await call_theme_llm(SAMPLE_SUMMARIES_JSON)
 
+            call_kwargs = mock_completion.call_args.kwargs
+            assert call_kwargs["purpose"] is not None
             assert model == "anthropic/claude-sonnet-4.5"
 
     @pytest.mark.asyncio
     async def test_feedback_injected_into_prompt(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "THEME: Test"
-
-        with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.theme_generation.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text="THEME: Test", model="test-model"
+            )
 
             await call_theme_llm(
                 SAMPLE_SUMMARIES_JSON,
@@ -543,24 +523,22 @@ class TestCallThemeLlm:
                 model="test-model",
             )
 
-            call_kwargs = mock_litellm.acompletion.call_args
-            user_msg = call_kwargs.kwargs["messages"][1]["content"]
-            assert "tactical content" in user_msg
+            call_kwargs = mock_completion.call_args.kwargs
+            user_prompt = call_kwargs["user_prompt"]
+            assert "tactical content" in user_prompt
 
     @pytest.mark.asyncio
     async def test_no_feedback_no_section(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "THEME: Test"
-
-        with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.theme_generation.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text="THEME: Test", model="test-model"
+            )
 
             await call_theme_llm(SAMPLE_SUMMARIES_JSON, model="test-model")
 
-            call_kwargs = mock_litellm.acompletion.call_args
-            user_msg = call_kwargs.kwargs["messages"][1]["content"]
-            assert "Editorial Improvement Context" not in user_msg
+            call_kwargs = mock_completion.call_args.kwargs
+            user_prompt = call_kwargs["user_prompt"]
+            assert "Editorial Improvement Context" not in user_prompt
 
 
 # ---------------------------------------------------------------------------
@@ -573,12 +551,10 @@ class TestGenerateThemes:
 
     @pytest.mark.asyncio
     async def test_without_session_no_feedback(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = SAMPLE_LLM_OUTPUT
-
-        with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.theme_generation.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text=SAMPLE_LLM_OUTPUT.strip(), model="test-model"
+            )
 
             result = await generate_themes(SAMPLE_SUMMARIES_JSON, model="test-model")
 
@@ -588,12 +564,10 @@ class TestGenerateThemes:
 
     @pytest.mark.asyncio
     async def test_result_has_recommendation(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = SAMPLE_LLM_OUTPUT
-
-        with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.theme_generation.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text=SAMPLE_LLM_OUTPUT.strip(), model="test-model"
+            )
 
             result = await generate_themes(SAMPLE_SUMMARIES_JSON, model="test-model")
 
@@ -602,12 +576,10 @@ class TestGenerateThemes:
 
     @pytest.mark.asyncio
     async def test_result_has_raw_llm_output(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = SAMPLE_LLM_OUTPUT
-
-        with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.theme_generation.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text=SAMPLE_LLM_OUTPUT.strip(), model="test-model"
+            )
 
             result = await generate_themes(SAMPLE_SUMMARIES_JSON, model="test-model")
 
@@ -615,12 +587,10 @@ class TestGenerateThemes:
 
     @pytest.mark.asyncio
     async def test_themes_have_formatted_data(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = SAMPLE_LLM_OUTPUT
-
-        with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.theme_generation.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text=SAMPLE_LLM_OUTPUT.strip(), model="test-model"
+            )
 
             result = await generate_themes(SAMPLE_SUMMARIES_JSON, model="test-model")
 
@@ -631,10 +601,6 @@ class TestGenerateThemes:
 
     @pytest.mark.asyncio
     async def test_with_session_fetches_feedback(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = SAMPLE_LLM_OUTPUT
-
         mock_session = AsyncMock()
 
         feedback_rows = [
@@ -643,14 +609,16 @@ class TestGenerateThemes:
         ]
 
         with (
-            patch("ica.pipeline.theme_generation.litellm") as mock_litellm,
+            patch("ica.pipeline.theme_generation.completion") as mock_completion,
             patch(
                 "ica.pipeline.theme_generation.get_recent_notes",
                 new_callable=AsyncMock,
                 return_value=feedback_rows,
             ) as mock_get_feedback,
         ):
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+            mock_completion.return_value = LLMResponse(
+                text=SAMPLE_LLM_OUTPUT.strip(), model="test-model"
+            )
 
             result = await generate_themes(
                 SAMPLE_SUMMARIES_JSON,
@@ -663,10 +631,6 @@ class TestGenerateThemes:
 
     @pytest.mark.asyncio
     async def test_feedback_passed_to_llm(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = SAMPLE_LLM_OUTPUT
-
         mock_session = AsyncMock()
 
         feedback_rows = [
@@ -674,14 +638,16 @@ class TestGenerateThemes:
         ]
 
         with (
-            patch("ica.pipeline.theme_generation.litellm") as mock_litellm,
+            patch("ica.pipeline.theme_generation.completion") as mock_completion,
             patch(
                 "ica.pipeline.theme_generation.get_recent_notes",
                 new_callable=AsyncMock,
                 return_value=feedback_rows,
             ),
         ):
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+            mock_completion.return_value = LLMResponse(
+                text=SAMPLE_LLM_OUTPUT.strip(), model="test-model"
+            )
 
             await generate_themes(
                 SAMPLE_SUMMARIES_JSON,
@@ -689,27 +655,25 @@ class TestGenerateThemes:
                 model="test-model",
             )
 
-            call_kwargs = mock_litellm.acompletion.call_args
-            user_msg = call_kwargs.kwargs["messages"][1]["content"]
-            assert "practical tools" in user_msg
+            call_kwargs = mock_completion.call_args.kwargs
+            user_prompt = call_kwargs["user_prompt"]
+            assert "practical tools" in user_prompt
 
     @pytest.mark.asyncio
     async def test_empty_feedback_rows_no_injection(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = SAMPLE_LLM_OUTPUT
-
         mock_session = AsyncMock()
 
         with (
-            patch("ica.pipeline.theme_generation.litellm") as mock_litellm,
+            patch("ica.pipeline.theme_generation.completion") as mock_completion,
             patch(
                 "ica.pipeline.theme_generation.get_recent_notes",
                 new_callable=AsyncMock,
                 return_value=[],
             ),
         ):
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+            mock_completion.return_value = LLMResponse(
+                text=SAMPLE_LLM_OUTPUT.strip(), model="test-model"
+            )
 
             await generate_themes(
                 SAMPLE_SUMMARIES_JSON,
@@ -717,18 +681,16 @@ class TestGenerateThemes:
                 model="test-model",
             )
 
-            call_kwargs = mock_litellm.acompletion.call_args
-            user_msg = call_kwargs.kwargs["messages"][1]["content"]
-            assert "Editorial Improvement Context" not in user_msg
+            call_kwargs = mock_completion.call_args.kwargs
+            user_prompt = call_kwargs["user_prompt"]
+            assert "Editorial Improvement Context" not in user_prompt
 
     @pytest.mark.asyncio
     async def test_result_is_frozen(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = SAMPLE_LLM_OUTPUT
-
-        with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch("ica.pipeline.theme_generation.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text=SAMPLE_LLM_OUTPUT.strip(), model="test-model"
+            )
 
             result = await generate_themes(SAMPLE_SUMMARIES_JSON, model="test-model")
 
@@ -879,10 +841,12 @@ class TestEdgeCases:
 
     @pytest.mark.asyncio
     async def test_generate_themes_propagates_llm_error(self) -> None:
-        with patch("ica.pipeline.theme_generation.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(side_effect=Exception("API rate limit exceeded"))
+        with patch("ica.pipeline.theme_generation.completion") as mock_completion:
+            mock_completion.side_effect = LLMError(
+                "theme_generation", "API rate limit exceeded"
+            )
 
-            with pytest.raises(Exception, match="API rate limit"):
+            with pytest.raises(LLMError, match="API rate limit"):
                 await generate_themes(SAMPLE_SUMMARIES_JSON, model="test-model")
 
     def test_all_marker_types_present_in_sample(self) -> None:

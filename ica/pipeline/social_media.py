@@ -28,9 +28,8 @@ import re
 from dataclasses import dataclass
 from typing import Protocol
 
-import litellm
-
 from ica.config.llm_config import LLMPurpose, get_model
+from ica.services.llm import completion
 from ica.prompts.social_media import (
     build_social_media_caption_prompt,
     build_social_media_post_prompt,
@@ -516,25 +515,20 @@ async def call_social_media_post_llm(
     Raises:
         RuntimeError: If the LLM returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.SOCIAL_MEDIA)
     system_prompt, user_prompt = build_social_media_post_prompt(
         newsletter_content=newsletter_content,
         formatted_theme=formatted_theme,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.SOCIAL_MEDIA,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="social_media_posts",
     )
 
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for social media post generation")
-
-    return content.strip()
+    return result.text
 
 
 async def call_caption_llm(
@@ -556,8 +550,6 @@ async def call_caption_llm(
     Raises:
         RuntimeError: If the LLM returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.SOCIAL_POST_CAPTION)
-
     # Build posts JSON array
     posts_json = json.dumps(
         [
@@ -592,19 +584,15 @@ async def call_caption_llm(
         industry_news_2=_get_article("INDUSTRY DEVELOPMENT 2"),
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.SOCIAL_POST_CAPTION,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="social_media_captions",
     )
 
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for social media caption generation")
-
-    return content.strip()
+    return result.text
 
 
 async def call_caption_regeneration_llm(
@@ -626,25 +614,20 @@ async def call_caption_regeneration_llm(
     Raises:
         RuntimeError: If the LLM returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.SOCIAL_MEDIA_REGENERATION)
     system_prompt, user_prompt = build_social_media_regeneration_prompt(
         feedback_text=feedback_text,
         previous_captions=previous_captions,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.SOCIAL_MEDIA_REGENERATION,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="social_media_regeneration",
     )
 
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for social media caption regeneration")
-
-    return content.strip()
+    return result.text
 
 
 # ---------------------------------------------------------------------------

@@ -1847,3 +1847,19 @@ After completing each task, add an entry below in this format:
 
 **Blockers:**
 - Docker containers not running — full pytest suite not run (JSON validation and template expansion verified locally)
+
+---
+
+## 2026-02-27 — ica-364: Replace direct litellm.acompletion calls with completion() wrapper
+
+**Done:**
+- Migrated 19 direct `litellm.acompletion` calls across 7 pipeline files to use the `ica.services.llm.completion()` wrapper
+- Files updated: theme_generation.py (1), theme_selection.py (2), markdown_generation.py (5), html_generation.py (3), email_subject.py (3), social_media.py (3), linkedin_carousel.py (2)
+- All pipeline files now get OpenRouter routing, retry with exponential backoff, structured logging, and error mapping via the unified wrapper
+- Removed `import litellm` from all 7 pipeline files
+- Updated all 7 corresponding test files to mock `completion()` instead of `litellm.acompletion`, using `LLMResponse` dataclass for return values
+- Empty response tests updated from `RuntimeError` to `LLMError` (wrapper handles empty response detection)
+- All 14 modified files pass Python syntax validation
+
+**Blockers:**
+- Docker containers not running — full pytest suite not run in-container
