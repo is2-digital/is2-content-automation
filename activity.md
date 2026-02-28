@@ -1,8 +1,16 @@
 # ims-tt - Activity Log
 
 ## Current Status
-**Last Updated:** 2026-02-27
-**Tasks Completed:** ica-hlu.5 (Tests for PromptEditorService full-edit methods)
+**Last Updated:** 2026-02-28
+**Tasks Completed:** ica-dnm (Create shared system prompt JSON file and schema)
+
+### 2026-02-28 — ica-dnm: Create shared system prompt JSON file and schema
+- Created `ica/llm_configs/system-prompt.json` with application-wide system prompt (IS2 identity, data integrity, output integrity, audience context protocols)
+- Added `SystemPromptConfig` and `SystemPromptMetadata` Pydantic models to `ica/llm_configs/schema.py` using `ica-system-prompt/v1` schema version
+- Exported new models from `ica/llm_configs/__init__.py`
+- Added 7 schema unit tests (`TestSystemPromptMetadata`, `TestSystemPromptConfig`) + 2 package export tests + 4 JSON file validation tests (`TestSharedSystemPrompt`)
+- All 357 llm_configs tests pass, ruff clean, mypy clean
+- Unblocks ica-52u (update loader) and ica-zo5 (remove system prompt from Prompts model)
 
 ### 2026-02-27 — ica-hlu.5: Tests for PromptEditorService full-edit methods
 - Added `TestStartFullEdit` (5 tests): doc creation/URL, all-sections content, metadata doc ID, existing session replacement, correct doc ID passed to insert

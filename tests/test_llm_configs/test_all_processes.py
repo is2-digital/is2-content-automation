@@ -802,3 +802,44 @@ class TestProcessCategoryCoverage:
         assert configs[0].model == _DEFAULT_MODEL
         assert configs[1].model == "openai/gpt-4.1"
         assert configs[2].model == "openai/gpt-4.1"
+
+
+# ===================================================================
+# 10. Shared system prompt JSON validates against SystemPromptConfig
+# ===================================================================
+
+
+class TestSharedSystemPrompt:
+    """The system-prompt.json file loads and validates correctly."""
+
+    def test_system_prompt_json_loads(self) -> None:
+        from ica.llm_configs.schema import SystemPromptConfig
+
+        path = Path(__file__).parent.parent.parent / "ica" / "llm_configs" / "system-prompt.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        config = SystemPromptConfig.model_validate(data)
+        assert config.schema_version == "ica-system-prompt/v1"
+
+    def test_system_prompt_is_non_empty(self) -> None:
+        from ica.llm_configs.schema import SystemPromptConfig
+
+        path = Path(__file__).parent.parent.parent / "ica" / "llm_configs" / "system-prompt.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        config = SystemPromptConfig.model_validate(data)
+        assert len(config.prompt) > 100
+
+    def test_system_prompt_has_description(self) -> None:
+        from ica.llm_configs.schema import SystemPromptConfig
+
+        path = Path(__file__).parent.parent.parent / "ica" / "llm_configs" / "system-prompt.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        config = SystemPromptConfig.model_validate(data)
+        assert len(config.description) > 0
+
+    def test_system_prompt_metadata_version(self) -> None:
+        from ica.llm_configs.schema import SystemPromptConfig
+
+        path = Path(__file__).parent.parent.parent / "ica" / "llm_configs" / "system-prompt.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        config = SystemPromptConfig.model_validate(data)
+        assert config.metadata.version >= 1

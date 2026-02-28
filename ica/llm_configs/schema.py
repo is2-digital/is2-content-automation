@@ -17,6 +17,40 @@ class Prompts(BaseModel):
     instruction: str = Field(min_length=1)
 
 
+class SystemPromptMetadata(BaseModel):
+    """Editing metadata for the shared system prompt config."""
+
+    last_synced_at: str | None = Field(default=None, alias="lastSyncedAt")
+    version: int = Field(default=1, ge=1)
+
+    model_config = {"populate_by_name": True}
+
+
+class SystemPromptConfig(BaseModel):
+    """Schema for the application-wide shared system prompt.
+
+    Loaded from ``system-prompt.json`` in ``ica/llm_configs/``.
+    This is the single source of truth for the system prompt used
+    across all pipeline processes.
+
+    Example JSON::
+
+        {
+            "$schema": "ica-system-prompt/v1",
+            "description": "Shared system prompt for ...",
+            "prompt": "You are an AI system ...",
+            "metadata": { "lastSyncedAt": null, "version": 1 }
+        }
+    """
+
+    schema_version: str = Field(alias="$schema")
+    description: str = Field(default="")
+    prompt: str = Field(min_length=1)
+    metadata: SystemPromptMetadata = Field(default_factory=SystemPromptMetadata)
+
+    model_config = {"populate_by_name": True}
+
+
 class Metadata(BaseModel):
     """Editing metadata for Google Docs sync workflow."""
 

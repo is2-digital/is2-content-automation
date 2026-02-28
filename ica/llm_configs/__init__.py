@@ -9,12 +9,20 @@ from ica.llm_configs.loader import (
     get_process_prompts,
     load_process_config,
 )
-from ica.llm_configs.schema import Metadata, ProcessConfig, Prompts
+from ica.llm_configs.schema import (
+    Metadata,
+    ProcessConfig,
+    Prompts,
+    SystemPromptConfig,
+    SystemPromptMetadata,
+)
 
 __all__ = [
     "Metadata",
     "ProcessConfig",
     "Prompts",
+    "SystemPromptConfig",
+    "SystemPromptMetadata",
     "get_process_model",
     "get_process_prompts",
     "load_process_config",
