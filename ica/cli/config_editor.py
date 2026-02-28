@@ -19,7 +19,7 @@ from ica.llm_configs.schema import ProcessConfig
 _CONFIGS_DIR = Path(__file__).resolve().parent.parent / "llm_configs"
 
 # Section header pattern used in Google Docs content.
-_SECTION_RE = re.compile(r"^##\s+(\w[\w\s]*)$", re.MULTILINE)
+_SECTION_RE = re.compile(r"^##\s+(\w[\w ]*)$", re.MULTILINE)
 
 
 def list_all_configs() -> list[tuple[str, ProcessConfig]]:
