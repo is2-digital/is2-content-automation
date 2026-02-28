@@ -1,14 +1,18 @@
 {
   "$schema": "ica-llm-config/v1",
   "processName": "email-subject-regeneration",
-  "description": "Email subject regeneration — re-generates email subject lines incorporating user feedback. Reuses the initial generation prompts with feedback injected via the {feedback_section} template variable.",
-  "model": "anthropic/claude-sonnet-4.5",
+  "description": "Email subject regeneration — surgically refines or recreates subject line options based on explicit user feedback and the primary newsletter text.",
+  "model": "anthropic/claude-3-5-sonnet-20240620",
   "prompts": {
+<<<<<<< Updated upstream
     "instruction": "{feedback_section}\n\n## Output Format (MANDATORY)\nReturn clean plain text output (no markdown or bullet points or colon) in this format for each created subject, do not duplicate.\n\nSubject_[number]: [Text subject]\n\nPut a separator string \"-----\" after each created subject.\n\nAs the final output, after generated subjects, create a recommendation to pick best subject and explain why, use in this format.\n\nRECOMMENDATION: Subject [Put generated subject number] - [the subject text, generated above what you recommend to use]\n\n---\n\nInput:\n{newsletter_text}"
+=======
+    "instruction": "<Task_Context>\nYou are a Lead Editorial Director. Your task is to regenerate the email subject lines by incorporating the provided feedback while strictly maintaining Kevin's authoritative, no-fluff persona.\n</Task_Context>\n\n<Surgical_Fix_Logic>\n- ANALYZE: Review {feedback_section} to identify the specific failure of the previous set (e.g., too hypey, too long, wrong focus).\n- REFINE: Generate 10 NEW subjects that address the feedback directly.\n- SOURCE: Use {newsletter_text} as the absolute source of truth for content.\n</Surgical_Fix_Logic>\n\n<Kevin_Voice_Standards>\n1. NO HYPERBOLE: Absolutely no 'Revolutionizing', 'Unlocking', or 'Essential' fluff.\n2. DECLARATIVE: Use punchy, matter-of-fact statements that describe reality, not marketing promises.\n3. ZERO EMOJIS: Maintain a clean, professional B2B appearance.\n</Kevin_Voice_Standards>\n\n<Technical_Constraints>\n1. LENGTH: Maximum 7 words per subject line. No exceptions.\n2. NO MARKDOWN: Output must be clean plain text for script parsing.\n</Technical_Constraints>\n\n<Output_Format_MANDATORY>\nSubject_1: [Subject Text]\n----\nSubject_2: [Subject Text]\n----\n(Repeat through Subject_10)\n\nRECOMMENDATION: Subject [Number] - [Subject Text]\n[Brief 1-sentence explanation of how this recommendation specifically addresses the {feedback_section}.]\n</Output_Format_MANDATORY>"
+>>>>>>> Stashed changes
   },
   "metadata": {
     "googleDocId": null,
-    "lastSyncedAt": null,
-    "version": 1
+    "lastSyncedAt": "2026-02-28",
+    "version": 2
   }
 }

@@ -1,14 +1,18 @@
 {
   "$schema": "ica-llm-config/v1",
   "processName": "html-generation",
-  "description": "HTML generation — populates an existing HTML newsletter template using final generated markdown content while preserving template structure, CSS, and inline styles.",
-  "model": "anthropic/claude-sonnet-4.5",
+  "description": "High-fidelity HTML compiler — maps validated Markdown into the master template with strict link attributes and style enforcement.",
+  "model": "google/gemini-3-flash",
   "prompts": {
+<<<<<<< Updated upstream
     "instruction": "Generate the HTML newsletter from the following inputs.\n\n### Final Generated Markdown Content:\n{markdown_content}\n\n### HTML Template:\n{html_template}\n\n### Newsletter Date:\n{newsletter_date}"
+=======
+    "instruction": "<Task_Context>\nYou are a Lead Email Developer. Compile the validated Markdown into the Master HTML Template. Output must be production-ready for Outlook, Gmail, and Apple Mail.\n</Task_Context>\n\n<Data_Sources>\n- Markdown Content: {markdown_content}\n- Master Link List (Source of Truth): {formatted_theme}\n- HTML Master Template: {html_template}\n</Data_Sources>\n\n<Technical_Execution_Rules>\n1. LINK ATTRIBUTES: Every <a> tag MUST include: target=\"_blank\" and rel=\"noopener noreferrer\".\n2. URL INTEGRITY: Cross-reference every headline and CTA link against {formatted_theme}. If the Markdown link is truncated or missing, use the full URL from {formatted_theme}. Do NOT hallucinate tracking parameters.\n3. METADATA MAPPING: Map 'Source/Origin' and 'Category' tags from {formatted_theme} into their designated slots in the template (e.g., %SOURCE%, %CAT%).\n4. COMPONENT CSS:\n   - FEATURED: Use the .featured-bg container row for the Featured Article.\n   - CALLOUTS: Wrap all 'Strategic Take-away' sections in the .callout-container CSS class provided in {html_template}.\n   - TYPOGRAPHY: Headlines must use <h2> or <h3> as styled in the template's <head>.\n5. NO MARKDOWN: Convert *italics* to <em> and **bold** to <strong>. Strip all '#', '_', and '`' characters entirely.\n6. LIQUID PROTECTION: Preserve all {{unsubscribe_url}}, {{web_version_url}}, and {{subscriber_name}} tags exactly as they appear in {html_template}.\n</Technical_Execution_Rules>\n\n<Structural_Guardrails>\n- Maintain the 600px <table> structure. Do NOT convert to <div> layouts.\n- If a section (e.g., 'Industry Developments') is empty in {markdown_content}, remove its entire <tr> row from the output to avoid layout gaps.\n- All images must have alt=\"\" text and style=\"display:block;\".\n</Structural_Guardrails>\n\n<Output_Constraint>\nOutput ONLY the raw, populated HTML code. Do NOT include triple backticks (```html) or any conversational text.\n</Output_Constraint>"
+>>>>>>> Stashed changes
   },
   "metadata": {
     "googleDocId": null,
     "lastSyncedAt": null,
-    "version": 1
+    "version": 2
   }
 }

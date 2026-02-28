@@ -1,14 +1,18 @@
 {
   "$schema": "ica-llm-config/v1",
   "processName": "social-media-caption",
-  "description": "Social media caption generation — generates full captions for user-selected social media posts from Phase 1.",
-  "model": "anthropic/claude-sonnet-4.5",
+  "description": "Social media caption generation — expands selected graphics into full, high-context captions with strict hook and formatting rules.",
+  "model": "anthropic/claude-3-5-sonnet-20240620",
   "prompts": {
+<<<<<<< Updated upstream
     "instruction": "OUTPUT FORMAT - SLACK OPTIMIZED (STRICT)\n- Do NOT use Markdown headers\n- Use explicit line breaks\n- Execute cleanly and consistently\n\nOUTPUT FORMAT (REPEAT FOR EACH POST)\n\n*[Post Type] #[X]:* *[Original Headline]*\n*Source:* [EXACT source from input]\n\n*GRAPHIC COMPONENT* ([graphicComponentInfo]):\n\n[graphicText]\n\n*CAPTION* ([character count]):\nIf Post Type = DYK:\nDid you know?\n\nIf Post Type = IT:\nInside Tip:\n\n[Opening hook]\n\n[Paragraph 2]\n\n[Paragraph 3]\n\n[Additional paragraphs if needed]\n\n[EXACT sourceUrl FROM INPUT]\n\n*[Hashtags: #specific #specific #iS2Digital #iS2 #general]*\n\n---\n\nPosts Array:\n{posts_json}\n\nNewsletter context:\n- Featured Article: {featured_article}\n- Main Article 1: {main_article_1}\n- Main Article 2: {main_article_2}\n- Quick Hit 1: {quick_hit_1}\n- Quick Hit 2: {quick_hit_2}\n- Quick Hit 3: {quick_hit_3}\n- Industry News 1: {industry_news_1}\n- Industry News 2: {industry_news_2}"
+=======
+    "instruction": "<Task_Context>\nGenerate full social media captions for the selected posts. You must add unique value beyond the graphic text while maintaining Kevin's professional authority.\n</Task_Context>\n\n<Data_Inputs>\n- Selected Posts: {posts_json}\n- Newsletter Context: {featured_article}, {main_article_1}, {main_article_2}, {quick_hit_1}, {quick_hit_2}, {quick_hit_3}, {industry_news_1}, {industry_news_2}\n</Data_Inputs>\n\n<Caption_Protocol>\n1. OPENING HOOK: Under 15 words. MUST NOT restate graphic facts. MUST NOT reuse nouns/verbs from the graphic. Provide a NEW insight or curiosity hook.\n2. BODY: 2-3 short paragraph blocks. Restate facts from the graphic with added implementation details or business implications.\n3. CHARACTER LIMIT: 150-300 characters for the body text.\n4. ENDING: Include the EXACT sourceUrl from the post and 3-5 hashtags (including #iS2Digital and #iS2).\n</Caption_Protocol>\n\n<Formatting_Rules>\n- Use *single asterisks* for bolding.\n- Explicit blank lines between all sections.\n- DYK posts: Enthusiastic tone; use '!!' for massive stats.\n- IT posts: Curiosity-driven; tactical and forward-looking.\n</Formatting_Rules>\n\n<Self_Check>\nDoes the opening add insight not found in the graphic? If no, rewrite the opening now.\n</Self_Check>\n\nOutput only the captions in the required Slack-optimized format."
+>>>>>>> Stashed changes
   },
   "metadata": {
     "googleDocId": null,
-    "lastSyncedAt": null,
-    "version": 1
+    "lastSyncedAt": "2026-02-28",
+    "version": 2
   }
 }

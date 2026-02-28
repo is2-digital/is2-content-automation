@@ -1,14 +1,18 @@
 {
   "$schema": "ica-llm-config/v1",
   "processName": "freshness-check",
-  "description": "Freshness check — compares a proposed newsletter theme against recently published newsletters to detect repetition and suggest changes.",
-  "model": "google/gemini-2.5-flash",
+  "description": "Freshness check — compares a proposed newsletter theme against recently published newsletters to detect repetition, narrative fatigue, and source redundancy.",
+  "model": "google/gemini-1.5-flash",
   "prompts": {
+<<<<<<< Updated upstream
     "instruction": "I have created a text theme for my new newsletter, please, check editorial freshness and if it's not repetitive to last newsletters,\n\nI will provide the text theme text and a link to site where you can find recent newsletters\n\nThe text theme:\n{theme_body}\n\nLinks to my site, on that page, you can find links to recent newsletters, one 3 most recent, and check against them:\nhttps://www.is2digital.com/newsletters\n\nAs final output - give your results for this task as a structured output, and tell what to change if needed, try to explain why"
+=======
+    "instruction": "<Task_Context>\nEvaluate if the proposed newsletter Theme is fresh, non-repetitive, and strategically distinct from the 3 most recent newsletters.\n</Task_Context>\n\n<Proposed_Theme>\n{theme_body}\n</Proposed_Theme>\n\n<Reference_Source>\nNavigate to: https://www.is2digital.com/newsletters \nAnalyze the content of the three most recent entries.\n</Reference_Source>\n\n<Evaluation_Criteria>\n1. THEMATIC REPETITION: Is the core narrative essentially the same as a recent issue?\n2. FEATURED OVERLAP: Does this theme rely on an article that was already used in the last 3 issues?\n3. NARRATIVE FATIGUE: Does the 'angle' (e.g., 'AI Regulation' or 'LLM Efficiency') feel over-rotated? If we just covered this angle 2 weeks ago, flag it as 'Stale'.\n4. SOURCE REDUNDANCY: Check if the primary sources/links are the same as the previous week. We aim for diverse sourcing to maintain authority.\n</Evaluation_Criteria>\n\n<Output_Format>\nOutput ONLY a JSON object in this structure:\n{\n  \"isFresh\": boolean,\n  \"confidenceScore\": 0.0-1.0,\n  \"assessment\": \"Detailed 2-3 sentence explanation of the overlap or uniqueness found.\",\n  \"suggestedChanges\": \"Specific editorial pivot to make the theme fresher if isFresh is false.\"\n}\n</Output_Format>\n\nPerform the check now."
+>>>>>>> Stashed changes
   },
   "metadata": {
     "googleDocId": null,
     "lastSyncedAt": null,
-    "version": 1
+    "version": 2
   }
 }
