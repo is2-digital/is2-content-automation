@@ -1,8 +1,7 @@
-"""Regression tests for pilot prompt migration.
+"""Regression tests for prompt configuration.
 
 Asserts that ``build_summarization_prompt()`` and ``build_email_subject_prompt()``
-produce string-identical output compared to the original hardcoded versions
-(pre-migration commit 646f1ec).
+produce string-identical output compared to the current XML-tagged JSON configs.
 
 These tests guard against accidental prompt drift when editing JSON config files.
 """
@@ -15,68 +14,47 @@ from ica.llm_configs import loader
 from ica.llm_configs.loader import _cache, get_system_prompt
 
 # ---------------------------------------------------------------------------
-# Original hardcoded constants (verbatim from commit 646f1ec)
+# Reference constants (current XML-tagged prompt configs)
 # ---------------------------------------------------------------------------
 
 # -- Summarization ----------------------------------------------------------
 
-_ORIG_SUMMARIZATION_SYSTEM_PROMPT = """\
-You are a professional AI research editor and content analyst. Your task is \
-to process news or blog articles that may be provided in HTML, Markdown, or \
-plain text format according to strict editorial and data integrity standards.
+_REF_SUMMARIZATION_INSTRUCTION = (
+    "<Task_Context>\n"
+    "Analyze the provided article data (which includes the URL, Title, and Body)"
+    " and generate a structured summary for the iS2 Digital newsletter. \n"
+    "</Task_Context>\n"
+    "\n"
+    "<Input_Data>\n"
+    "{article_content}\n"
+    "</Input_Data>\n"
+    "\n"
+    "<Constraint_Rules>\n"
+    "1. SUMMARY: 3-4 sentences. Focus on factual content, technical details,"
+    " and key findings.\n"
+    "2. BUSINESS_RELEVANCE: 2-3 sentences. Explain strategic relevance for"
+    " SMB professionals and operations.\n"
+    '3. INTEGRITY: No external research. Use ONLY the provided data.'
+    ' If content is inaccessible, output "DATA_INCOMPLETE".\n'
+    "4. VOICE: Use the declarative patterns defined in your Master System"
+    " Instruction. Describe reality directly without hedging.\n"
+    "</Constraint_Rules>\n"
+    "\n"
+    "<Output_Schema>\n"
+    "URL: [Extract URL from input]\n"
+    "Title: [Extract Title from input]\n"
+    "Summary: [Insert 3-4 sentence factual summary]\n"
+    "Business Relevance: [Insert 2-3 sentence business relevance commentary]\n"
+    "</Output_Schema>\n"
+    "\n"
+    "<Feedback_Adjustment>\n"
+    "{feedback_section}\n"
+    "</Feedback_Adjustment>\n"
+    "\n"
+    "Generate the structured summary now."
+)
 
-Follow these protocols EXACTLY:
-
-## Accuracy Control Protocol (MANDATORY)
-1. Do NOT search for alternative sources.
-2. Do NOT summarize partial or unavailable content.
-3. Do NOT generate or infer missing details.
-
-## Article Summary Standards
-Summary Specifications:
-- 3-4 sentences per article
-- Focus strictly on factual content, key findings, and main conclusions
-- Avoid editorial opinions or speculative tone
-- Include specific statistics, methodologies, or technical details when mentioned
-
-Business Relevance Specifications:
-- 2-3 sentences per article
-- Explain the broad business or strategic relevance across industries
-- Consider an audience of solopreneurs and SMB professionals (without naming them)
-- Emphasize practical implications for decision-making, operations, or strategy
-- Avoid technical or industry-specific jargon
-
-## Data Integrity Standards
-- Extract only verified information directly from the article
-- Quote or cite exact statistics or claims when possible
-- Flag unverifiable data explicitly (e.g., "Statistic requires verification")
-- Do NOT fabricate, infer, or supplement from external knowledge
-- Well-established general knowledge does NOT require verification\
-"""
-
-_ORIG_SUMMARIZATION_USER_PROMPT = """\
-{feedback_section}\
-
-## Output Format (MANDATORY)
-Return clean plain text output (no markdown or bullet points) in this format:
-
-URL: [article URL]
-Title: [article title]
-Summary: [3-4 sentence factual summary following Article Summary Standards]
-Business Relevance: [2-3 sentence business relevance commentary following \
-the same standards]
-
-Now process the following content accordingly. The input may be HTML, \
-Markdown, or plain text — automatically detect the format. If the content \
-cannot be fully accessed, follow the Accuracy Control Protocol.
-
-Keep the output format consistent as plain text and not JSON object.
-
-Input:
-{article_content}\
-"""
-
-_ORIG_SUMMARIZATION_FEEDBACK_TEMPLATE = """\
+_SUMMARIZATION_FEEDBACK_TEMPLATE = """\
 
 ## Editorial Improvement Context (From Prior Feedback)
 The following editorial preferences and improvement notes should guide \
@@ -90,51 +68,44 @@ factual accuracy or deviating from the core standards above.
 
 # -- Email subject ----------------------------------------------------------
 
-_ORIG_EMAIL_SUBJECT_SYSTEM_PROMPT = """\
-You are a professional AI research editor and content analyst. Your task is \
-to process the email newsletter in text format.
+_REF_EMAIL_SUBJECT_INSTRUCTION = (
+    "<Task_Context>\n"
+    "You are a high-authority B2B editor. Generate 10 definitive email subject"
+    " lines for the iS2 newsletter that reflect Kevin's declarative, no-fluff"
+    " persona.\n"
+    "</Task_Context>\n"
+    "\n"
+    "<Kevin_Voice_Rules>\n"
+    "1. NO HYPERBOLE: Ban words like 'Revolutionizing', 'Unlocking',"
+    " 'The Future of', or 'Exciting'.\n"
+    "2. DECLARATIVE: Use Pattern A logic: '[Reality] isn't [misconception]."
+    " It's [insight].' or similar punchy statements.\n"
+    "3. DRY PRECISION: Focus on operational reality or a striking data point"
+    " from the text.\n"
+    "4. ZERO EMOJIS: Never use emojis or hashtags.\n"
+    "</Kevin_Voice_Rules>\n"
+    "\n"
+    "<Technical_Constraints>\n"
+    "1. LENGTH: Strictly 7 words or fewer per subject line.\n"
+    "2. SOURCE: Base all subjects on {newsletter_text}.\n"
+    "3. REVISION: Apply {feedback_section} to refine the tone or focus.\n"
+    "</Technical_Constraints>\n"
+    "\n"
+    "<Output_Format_MANDATORY>\n"
+    "Return clean plain text. No markdown formatting, no colons in headers.\n"
+    "\n"
+    "Subject_1: [Subject Text]\n"
+    "----\n"
+    "Subject_2: [Subject Text]\n"
+    "----\n"
+    "(Repeat through Subject_10)\n"
+    "\n"
+    "RECOMMENDATION: Subject [Number] - [Subject Text]\n"
+    "[Brief 1-sentence explanation of why this fits the Kevin persona best.]\n"
+    "</Output_Format_MANDATORY>"
+)
 
-Start by reviewing the newsletter text, \
-based on that data create up to 10 definitive email subjects that will be \
-used for this newsletter.
-
-Follow these protocols EXACTLY:
-
----
-
-## Accuracy Control Protocol (MANDATORY)
-1. Do NOT search for alternative sources.
-2. Make those subject relevant to the newsletter text and be trending, \
-and represent the newsletter content.
-3. Make subjects short and maximum is 7 words.
-4. Be creative.\
-"""
-
-_ORIG_EMAIL_SUBJECT_USER_PROMPT = """\
-{feedback_section}\
-
-
-## Output Format (MANDATORY)
-Return clean plain text output (no markdown or bullet points or colon) \
-in this format for each created subject, do not duplicate.
-
-Subject_[number]: [Text subject]
-
-Put a separator string "-----" after each created subject.
-
-As the final output, after generated subjects, create a recommendation \
-to pick best subject and explain why, use in this format.
-
-RECOMMENDATION: Subject [Put generated subject number] - \
-[the subject text, generated above what you recommend to use]
-
----
-
-Input:
-{newsletter_text}\
-"""
-
-_ORIG_EMAIL_SUBJECT_FEEDBACK_TEMPLATE = """\
+_EMAIL_SUBJECT_FEEDBACK_TEMPLATE = """\
 
 
 ## Editorial Improvement Context (From Prior Feedback)
@@ -166,7 +137,7 @@ def _clear_loader_cache() -> None:
 
 
 class TestSummarizationPromptRegression:
-    """Assert JSON-loaded summarization prompts match original hardcoded versions."""
+    """Assert JSON-loaded summarization prompts match reference XML-tagged versions."""
 
     SAMPLE_ARTICLE = (
         "https://example.com/article "
@@ -181,24 +152,24 @@ class TestSummarizationPromptRegression:
         system, _ = build_summarization_prompt(self.SAMPLE_ARTICLE)
         assert system == get_system_prompt()
 
-    def test_user_prompt_without_feedback_matches_original(self) -> None:
+    def test_user_prompt_without_feedback_matches_reference(self) -> None:
         from ica.prompts.summarization import build_summarization_prompt
 
         _, user = build_summarization_prompt(self.SAMPLE_ARTICLE)
-        expected = _ORIG_SUMMARIZATION_USER_PROMPT.format(
+        expected = _REF_SUMMARIZATION_INSTRUCTION.format(
             feedback_section="",
             article_content=self.SAMPLE_ARTICLE,
         )
         assert user == expected
 
-    def test_user_prompt_with_feedback_matches_original(self) -> None:
+    def test_user_prompt_with_feedback_matches_reference(self) -> None:
         from ica.prompts.summarization import build_summarization_prompt
 
         _, user = build_summarization_prompt(self.SAMPLE_ARTICLE, self.SAMPLE_FEEDBACK)
-        feedback_section = _ORIG_SUMMARIZATION_FEEDBACK_TEMPLATE.format(
+        feedback_section = _SUMMARIZATION_FEEDBACK_TEMPLATE.format(
             aggregated_feedback=self.SAMPLE_FEEDBACK.strip(),
         )
-        expected = _ORIG_SUMMARIZATION_USER_PROMPT.format(
+        expected = _REF_SUMMARIZATION_INSTRUCTION.format(
             feedback_section=feedback_section,
             article_content=self.SAMPLE_ARTICLE,
         )
@@ -209,7 +180,7 @@ class TestSummarizationPromptRegression:
         from ica.llm_configs import get_process_prompts
 
         _, instruction = get_process_prompts("summarization")
-        assert len(instruction) == 643
+        assert len(instruction) == 1016
 
 
 # ---------------------------------------------------------------------------
@@ -218,7 +189,7 @@ class TestSummarizationPromptRegression:
 
 
 class TestEmailSubjectPromptRegression:
-    """Assert JSON-loaded email-subject prompts match original hardcoded versions."""
+    """Assert JSON-loaded email-subject prompts match reference XML-tagged versions."""
 
     SAMPLE_NEWSLETTER = (
         "This week in AI: New breakthroughs in language models. "
@@ -232,24 +203,24 @@ class TestEmailSubjectPromptRegression:
         system, _ = build_email_subject_prompt(self.SAMPLE_NEWSLETTER)
         assert system == get_system_prompt()
 
-    def test_user_prompt_without_feedback_matches_original(self) -> None:
+    def test_user_prompt_without_feedback_matches_reference(self) -> None:
         from ica.prompts.email_subject import build_email_subject_prompt
 
         _, user = build_email_subject_prompt(self.SAMPLE_NEWSLETTER)
-        expected = _ORIG_EMAIL_SUBJECT_USER_PROMPT.format(
+        expected = _REF_EMAIL_SUBJECT_INSTRUCTION.format(
             feedback_section="",
             newsletter_text=self.SAMPLE_NEWSLETTER,
         )
         assert user == expected
 
-    def test_user_prompt_with_feedback_matches_original(self) -> None:
+    def test_user_prompt_with_feedback_matches_reference(self) -> None:
         from ica.prompts.email_subject import build_email_subject_prompt
 
         _, user = build_email_subject_prompt(self.SAMPLE_NEWSLETTER, self.SAMPLE_FEEDBACK)
-        feedback_section = _ORIG_EMAIL_SUBJECT_FEEDBACK_TEMPLATE.format(
+        feedback_section = _EMAIL_SUBJECT_FEEDBACK_TEMPLATE.format(
             aggregated_feedback=self.SAMPLE_FEEDBACK.strip(),
         )
-        expected = _ORIG_EMAIL_SUBJECT_USER_PROMPT.format(
+        expected = _REF_EMAIL_SUBJECT_INSTRUCTION.format(
             feedback_section=feedback_section,
             newsletter_text=self.SAMPLE_NEWSLETTER,
         )
@@ -259,7 +230,7 @@ class TestEmailSubjectPromptRegression:
         from ica.llm_configs import get_process_prompts
 
         _, instruction = get_process_prompts("email-subject")
-        assert len(instruction) == 553
+        assert len(instruction) == 1136
 
 
 # ---------------------------------------------------------------------------
@@ -268,7 +239,7 @@ class TestEmailSubjectPromptRegression:
 
 
 class TestRawTemplateRegression:
-    """Verify that the raw JSON prompt templates match the original constants.
+    """Verify that the raw JSON prompt templates match the reference constants.
 
     These tests compare the templates *before* any .format() substitution,
     catching whitespace drift that might not surface in formatted output tests.
@@ -284,7 +255,7 @@ class TestRawTemplateRegression:
         from ica.llm_configs import get_process_prompts
 
         _, instruction = get_process_prompts("summarization")
-        assert instruction == _ORIG_SUMMARIZATION_USER_PROMPT
+        assert instruction == _REF_SUMMARIZATION_INSTRUCTION
 
     def test_email_subject_system_is_shared(self) -> None:
         from ica.llm_configs import get_process_prompts
@@ -296,4 +267,4 @@ class TestRawTemplateRegression:
         from ica.llm_configs import get_process_prompts
 
         _, instruction = get_process_prompts("email-subject")
-        assert instruction == _ORIG_EMAIL_SUBJECT_USER_PROMPT
+        assert instruction == _REF_EMAIL_SUBJECT_INSTRUCTION

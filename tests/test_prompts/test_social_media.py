@@ -30,11 +30,11 @@ class TestSocialMediaPostSystemPrompt:
 
         assert _POST_SYSTEM == get_system_prompt()
 
-    def test_contains_data_integrity_section(self):
-        assert "Data Integrity" in _POST_SYSTEM
+    def test_contains_zero_hallucination(self):
+        assert "ZERO HALLUCINATION" in _POST_SYSTEM
 
-    def test_contains_output_integrity_section(self):
-        assert "Output Integrity" in _POST_SYSTEM
+    def test_contains_headless_api(self):
+        assert "HEADLESS API" in _POST_SYSTEM
 
     def test_is_string(self):
         assert isinstance(_POST_SYSTEM, str)
@@ -52,8 +52,8 @@ class TestSocialMediaPostUserPrompt:
     def test_contains_theme_placeholder(self):
         assert "{formatted_theme}" in _POST_INSTRUCTION
 
-    def test_contains_slack_format_instruction(self):
-        assert "SLACK OPTIMIZED" in _POST_INSTRUCTION
+    def test_contains_slack_optimized_structure(self):
+        assert "Slack-optimized" in _POST_INSTRUCTION
 
     def test_contains_dyk_output_format(self):
         assert "DYK #1" in _POST_INSTRUCTION
@@ -61,9 +61,9 @@ class TestSocialMediaPostUserPrompt:
     def test_contains_it_output_format(self):
         assert "IT #1" in _POST_INSTRUCTION
 
-    def test_contains_final_hard_stops(self):
-        assert "No captions" in _POST_INSTRUCTION
-        assert "No explanations" in _POST_INSTRUCTION
+    def test_contains_output_protocol(self):
+        assert "Do NOT include captions" in _POST_INSTRUCTION
+        assert "Do NOT include" in _POST_INSTRUCTION
 
 
 # ===========================================================================
@@ -79,11 +79,11 @@ class TestSocialMediaCaptionSystemPrompt:
 
         assert _CAPTION_SYSTEM == get_system_prompt()
 
-    def test_contains_data_integrity_section(self):
-        assert "Data Integrity" in _CAPTION_SYSTEM
+    def test_contains_zero_hallucination(self):
+        assert "ZERO HALLUCINATION" in _CAPTION_SYSTEM
 
-    def test_contains_output_integrity_section(self):
-        assert "Output Integrity" in _CAPTION_SYSTEM
+    def test_contains_headless_api(self):
+        assert "HEADLESS API" in _CAPTION_SYSTEM
 
     def test_is_string(self):
         assert isinstance(_CAPTION_SYSTEM, str)
@@ -108,11 +108,11 @@ class TestSocialMediaCaptionUserPrompt:
         assert "{industry_news_1}" in _CAPTION_INSTRUCTION
         assert "{industry_news_2}" in _CAPTION_INSTRUCTION
 
-    def test_contains_output_format(self):
-        assert "OUTPUT FORMAT" in _CAPTION_INSTRUCTION
+    def test_contains_caption_protocol(self):
+        assert "Caption_Protocol" in _CAPTION_INSTRUCTION
 
     def test_contains_slack_optimized(self):
-        assert "SLACK OPTIMIZED" in _CAPTION_INSTRUCTION
+        assert "Slack-optimized" in _CAPTION_INSTRUCTION
 
 
 # ===========================================================================
@@ -128,11 +128,11 @@ class TestSocialMediaRegenerationSystemPrompt:
 
         assert _REGEN_SYSTEM == get_system_prompt()
 
-    def test_contains_data_integrity_section(self):
-        assert "Data Integrity" in _REGEN_SYSTEM
+    def test_contains_zero_hallucination(self):
+        assert "ZERO HALLUCINATION" in _REGEN_SYSTEM
 
-    def test_contains_output_integrity_section(self):
-        assert "Output Integrity" in _REGEN_SYSTEM
+    def test_contains_headless_api(self):
+        assert "HEADLESS API" in _REGEN_SYSTEM
 
     def test_is_string(self):
         assert isinstance(_REGEN_SYSTEM, str)
@@ -150,8 +150,8 @@ class TestSocialMediaRegenerationUserPrompt:
     def test_contains_previous_captions_placeholder(self):
         assert "{previous_captions}" in _REGEN_INSTRUCTION
 
-    def test_contains_output_format(self):
-        assert "OUTPUT FORMAT" in _REGEN_INSTRUCTION
+    def test_contains_critical_rules(self):
+        assert "Critical_Rules" in _REGEN_INSTRUCTION
 
 
 # ===========================================================================

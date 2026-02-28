@@ -31,11 +31,11 @@ class TestLinkedInCarouselSystemPrompt:
     def test_not_empty(self):
         assert len(_CAROUSEL_SYSTEM) > 0
 
-    def test_contains_data_integrity(self):
-        assert "Data Integrity" in _CAROUSEL_SYSTEM
+    def test_contains_zero_hallucination(self):
+        assert "ZERO HALLUCINATION" in _CAROUSEL_SYSTEM
 
-    def test_contains_output_integrity(self):
-        assert "Output Integrity" in _CAROUSEL_SYSTEM
+    def test_contains_strict_output(self):
+        assert "STRICT OUTPUT" in _CAROUSEL_SYSTEM
 
 
 # ===========================================================================
@@ -52,22 +52,22 @@ class TestLinkedInCarouselUserPrompt:
     def test_contains_newsletter_content_placeholder(self):
         assert "{newsletter_content}" in _CAROUSEL_INSTRUCTION
 
-    def test_contains_previous_output_placeholder(self):
-        assert "{previous_output}" in _CAROUSEL_INSTRUCTION
+    def test_contains_character_errors_placeholder(self):
+        assert "{character_errors}" in _CAROUSEL_INSTRUCTION
 
-    def test_contains_output_format(self):
-        assert "OUTPUT FORMAT" in _CAROUSEL_INSTRUCTION
+    def test_contains_task_context_tag(self):
+        assert "<Task_Context>" in _CAROUSEL_INSTRUCTION
 
-    def test_contains_version_labels(self):
-        assert "*Version 1*" in _CAROUSEL_INSTRUCTION
-        assert "*Version 2*" in _CAROUSEL_INSTRUCTION
-        assert "*Version 3*" in _CAROUSEL_INSTRUCTION
+    def test_contains_technical_constraints(self):
+        assert "SLIDE BODY" in _CAROUSEL_INSTRUCTION
+        assert "POST COPY" in _CAROUSEL_INSTRUCTION
+        assert "SLACK FORMATTING" in _CAROUSEL_INSTRUCTION
 
-    def test_contains_tldr_section(self):
-        assert "TL;DR" in _CAROUSEL_INSTRUCTION
+    def test_contains_character_limits(self):
+        assert "265-315" in _CAROUSEL_INSTRUCTION
 
-    def test_contains_slide_3_label(self):
-        assert "Slide 3" in _CAROUSEL_INSTRUCTION
+    def test_contains_surgical_revision_logic(self):
+        assert "Surgical_Revision_Logic" in _CAROUSEL_INSTRUCTION
 
 
 # ===========================================================================
@@ -87,11 +87,11 @@ class TestLinkedInRegenerationSystemPrompt:
     def test_not_empty(self):
         assert len(_REGEN_SYSTEM) > 0
 
-    def test_contains_data_integrity(self):
-        assert "Data Integrity" in _REGEN_SYSTEM
+    def test_contains_zero_hallucination(self):
+        assert "ZERO HALLUCINATION" in _REGEN_SYSTEM
 
-    def test_contains_output_integrity(self):
-        assert "Output Integrity" in _REGEN_SYSTEM
+    def test_contains_strict_output(self):
+        assert "STRICT OUTPUT" in _REGEN_SYSTEM
 
 
 # ===========================================================================
@@ -111,20 +111,20 @@ class TestLinkedInRegenerationUserPrompt:
     def test_contains_formatted_theme_placeholder(self):
         assert "{formatted_theme}" in _REGEN_INSTRUCTION
 
-    def test_contains_newsletter_content_placeholder(self):
-        assert "{newsletter_content}" in _REGEN_INSTRUCTION
+    def test_contains_data_inputs_tag(self):
+        assert "<Data_Inputs>" in _REGEN_INSTRUCTION
 
-    def test_contains_output_format(self):
-        assert "OUTPUT FORMAT" in _REGEN_INSTRUCTION
+    def test_contains_output_constraint_tag(self):
+        assert "<Output_Constraint>" in _REGEN_INSTRUCTION
 
-    def test_contains_primary_source_label(self):
-        assert "PRIMARY SOURCE" in _REGEN_INSTRUCTION
+    def test_contains_verbatim_lock(self):
+        assert "VERBATIM LOCK" in _REGEN_INSTRUCTION
 
     def test_contains_primary_authority_label(self):
         assert "PRIMARY AUTHORITY" in _REGEN_INSTRUCTION
 
-    def test_contains_read_only_labels(self):
-        assert "READ-ONLY" in _REGEN_INSTRUCTION
+    def test_contains_technical_revalidation(self):
+        assert "TECHNICAL RE-VALIDATION" in _REGEN_INSTRUCTION
 
 
 # ===========================================================================
@@ -160,10 +160,15 @@ class TestBuildLinkedInCarouselPrompt:
         _, user_prompt = build_linkedin_carousel_prompt("theme", "content", "")
         assert "None" in user_prompt
 
-    def test_previous_output_included(self):
-        _, user_prompt = build_linkedin_carousel_prompt("theme", "content", "previous carousel")
-        assert "previous carousel" in user_prompt
-        assert "None" not in user_prompt.split("Previously generated output")[1]
+    def test_character_errors_included(self):
+        _, user_prompt = build_linkedin_carousel_prompt(
+            "theme", "content", character_errors="Slide 5 over limit"
+        )
+        assert "Slide 5 over limit" in user_prompt
+
+    def test_empty_character_errors_shows_none(self):
+        _, user_prompt = build_linkedin_carousel_prompt("theme", "content")
+        assert "Previous Errors (if any): None" in user_prompt
 
     def test_different_themes_produce_different_prompts(self):
         _, prompt_a = build_linkedin_carousel_prompt("theme A", "content")
@@ -208,11 +213,13 @@ class TestBuildLinkedInRegenerationPrompt:
         )
         assert "ref theme data" in user_prompt
 
-    def test_user_prompt_contains_newsletter_content(self):
+    def test_newsletter_content_arg_accepted(self):
+        """The builder accepts newsletter_content without error even though
+        the regeneration template no longer interpolates it."""
         _, user_prompt = build_linkedin_regeneration_prompt(
             "previous", "feedback", "theme", "html newsletter"
         )
-        assert "html newsletter" in user_prompt
+        assert isinstance(user_prompt, str)
 
     def test_different_feedback_produces_different_prompts(self):
         _, prompt_a = build_linkedin_regeneration_prompt("prev", "fix A", "theme", "content")

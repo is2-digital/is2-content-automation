@@ -48,9 +48,10 @@ EMPTY_PRIOR_ERRORS = '{"output": {"isValid": true, "errors": []}}'
 class TestVoiceValidationPromptConstant:
     """Tests for the voice validation prompt constants.
 
-    After the shared system prompt refactoring, ``_SYSTEM`` contains the
-    application-wide shared system prompt and ``_INSTRUCTION`` contains the
-    per-process instruction template with input/prior-errors placeholders.
+    After the XML-tagged prompt refactoring, ``_SYSTEM`` contains the
+    shared system prompt (iS2 Editorial Engine persona) and ``_INSTRUCTION``
+    contains the per-process instruction template with XML-tagged sections
+    for voice evaluation criteria and prior error handling.
     """
 
     def test_prompt_is_string(self) -> None:
@@ -62,31 +63,30 @@ class TestVoiceValidationPromptConstant:
     def test_system_is_shared_system_prompt(self) -> None:
         assert _SYSTEM == _SHARED_SYSTEM
 
-    def test_system_contains_ai_system_role(self) -> None:
-        assert "AI system" in _SYSTEM
-        assert "IS2 Digital newsletter" in _SYSTEM
+    def test_system_contains_editorial_engine_role(self) -> None:
+        assert "iS2 Editorial Engine" in _SYSTEM
+        assert "Kevin" in _SYSTEM
 
-    def test_system_contains_data_integrity(self) -> None:
-        assert "Data Integrity" in _SYSTEM
-        assert "Use ONLY the data and content explicitly provided" in _SYSTEM
+    def test_system_contains_headless_api_mode(self) -> None:
+        assert "HEADLESS API" in _SYSTEM
+        assert "STRICT OUTPUT" in _SYSTEM
 
-    def test_system_contains_output_integrity(self) -> None:
-        assert "Output Integrity" in _SYSTEM
-        assert "exact format specified per process" in _SYSTEM
+    def test_system_contains_zero_hallucination(self) -> None:
+        assert "ZERO HALLUCINATION" in _SYSTEM
+        assert "Use only provided Input data" in _SYSTEM
 
-    def test_system_contains_audience_context(self) -> None:
-        assert "Audience Context" in _SYSTEM
-        assert "solopreneurs and SMB professionals" in _SYSTEM
+    def test_system_contains_voice_guardrails(self) -> None:
+        assert "VOICE & FORMATTING GUARDRAILS" in _SYSTEM
 
-    def test_instruction_contains_input_header(self) -> None:
-        assert "### INPUT" in _INSTRUCTION
+    def test_instruction_contains_voice_evaluation(self) -> None:
+        assert "Voice_Evaluation_Criteria" in _INSTRUCTION
 
     def test_instruction_contains_markdown_placeholder(self) -> None:
         assert "{markdown_content}" in _INSTRUCTION
 
-    def test_instruction_contains_prior_errors_header(self) -> None:
-        assert "PRIOR_ERRORS_JSON" in _INSTRUCTION
-        assert "DO NOT MODIFY" in _INSTRUCTION
+    def test_instruction_contains_prior_error_handling(self) -> None:
+        assert "Prior_Error_Handling" in _INSTRUCTION
+        assert "{prior_errors_json}" in _INSTRUCTION
 
     def test_instruction_contains_prior_errors_placeholder(self) -> None:
         assert "{prior_errors_json}" in _INSTRUCTION
@@ -126,19 +126,18 @@ class TestBuildVoiceValidationPrompt:
         _, user = build_voice_validation_prompt(SAMPLE_MARKDOWN, SAMPLE_PRIOR_ERRORS)
         assert SAMPLE_PRIOR_ERRORS in user
 
-    def test_user_prompt_has_input_header(self) -> None:
+    def test_user_prompt_has_input_data_tag(self) -> None:
         _, user = build_voice_validation_prompt(SAMPLE_MARKDOWN, EMPTY_PRIOR_ERRORS)
-        assert "### INPUT" in user
+        assert "Input_Data" in user
 
-    def test_user_prompt_has_prior_errors_header(self) -> None:
+    def test_user_prompt_has_prior_error_handling(self) -> None:
         _, user = build_voice_validation_prompt(SAMPLE_MARKDOWN, EMPTY_PRIOR_ERRORS)
-        assert "PRIOR_ERRORS_JSON" in user
-        assert "DO NOT MODIFY" in user
+        assert "Prior_Error_Handling" in user
 
     def test_empty_markdown(self) -> None:
         system, user = build_voice_validation_prompt("", EMPTY_PRIOR_ERRORS)
         assert system == _SYSTEM
-        assert "### INPUT" in user
+        assert "Input_Data" in user
 
     def test_empty_prior_errors(self) -> None:
         _, user = build_voice_validation_prompt(SAMPLE_MARKDOWN, "")
@@ -167,25 +166,23 @@ class TestBuildVoiceValidationPrompt:
 
 
 class TestVoiceRuleSections:
-    """Verify prompt structure after shared system prompt refactoring.
+    """Verify prompt structure after XML-tagged prompt refactoring.
 
-    Voice-specific evaluation rules (section checks, evaluation rules,
-    merge directives, etc.) were previously embedded in the per-process
-    system prompt. After the refactoring, ``_SYSTEM`` is the shared prompt
-    and ``_INSTRUCTION`` is the minimal input template. These tests verify
-    the current prompt structure.
+    Voice-specific evaluation rules are in the per-process instruction
+    template inside XML tags. The shared system prompt defines the iS2
+    Editorial Engine persona.
     """
 
-    def test_shared_system_prompt_universal_protocols(self) -> None:
-        assert "Universal Protocols" in _SYSTEM
+    def test_shared_system_prompt_has_role_identity(self) -> None:
+        assert "ROLE & IDENTITY" in _SYSTEM
 
-    def test_instruction_has_input_section(self) -> None:
-        assert "### INPUT" in _INSTRUCTION
-        assert "newsletter content" in _INSTRUCTION
+    def test_instruction_has_input_data_section(self) -> None:
+        assert "Input_Data" in _INSTRUCTION
+        assert "Newsletter Content" in _INSTRUCTION
 
-    def test_instruction_has_prior_errors_section(self) -> None:
-        assert "PRIOR_ERRORS_JSON" in _INSTRUCTION
-        assert "AUTHORITATIVE" in _INSTRUCTION
+    def test_instruction_has_prior_error_handling_section(self) -> None:
+        assert "Prior_Error_Handling" in _INSTRUCTION
+        assert "verbatim" in _INSTRUCTION
 
     def test_combined_includes_both_prompts(self) -> None:
         assert _SYSTEM in _COMBINED

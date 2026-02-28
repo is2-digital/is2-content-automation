@@ -46,9 +46,9 @@ def build_learning_data_extraction_prompt(
     system_prompt, instruction = get_process_prompts("learning-data-extraction")
 
     user_prompt = instruction.format(
-        feedback=feedback,
-        input_text=input_text,
-        model_output=model_output,
+        feedback_section=feedback,
+        markdown_content=input_text,
+        validator_errors_section=model_output,
     )
 
     return system_prompt, user_prompt

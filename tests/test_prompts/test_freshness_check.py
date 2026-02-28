@@ -58,20 +58,20 @@ class TestFreshnessCheckPromptConstant:
         assert "https://www.is2digital.com/newsletters" in _COMBINED
 
     def test_contains_freshness_check_context(self) -> None:
-        assert "editorial freshness" in _COMBINED
+        assert "fresh" in _COMBINED
 
     def test_contains_repetitiveness_check(self) -> None:
-        assert "not repetitive" in _COMBINED
+        assert "non-repetitive" in _COMBINED
 
     def test_contains_recent_newsletters_reference(self) -> None:
         assert "3 most recent" in _COMBINED
 
-    def test_contains_structured_output_request(self) -> None:
-        assert "structured output" in _COMBINED
+    def test_contains_json_output_request(self) -> None:
+        assert "JSON object" in _COMBINED
 
-    def test_contains_change_explanation_request(self) -> None:
-        assert "what to change" in _COMBINED
-        assert "explain why" in _COMBINED
+    def test_contains_suggested_changes_field(self) -> None:
+        assert "suggestedChanges" in _COMBINED
+        assert "assessment" in _COMBINED
 
     def test_no_n8n_expression_syntax(self) -> None:
         assert "$json" not in _COMBINED
@@ -116,7 +116,7 @@ class TestBuildFreshnessCheckPrompt:
     def test_empty_theme_body(self) -> None:
         system, user = build_freshness_check_prompt("")
         assert "newsletter" in system
-        assert "editorial freshness" in user
+        assert "fresh" in user
 
     def test_theme_body_with_special_characters(self) -> None:
         body = "Theme with {braces} and $dollar and %markers"
@@ -134,9 +134,9 @@ class TestBuildFreshnessCheckPrompt:
         assert "%M1_TITLE:" in user
         assert "%M2_TITLE:" in user
 
-    def test_system_prompt_describes_freshness_role(self) -> None:
+    def test_system_prompt_describes_editorial_role(self) -> None:
         system, _ = build_freshness_check_prompt(SAMPLE_THEME_BODY)
-        assert "fresh" in system or "non-repetitive" in system
+        assert "iS2 Editorial Engine" in system
 
 
 # ---------------------------------------------------------------------------
@@ -160,4 +160,4 @@ class TestFreshnessCheckEdgeCases:
 
     def test_whitespace_only_theme_body(self) -> None:
         _, user = build_freshness_check_prompt("   \n  \n  ")
-        assert "editorial freshness" in user
+        assert "fresh" in user

@@ -106,11 +106,11 @@ class TestSystemPrompt:
     def test_not_empty(self):
         assert len(_GENERATION_SYSTEM) > 0
 
-    def test_contains_data_integrity(self):
-        assert "Data Integrity" in _GENERATION_SYSTEM
+    def test_contains_zero_hallucination(self):
+        assert "ZERO HALLUCINATION" in _GENERATION_SYSTEM
 
-    def test_contains_output_integrity(self):
-        assert "Output Integrity" in _GENERATION_SYSTEM
+    def test_contains_strict_output(self):
+        assert "STRICT OUTPUT" in _GENERATION_SYSTEM
 
 
 # ---------------------------------------------------------------------------
@@ -141,84 +141,83 @@ class TestUserPromptTemplate:
     def test_contains_featured_article_heading(self):
         assert "# *FEATURED ARTICLE*" in _GENERATION_INSTRUCTION
 
-    def test_contains_main_article_1_heading(self):
-        assert "# *MAIN ARTICLE 1*" in _GENERATION_INSTRUCTION
-
-    def test_contains_main_article_2_heading(self):
-        assert "# *MAIN ARTICLE 2*" in _GENERATION_INSTRUCTION
+    def test_contains_main_articles_heading(self):
+        assert "# *MAIN ARTICLES*" in _GENERATION_INSTRUCTION
 
     def test_contains_quick_hits_heading(self):
         assert "# *QUICK HITS*" in _GENERATION_INSTRUCTION
 
-    def test_contains_industry_developments_heading(self):
-        assert "# *INDUSTRY DEVELOPMENTS*" in _GENERATION_INSTRUCTION
+    def test_contains_industry_reference(self):
+        assert "*INDUSTRY*" in _GENERATION_INSTRUCTION
 
     def test_contains_footer_heading(self):
         assert "# *FOOTER*" in _GENERATION_INSTRUCTION
 
-    def test_all_eight_sections_present(self):
-        headings = [
+    def test_all_sections_present(self):
+        sections = [
             "# *INTRODUCTION*",
             "# *QUICK HIGHLIGHTS*",
             "# *FEATURED ARTICLE*",
-            "# *MAIN ARTICLE 1*",
-            "# *MAIN ARTICLE 2*",
+            "# *MAIN ARTICLES*",
             "# *QUICK HITS*",
-            "# *INDUSTRY DEVELOPMENTS*",
+            "*INDUSTRY*",
             "# *FOOTER*",
         ]
-        for h in headings:
-            assert h in _GENERATION_INSTRUCTION, f"Missing heading: {h}"
+        for s in sections:
+            assert s in _GENERATION_INSTRUCTION, f"Missing section: {s}"
 
     # --- Section content rules ---
 
     def test_introduction_rules(self):
-        assert "Conversational opening paragraph" in _GENERATION_INSTRUCTION
-        assert "Italic theme summary" in _GENERATION_INSTRUCTION
+        assert "Striking observation" in _GENERATION_INSTRUCTION
+        assert "italicized theme summary" in _GENERATION_INSTRUCTION
 
     def test_quick_highlights_rules(self):
-        assert "3 bullet points" in _GENERATION_INSTRUCTION
-        assert "150-190 characters" in _GENERATION_INSTRUCTION
+        assert "3 bullets" in _GENERATION_INSTRUCTION
+        assert "150-190 chars" in _GENERATION_INSTRUCTION
 
     def test_featured_article_rules(self):
-        assert "300-400 characters" in _GENERATION_INSTRUCTION
-        assert "Key Insight Paragraph" in _GENERATION_INSTRUCTION
-        assert "300-370 characters" in _GENERATION_INSTRUCTION
-        assert "CTA Link" in _GENERATION_INSTRUCTION
+        assert "300-400 char" in _GENERATION_INSTRUCTION
+        assert "Key Insight" in _GENERATION_INSTRUCTION
+        assert "300-370 chars" in _GENERATION_INSTRUCTION
+        assert "CTA link" in _GENERATION_INSTRUCTION
 
     def test_featured_article_cta_rules(self):
         prompt = _GENERATION_INSTRUCTION
-        assert "2-4 words" in prompt
-        assert "end with" in prompt
+        assert "'->'." in prompt or "'->" in prompt
 
     def test_main_article_rules(self):
         assert "max 750 chars" in _GENERATION_INSTRUCTION
         assert "180-250 chars" in _GENERATION_INSTRUCTION
         assert "Strategic Take-away" in _GENERATION_INSTRUCTION
-        assert "Actionable Steps" in _GENERATION_INSTRUCTION
 
     def test_quick_hits_rules(self):
-        assert "3 items" in _GENERATION_INSTRUCTION
+        assert "# *QUICK HITS*" in _GENERATION_INSTRUCTION
+        assert "summaries" in _GENERATION_INSTRUCTION
 
-    def test_industry_developments_rules(self):
-        assert "2 items" in _GENERATION_INSTRUCTION
-        assert "major AI company" in _GENERATION_INSTRUCTION
+    def test_industry_rules(self):
+        assert "*INDUSTRY*" in _GENERATION_INSTRUCTION
+        assert "summaries" in _GENERATION_INSTRUCTION
 
     def test_footer_rules(self):
-        assert "Reflective paragraph" in _GENERATION_INSTRUCTION
-        assert "tie back to the theme" in _GENERATION_INSTRUCTION
+        assert "wrap for the week" in _GENERATION_INSTRUCTION
+        assert "Thoughts?" in _GENERATION_INSTRUCTION
 
-    def test_link_rules(self):
-        assert "LINK RULES" in _GENERATION_INSTRUCTION
-        assert "ONLY URLs found" in _GENERATION_INSTRUCTION
+    def test_url_integrity_rules(self):
+        assert "ONLY URLs" in _GENERATION_INSTRUCTION
+        assert "Formatting_Integrity" in _GENERATION_INSTRUCTION
 
-    def test_final_instructions(self):
-        assert "FINAL INSTRUCTIONS" in _GENERATION_INSTRUCTION
-        assert "only the final newsletter in valid Markdown" in (_GENERATION_INSTRUCTION)
+    def test_output_instruction(self):
+        assert "Markdown output now" in _GENERATION_INSTRUCTION
 
     def test_no_stray_placeholders(self):
-        """Only the three expected placeholders should appear."""
-        known = ["{feedback_section}", "{validator_errors_section}", "{formatted_theme}"]
+        """Only the four expected placeholders should appear."""
+        known = [
+            "{feedback_section}",
+            "{validator_errors_section}",
+            "{formatted_theme}",
+            "{previous_markdown}",
+        ]
         cleaned = _GENERATION_INSTRUCTION
         for p in known:
             cleaned = cleaned.replace(p, "")
@@ -324,19 +323,18 @@ class TestBuildPromptFirstGeneration:
         assert "{validator_errors_section}" not in user
         assert "{formatted_theme}" not in user
 
-    def test_user_prompt_contains_all_headings(self):
+    def test_user_prompt_contains_all_sections(self):
         _, user = build_markdown_generation_prompt(SAMPLE_THEME)
-        for heading in [
+        for section in [
             "# *INTRODUCTION*",
             "# *QUICK HIGHLIGHTS*",
             "# *FEATURED ARTICLE*",
-            "# *MAIN ARTICLE 1*",
-            "# *MAIN ARTICLE 2*",
+            "# *MAIN ARTICLES*",
             "# *QUICK HITS*",
-            "# *INDUSTRY DEVELOPMENTS*",
+            "*INDUSTRY*",
             "# *FOOTER*",
         ]:
-            assert heading in user
+            assert section in user
 
 
 # ---------------------------------------------------------------------------
@@ -462,11 +460,11 @@ class TestRegenerationSystemPrompt:
     def test_not_empty(self):
         assert len(_REGEN_SYSTEM) > 0
 
-    def test_contains_data_integrity(self):
-        assert "Data Integrity" in _REGEN_SYSTEM
+    def test_contains_zero_hallucination(self):
+        assert "ZERO HALLUCINATION" in _REGEN_SYSTEM
 
-    def test_contains_output_integrity(self):
-        assert "Output Integrity" in _REGEN_SYSTEM
+    def test_contains_strict_output(self):
+        assert "STRICT OUTPUT" in _REGEN_SYSTEM
 
 
 # ---------------------------------------------------------------------------
@@ -509,12 +507,16 @@ class TestBuildRegenerationPrompt:
         )
         assert "Make the intro shorter." not in system
 
-    def test_user_message_is_feedback(self):
+    def test_user_prompt_contains_original_and_feedback(self):
         _, user = build_markdown_regeneration_prompt(
             "# Newsletter\nContent here.",
             "Make the intro shorter.",
         )
-        assert user == "Make the intro shorter."
+        # The instruction template interpolates both original_markdown and
+        # user_feedback into the XML-tagged user prompt.
+        assert "# Newsletter" in user
+        assert "Content here." in user
+        assert "Make the intro shorter." in user
 
     def test_no_unresolved_placeholders(self):
         system, _user = build_markdown_regeneration_prompt(

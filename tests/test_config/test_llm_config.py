@@ -144,7 +144,7 @@ class TestGetModel:
         get_llm_config.cache_clear()
         with patch.dict("os.environ", {}, clear=False):
             model = get_model(LLMPurpose.SUMMARY)
-        assert model == "anthropic/claude-sonnet-4.5"
+        assert model == "google/gemini-2.5-flash"
 
     def test_returns_overridden_model(self) -> None:
         get_llm_config.cache_clear()

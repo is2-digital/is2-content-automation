@@ -106,11 +106,10 @@ EMPTY_CHAR_ERRORS = "[]"
 class TestStructuralValidationPromptConstant:
     """Tests for the structural validation prompt constants.
 
-    After the shared system prompt refactoring, ``_SYSTEM`` contains the
-    application-wide shared system prompt and ``_INSTRUCTION`` contains
-    the per-process instruction template (just the ``{markdown_content}``
-    placeholder). Structural validation rules that were previously in the
-    per-process system prompt have been removed from the JSON config.
+    After the XML-tagged prompt refactoring, ``_SYSTEM`` contains the
+    shared system prompt (iS2 Editorial Engine persona) and ``_INSTRUCTION``
+    contains the per-process instruction template with ``{markdown_content}``
+    and ``{char_errors}`` placeholders inside XML tags.
     """
 
     def test_prompt_is_string(self) -> None:
@@ -122,21 +121,20 @@ class TestStructuralValidationPromptConstant:
     def test_system_is_shared_system_prompt(self) -> None:
         assert _SYSTEM == _SHARED_SYSTEM
 
-    def test_system_contains_ai_system_role(self) -> None:
-        assert "AI system" in _SYSTEM
-        assert "IS2 Digital newsletter" in _SYSTEM
+    def test_system_contains_editorial_engine_role(self) -> None:
+        assert "iS2 Editorial Engine" in _SYSTEM
+        assert "Kevin" in _SYSTEM
 
-    def test_system_contains_data_integrity(self) -> None:
-        assert "Data Integrity" in _SYSTEM
-        assert "Use ONLY the data and content explicitly provided" in _SYSTEM
+    def test_system_contains_headless_api_mode(self) -> None:
+        assert "HEADLESS API" in _SYSTEM
+        assert "STRICT OUTPUT" in _SYSTEM
 
-    def test_system_contains_output_integrity(self) -> None:
-        assert "Output Integrity" in _SYSTEM
-        assert "exact format specified per process" in _SYSTEM
+    def test_system_contains_zero_hallucination(self) -> None:
+        assert "ZERO HALLUCINATION" in _SYSTEM
+        assert "Use only provided Input data" in _SYSTEM
 
-    def test_system_contains_audience_context(self) -> None:
-        assert "Audience Context" in _SYSTEM
-        assert "solopreneurs and SMB professionals" in _SYSTEM
+    def test_system_contains_voice_guardrails(self) -> None:
+        assert "VOICE & FORMATTING GUARDRAILS" in _SYSTEM
 
     def test_system_has_no_char_errors_placeholder(self) -> None:
         """Shared system prompt does not contain ``{char_errors}``."""
@@ -144,6 +142,9 @@ class TestStructuralValidationPromptConstant:
 
     def test_instruction_contains_markdown_placeholder(self) -> None:
         assert "{markdown_content}" in _INSTRUCTION
+
+    def test_instruction_contains_char_errors_placeholder(self) -> None:
+        assert "{char_errors}" in _INSTRUCTION
 
     def test_no_n8n_expression_syntax(self) -> None:
         assert "$json" not in _COMBINED
@@ -158,11 +159,9 @@ class TestStructuralValidationPromptConstant:
 class TestBuildStructuralValidationPrompt:
     """Tests for the build_structural_validation_prompt() function.
 
-    After the shared system prompt refactoring, the system prompt is the
-    shared prompt (no ``{char_errors}`` placeholder). The
-    ``system_prompt.format(char_errors=...)`` call in the builder is a
-    no-op since the shared prompt has no such placeholder. The user prompt
-    is the markdown content from the instruction template.
+    After the XML-tagged prompt refactoring, the instruction template
+    contains ``{markdown_content}`` and ``{char_errors}`` placeholders.
+    Both are interpolated into the user prompt by the builder function.
     """
 
     def test_returns_tuple(self) -> None:
@@ -180,29 +179,38 @@ class TestBuildStructuralValidationPrompt:
         assert system == _SHARED_SYSTEM
 
     def test_system_prompt_char_errors_format_is_noop(self) -> None:
-        """The format(char_errors=...) call is a no-op on the shared prompt."""
+        """char_errors does not appear in the system prompt."""
         system, _ = build_structural_validation_prompt(SAMPLE_MARKDOWN, SAMPLE_CHAR_ERRORS)
         assert SAMPLE_CHAR_ERRORS not in system
         assert "{char_errors}" not in system
 
-    def test_user_prompt_is_markdown_content(self) -> None:
+    def test_user_prompt_contains_markdown_content(self) -> None:
         _, user = build_structural_validation_prompt(SAMPLE_MARKDOWN, EMPTY_CHAR_ERRORS)
-        assert user == SAMPLE_MARKDOWN
+        assert SAMPLE_MARKDOWN in user
+
+    def test_user_prompt_contains_char_errors(self) -> None:
+        _, user = build_structural_validation_prompt(SAMPLE_MARKDOWN, SAMPLE_CHAR_ERRORS)
+        assert SAMPLE_CHAR_ERRORS in user
 
     def test_system_prompt_contains_shared_content(self) -> None:
         system, _ = build_structural_validation_prompt(SAMPLE_MARKDOWN, EMPTY_CHAR_ERRORS)
-        assert "AI system" in system
-        assert "IS2 Digital newsletter" in system
+        assert "iS2 Editorial Engine" in system
+        assert "Kevin" in system
 
     def test_empty_markdown_content(self) -> None:
         system, user = build_structural_validation_prompt("", EMPTY_CHAR_ERRORS)
-        assert user == ""
+        assert EMPTY_CHAR_ERRORS in user
         assert system == _SHARED_SYSTEM
 
     def test_markdown_with_special_characters(self) -> None:
         md = "Content with {braces} and $dollar and %percent"
         _, user = build_structural_validation_prompt(md, EMPTY_CHAR_ERRORS)
-        assert user == md
+        assert md in user
+
+    def test_no_unresolved_placeholders(self) -> None:
+        _, user = build_structural_validation_prompt(SAMPLE_MARKDOWN, SAMPLE_CHAR_ERRORS)
+        assert "{markdown_content}" not in user
+        assert "{char_errors}" not in user
 
 
 # ---------------------------------------------------------------------------
@@ -211,20 +219,31 @@ class TestBuildStructuralValidationPrompt:
 
 
 class TestSectionRuleCoverage:
-    """Verify prompt structure after shared system prompt refactoring.
+    """Verify prompt structure after XML-tagged prompt refactoring.
 
-    Structural validation section rules (QUICK HIGHLIGHTS, FEATURED ARTICLE,
-    MAIN ARTICLES, etc.) and the three-step role were previously in the
-    per-process system prompt. After the refactoring, ``_SYSTEM`` is the
-    shared prompt and ``_INSTRUCTION`` is the minimal input template.
-    These tests verify the current prompt structure.
+    Structural validation rules (QUICK HIGHLIGHTS, FEATURED ARTICLE,
+    MAIN ARTICLES, etc.) are in the per-process instruction template
+    inside XML tags. The shared system prompt defines the iS2 Editorial
+    Engine persona.
     """
 
-    def test_shared_system_prompt_universal_protocols(self) -> None:
-        assert "Universal Protocols" in _SYSTEM
+    def test_shared_system_prompt_has_role_identity(self) -> None:
+        assert "ROLE & IDENTITY" in _SYSTEM
 
     def test_instruction_contains_markdown_placeholder(self) -> None:
         assert "{markdown_content}" in _INSTRUCTION
+
+    def test_instruction_contains_validation_authority(self) -> None:
+        """Instruction has XML-tagged validation rules."""
+        assert "Validation_Authority" in _INSTRUCTION
+
+    def test_instruction_contains_structural_rules(self) -> None:
+        """Instruction contains section-specific structural rules."""
+        assert "QUICK HIGHLIGHTS" in _INSTRUCTION
+        assert "FEATURED ARTICLE" in _INSTRUCTION
+        assert "MAIN ARTICLES" in _INSTRUCTION
+        assert "INDUSTRY DEVELOPMENTS" in _INSTRUCTION
+        assert "FOOTER" in _INSTRUCTION
 
     def test_combined_includes_both_prompts(self) -> None:
         assert _SYSTEM in _COMBINED
@@ -239,17 +258,17 @@ class TestSectionRuleCoverage:
 class TestEdgeCases:
     """Edge case tests for structural validation prompt.
 
-    After the shared system prompt refactoring, ``char_errors`` are no
-    longer interpolated into the system prompt (the format call is a
-    no-op). These tests verify the builder still handles edge cases
-    for markdown content correctly.
+    Both ``markdown_content`` and ``char_errors`` are interpolated into
+    the instruction template. The system prompt is always the shared
+    prompt unchanged.
     """
 
-    def test_large_char_errors_ignored_by_system_prompt(self) -> None:
-        """Large char_errors string does not appear in system (no-op format)."""
+    def test_large_char_errors_in_user_prompt(self) -> None:
+        """Large char_errors string appears in user prompt, not system."""
         errors = "[" + ", ".join(f'"error {i}"' for i in range(100)) + "]"
-        system, _ = build_structural_validation_prompt(SAMPLE_MARKDOWN, errors)
+        system, user = build_structural_validation_prompt(SAMPLE_MARKDOWN, errors)
         assert system == _SHARED_SYSTEM
+        assert errors in user
 
     def test_unicode_in_markdown(self) -> None:
         md = "Content with unicode: \u2192 \u2022 \u201c \u201d"
@@ -257,8 +276,9 @@ class TestEdgeCases:
         assert "\u2192" in user
         assert "\u2022" in user
 
-    def test_multiline_char_errors_ignored_by_system_prompt(self) -> None:
-        """Multiline char_errors string does not appear in system (no-op format)."""
+    def test_multiline_char_errors_in_user_prompt(self) -> None:
+        """Multiline char_errors string appears in user prompt, not system."""
         errors = '[\n  "error 1",\n  "error 2"\n]'
-        system, _ = build_structural_validation_prompt(SAMPLE_MARKDOWN, errors)
+        system, user = build_structural_validation_prompt(SAMPLE_MARKDOWN, errors)
         assert system == _SHARED_SYSTEM
+        assert errors in user

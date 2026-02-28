@@ -55,9 +55,17 @@ ALL_PROCESS_NAMES = [
 
 # Expected models per process (non-Claude exceptions)
 EXPECTED_MODELS = {
+    "summarization": "google/gemini-2.5-flash",
+    "summarization-regeneration": "anthropic/claude-haiku-4.5",
     "freshness-check": "google/gemini-2.5-flash",
     "markdown-structural-validation": "openai/gpt-4.1",
     "markdown-voice-validation": "openai/gpt-4.1",
+    "html-generation": "openai/gpt-4.1",
+    "html-regeneration": "openai/gpt-4.1",
+    "email-subject": "anthropic/claude-haiku-4.5",
+    "email-subject-regeneration": "anthropic/claude-haiku-4.5",
+    "social-media-regeneration": "openai/gpt-4.1",
+    "learning-data-extraction": "google/gemini-2.5-flash",
 }
 _DEFAULT_MODEL = "anthropic/claude-sonnet-4.5"
 
@@ -335,9 +343,9 @@ class TestBuildFunctionsMatchJsonConfigs:
             build_structural_validation_prompt,
         )
 
-        system, user = build_structural_validation_prompt("# MD content", '["err1"]')
-        # System prompt has {char_errors} substitution
-        assert '["err1"]' in system
+        _, user = build_structural_validation_prompt("# MD content", '["err1"]')
+        # char_errors is now in the instruction (user prompt), not the system prompt
+        assert '["err1"]' in user
         assert "# MD content" in user
 
     def test_build_voice_validation_prompt(self) -> None:
@@ -359,26 +367,26 @@ class TestGetModelAllPurposes:
 
     # Map each LLMPurpose to its expected default model
     PURPOSE_DEFAULT_MODELS: ClassVar[dict[LLMPurpose, str]] = {
-        LLMPurpose.SUMMARY: _DEFAULT_MODEL,
-        LLMPurpose.SUMMARY_REGENERATION: _DEFAULT_MODEL,
-        LLMPurpose.SUMMARY_LEARNING_DATA: _DEFAULT_MODEL,
+        LLMPurpose.SUMMARY: "google/gemini-2.5-flash",
+        LLMPurpose.SUMMARY_REGENERATION: "anthropic/claude-haiku-4.5",
+        LLMPurpose.SUMMARY_LEARNING_DATA: "google/gemini-2.5-flash",
         LLMPurpose.MARKDOWN: _DEFAULT_MODEL,
         LLMPurpose.MARKDOWN_VALIDATOR: "openai/gpt-4.1",
         LLMPurpose.MARKDOWN_REGENERATION: _DEFAULT_MODEL,
         LLMPurpose.MARKDOWN_LEARNING_DATA: _DEFAULT_MODEL,
-        LLMPurpose.HTML: _DEFAULT_MODEL,
-        LLMPurpose.HTML_REGENERATION: _DEFAULT_MODEL,
+        LLMPurpose.HTML: "openai/gpt-4.1",
+        LLMPurpose.HTML_REGENERATION: "openai/gpt-4.1",
         LLMPurpose.HTML_LEARNING_DATA: _DEFAULT_MODEL,
         LLMPurpose.THEME: _DEFAULT_MODEL,
         LLMPurpose.THEME_LEARNING_DATA: _DEFAULT_MODEL,
         LLMPurpose.THEME_FRESHNESS_CHECK: "google/gemini-2.5-flash",
         LLMPurpose.SOCIAL_MEDIA: _DEFAULT_MODEL,
         LLMPurpose.SOCIAL_POST_CAPTION: _DEFAULT_MODEL,
-        LLMPurpose.SOCIAL_MEDIA_REGENERATION: _DEFAULT_MODEL,
+        LLMPurpose.SOCIAL_MEDIA_REGENERATION: "openai/gpt-4.1",
         LLMPurpose.LINKEDIN: _DEFAULT_MODEL,
         LLMPurpose.LINKEDIN_REGENERATION: _DEFAULT_MODEL,
-        LLMPurpose.EMAIL_SUBJECT: _DEFAULT_MODEL,
-        LLMPurpose.EMAIL_SUBJECT_REGENERATION: _DEFAULT_MODEL,
+        LLMPurpose.EMAIL_SUBJECT: "anthropic/claude-haiku-4.5",
+        LLMPurpose.EMAIL_SUBJECT_REGENERATION: "anthropic/claude-haiku-4.5",
         LLMPurpose.EMAIL_PREVIEW: _DEFAULT_MODEL,
     }
 
@@ -730,7 +738,7 @@ class TestProcessCategoryCoverage:
     """Verify all process categories have their expected JSON configs."""
 
     def test_primary_generation_processes(self) -> None:
-        """7 primary generation processes exist."""
+        """7 primary generation processes exist with expected models."""
         primary = [
             "summarization",
             "theme-generation",
@@ -742,10 +750,11 @@ class TestProcessCategoryCoverage:
         ]
         for name in primary:
             config = load_process_config(name)
-            assert config.model == _DEFAULT_MODEL
+            expected = EXPECTED_MODELS.get(name, _DEFAULT_MODEL)
+            assert config.model == expected
 
     def test_regeneration_processes(self) -> None:
-        """7 regeneration processes exist."""
+        """7 regeneration processes exist with expected models."""
         regen = [
             "summarization-regeneration",
             "markdown-regeneration",
@@ -756,20 +765,22 @@ class TestProcessCategoryCoverage:
         ]
         for name in regen:
             config = load_process_config(name)
-            assert config.model == _DEFAULT_MODEL
+            expected = EXPECTED_MODELS.get(name, _DEFAULT_MODEL)
+            assert config.model == expected
 
     def test_validation_utility_processes(self) -> None:
         """5 validation/utility processes exist with correct models."""
-        validation = {
-            "freshness-check": "google/gemini-2.5-flash",
-            "markdown-structural-validation": "openai/gpt-4.1",
-            "markdown-voice-validation": "openai/gpt-4.1",
-            "learning-data-extraction": _DEFAULT_MODEL,
-            "email-preview": _DEFAULT_MODEL,
-        }
-        for name, expected_model in validation.items():
+        validation = [
+            "freshness-check",
+            "markdown-structural-validation",
+            "markdown-voice-validation",
+            "learning-data-extraction",
+            "email-preview",
+        ]
+        for name in validation:
             config = load_process_config(name)
-            assert config.model == expected_model
+            expected = EXPECTED_MODELS.get(name, _DEFAULT_MODEL)
+            assert config.model == expected
 
     def test_social_media_has_three_stages(self) -> None:
         """Social media pipeline: post -> caption -> regeneration."""

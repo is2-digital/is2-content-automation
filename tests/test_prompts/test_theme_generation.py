@@ -27,14 +27,20 @@ class TestSystemPrompt:
 
         assert _SYSTEM == get_system_prompt()
 
-    def test_contains_data_integrity_section(self):
-        assert "Data Integrity" in _SYSTEM
+    def test_contains_role_and_identity_section(self):
+        assert "ROLE & IDENTITY" in _SYSTEM
 
-    def test_contains_output_integrity_section(self):
-        assert "Output Integrity" in _SYSTEM
+    def test_contains_editorial_engine_persona(self):
+        assert "iS2 Editorial Engine" in _SYSTEM
 
-    def test_contains_audience_context_section(self):
-        assert "Audience Context" in _SYSTEM
+    def test_contains_kevin_persona(self):
+        assert "Kevin" in _SYSTEM
+
+    def test_contains_headless_api_mode(self):
+        assert "HEADLESS API" in _SYSTEM
+
+    def test_contains_marker_token_protocol(self):
+        assert "MARKER & TOKEN PROTOCOL" in _SYSTEM
 
     def test_no_feedback_in_system_prompt(self):
         """Feedback is injected into the user prompt, not the system prompt."""
@@ -60,8 +66,8 @@ class TestUserPromptTemplate:
     def test_has_summaries_json_placeholder(self):
         assert "{summaries_json}" in _INSTRUCTION
 
-    def test_contains_output_format_heading(self):
-        assert "Output Format (MANDATORY)" in _INSTRUCTION
+    def test_contains_output_format_xml_tag(self):
+        assert "<Output_Format>" in _INSTRUCTION
 
     # --- Featured Article markers ---
     def test_contains_fa_title_marker(self):
@@ -82,95 +88,69 @@ class TestUserPromptTemplate:
     def test_contains_fa_why_featured_marker(self):
         assert "%FA_WHY FEATURED:" in _INSTRUCTION
 
-    # --- Main Article markers ---
-    def test_contains_m1_markers(self):
-        assert "%M1_TITLE:" in _INSTRUCTION
-        assert "%M1_SOURCE:" in _INSTRUCTION
-        assert "%M1_URL:" in _INSTRUCTION
-        assert "%M1_CATEGORY:" in _INSTRUCTION
-        assert "%M1_RATIONALE:" in _INSTRUCTION
+    # --- Main Article prefixes referenced ---
+    def test_contains_m1_prefix(self):
+        assert "%M1_" in _INSTRUCTION
 
-    def test_contains_m2_markers(self):
-        assert "%M2_TITLE:" in _INSTRUCTION
-        assert "%M2_SOURCE:" in _INSTRUCTION
-        assert "%M2_URL:" in _INSTRUCTION
-        assert "%M2_CATEGORY:" in _INSTRUCTION
-        assert "%M2_RATIONALE:" in _INSTRUCTION
+    def test_contains_m2_prefix(self):
+        assert "%M2_" in _INSTRUCTION
 
-    # --- Quick Hit markers ---
-    def test_contains_q1_markers(self):
-        assert "%Q1_TITLE:" in _INSTRUCTION
-        assert "%Q1_SOURCE:" in _INSTRUCTION
-        assert "%Q1_URL:" in _INSTRUCTION
-        assert "%Q1_CATEGORY:" in _INSTRUCTION
+    # --- Quick Hit prefixes referenced ---
+    def test_contains_q1_prefix(self):
+        assert "%Q1_" in _INSTRUCTION
 
-    def test_contains_q2_markers(self):
-        assert "%Q2_TITLE:" in _INSTRUCTION
-        assert "%Q2_SOURCE:" in _INSTRUCTION
-        assert "%Q2_URL:" in _INSTRUCTION
-        assert "%Q2_CATEGORY:" in _INSTRUCTION
+    def test_contains_q2_prefix(self):
+        assert "%Q2_" in _INSTRUCTION
 
-    def test_contains_q3_markers(self):
-        assert "%Q3_TITLE:" in _INSTRUCTION
-        assert "%Q3_SOURCE:" in _INSTRUCTION
-        assert "%Q3_URL:" in _INSTRUCTION
-        assert "%Q3_CATEGORY:" in _INSTRUCTION
+    def test_contains_q3_prefix(self):
+        assert "%Q3_" in _INSTRUCTION
 
-    # --- Industry Development markers ---
-    def test_contains_i1_markers(self):
-        assert "%I1_TITLE:" in _INSTRUCTION
-        assert "%I1_SOURCE:" in _INSTRUCTION
-        assert "%I1_URL:" in _INSTRUCTION
-        assert "%I1_Major AI Player:" in _INSTRUCTION
+    # --- Industry Development prefixes referenced ---
+    def test_contains_i1_prefix(self):
+        assert "%I1_" in _INSTRUCTION
 
-    def test_contains_i2_markers(self):
-        assert "%I2_TITLE:" in _INSTRUCTION
-        assert "%I2_SOURCE:" in _INSTRUCTION
-        assert "%I2_URL:" in _INSTRUCTION
-        assert "%I2_Major AI Player:" in _INSTRUCTION
+    def test_contains_i2_prefix(self):
+        assert "%I2_" in _INSTRUCTION
 
     # --- 2-2-2 Distribution markers ---
-    def test_contains_222_distribution_section(self):
-        assert "2-2-2 Distribution:" in _INSTRUCTION
+    def test_contains_222_distribution_requirement(self):
+        assert "2-2-2 DISTRIBUTION" in _INSTRUCTION
 
     def test_contains_222_tactical(self):
-        assert "%222_tactical:%" in _INSTRUCTION
+        assert "%222_tactical:" in _INSTRUCTION
 
     def test_contains_222_educational(self):
-        assert "%222_educational:%" in _INSTRUCTION
+        assert "%222_educational:" in _INSTRUCTION
 
     def test_contains_222_forward_thinking(self):
-        assert "%222_forward-thinking:%" in _INSTRUCTION
+        assert "%222_forward-thinking:" in _INSTRUCTION
 
     # --- Source mix markers ---
     def test_contains_source_mix_section(self):
         assert "Source mix:" in _INSTRUCTION
 
     def test_contains_sm_smaller_publisher(self):
-        assert "%SM_smaller_publisher:%" in _INSTRUCTION
+        assert "%SM_smaller_publisher:" in _INSTRUCTION
 
     def test_contains_sm_major_ai_player(self):
-        assert "%SM_major_ai_player_coverage:%" in _INSTRUCTION
+        assert "%SM_major_ai_player_coverage:" in _INSTRUCTION
 
     # --- Requirements Verified markers ---
-    def test_contains_requirements_verified_section(self):
-        assert "REQUIREMENTS VERIFIED" in _INSTRUCTION
-
     def test_contains_rv_222_distribution(self):
-        assert "%RV_2-2-2 Distribution Achieved:%" in _INSTRUCTION
+        assert "%RV_2-2-2 Distribution Achieved:" in _INSTRUCTION
 
     def test_contains_rv_source_mix(self):
-        assert "%RV_Source mix:%" in _INSTRUCTION
+        assert "%RV_Source mix:" in _INSTRUCTION
 
     def test_contains_rv_technical_complexity(self):
-        assert "%RV_Technical complexity:%" in _INSTRUCTION
+        assert "%RV_Technical complexity:" in _INSTRUCTION
 
     def test_contains_rv_major_ai_player(self):
-        assert "%RV_Major AI player coverage:%" in _INSTRUCTION
+        assert "%RV_Major AI player coverage:" in _INSTRUCTION
 
     # --- Theme separator and recommendation ---
     def test_contains_theme_separator_instruction(self):
-        assert '"-----"' in _INSTRUCTION
+        assert "-----" in _INSTRUCTION
 
     def test_contains_recommendation_section(self):
         assert "RECOMMENDATION:" in _INSTRUCTION
@@ -184,11 +164,41 @@ class TestUserPromptTemplate:
     def test_contains_theme_description(self):
         assert "Theme Description:" in _INSTRUCTION
 
-    def test_contains_featured_article_heading(self):
-        assert "FEATURED ARTICLE:" in _INSTRUCTION
+    def test_contains_articles_that_fit_heading(self):
+        assert "Articles that fit:" in _INSTRUCTION
 
-    def test_contains_input_label(self):
-        assert "Input:" in _INSTRUCTION
+    def test_contains_input_data_xml_tag(self):
+        assert "<Input_Data>" in _INSTRUCTION
+
+    # --- XML structure tags ---
+    def test_contains_task_context_tag(self):
+        assert "<Task_Context>" in _INSTRUCTION
+
+    def test_contains_thematic_definitions_tag(self):
+        assert "<Thematic_Definitions>" in _INSTRUCTION
+
+    def test_contains_editorial_requirements_tag(self):
+        assert "<Editorial_Requirements>" in _INSTRUCTION
+
+    def test_contains_marker_protocol_strict_tag(self):
+        assert "<Marker_Protocol_Strict>" in _INSTRUCTION
+
+    def test_contains_feedback_adjustment_tag(self):
+        assert "<Feedback_Adjustment>" in _INSTRUCTION
+
+    # --- Required marker prefixes listed in Marker_Protocol_Strict ---
+    def test_marker_protocol_lists_required_prefixes(self):
+        assert "%FA_" in _INSTRUCTION
+        assert "%M1_" in _INSTRUCTION
+        assert "%M2_" in _INSTRUCTION
+        assert "%Q1_" in _INSTRUCTION
+        assert "%Q2_" in _INSTRUCTION
+        assert "%Q3_" in _INSTRUCTION
+        assert "%I1_" in _INSTRUCTION
+        assert "%I2_" in _INSTRUCTION
+        assert "%222_" in _INSTRUCTION
+        assert "%SM_" in _INSTRUCTION
+        assert "%RV_" in _INSTRUCTION
 
 
 # ---------------------------------------------------------------------------
@@ -280,24 +290,24 @@ class TestBuildThemeGenerationPromptNoFeedback:
         _, user = build_theme_generation_prompt(self.SAMPLE_SUMMARIES, "   ")
         assert "Editorial Improvement Context" not in user
 
-    def test_user_prompt_contains_output_format(self):
+    def test_user_prompt_contains_output_format_tag(self):
         _, user = build_theme_generation_prompt(self.SAMPLE_SUMMARIES)
-        assert "Output Format (MANDATORY)" in user
+        assert "<Output_Format>" in user
 
     def test_user_prompt_contains_markers(self):
         _, user = build_theme_generation_prompt(self.SAMPLE_SUMMARIES)
         assert "%FA_TITLE:" in user
-        assert "%M1_TITLE:" in user
-        assert "%Q1_TITLE:" in user
-        assert "%I1_TITLE:" in user
+        assert "%M1_" in user
+        assert "%Q1_" in user
+        assert "%I1_" in user
 
     def test_user_prompt_contains_recommendation(self):
         _, user = build_theme_generation_prompt(self.SAMPLE_SUMMARIES)
         assert "RECOMMENDATION:" in user
 
-    def test_user_prompt_ends_with_input_data(self):
+    def test_user_prompt_ends_with_generate_command(self):
         _, user = build_theme_generation_prompt(self.SAMPLE_SUMMARIES)
-        assert user.rstrip().endswith(self.SAMPLE_SUMMARIES)
+        assert user.rstrip().endswith("Generate the themes now.")
 
     def test_user_prompt_no_unresolved_placeholders(self):
         _, user = build_theme_generation_prompt(self.SAMPLE_SUMMARIES)
@@ -335,14 +345,15 @@ class TestBuildThemeGenerationPromptWithFeedback:
         assert "practical applications" in user
         assert "Avoid overly technical language" in user
 
-    def test_feedback_before_output_format(self):
+    def test_feedback_inside_feedback_adjustment_tag(self):
         _, user = build_theme_generation_prompt(
             self.SAMPLE_SUMMARIES,
             self.SAMPLE_FEEDBACK,
         )
         fb_pos = user.index("Editorial Improvement Context")
-        fmt_pos = user.index("Output Format (MANDATORY)")
-        assert fb_pos < fmt_pos
+        tag_pos = user.index("<Feedback_Adjustment>")
+        closing_tag_pos = user.index("</Feedback_Adjustment>")
+        assert tag_pos < fb_pos < closing_tag_pos
 
     def test_feedback_stripped(self):
         _, user = build_theme_generation_prompt(
@@ -388,22 +399,22 @@ class TestContentDistributionSlots:
     """
 
     def test_one_featured_article(self):
-        assert "FEATURED ARTICLE:" in _INSTRUCTION
-        # Only one FA prefix set
+        assert "Articles that fit:" in _INSTRUCTION
+        # Only one FA prefix set with explicit markers
         assert "%FA_TITLE:" in _INSTRUCTION
 
-    def test_two_main_articles(self):
-        assert "%M1_TITLE:" in _INSTRUCTION
-        assert "%M2_TITLE:" in _INSTRUCTION
+    def test_two_main_articles_referenced(self):
+        assert "%M1_" in _INSTRUCTION
+        assert "%M2_" in _INSTRUCTION
 
-    def test_three_quick_hits(self):
-        assert "%Q1_TITLE:" in _INSTRUCTION
-        assert "%Q2_TITLE:" in _INSTRUCTION
-        assert "%Q3_TITLE:" in _INSTRUCTION
+    def test_three_quick_hits_referenced(self):
+        assert "%Q1_" in _INSTRUCTION
+        assert "%Q2_" in _INSTRUCTION
+        assert "%Q3_" in _INSTRUCTION
 
-    def test_two_industry_developments(self):
-        assert "%I1_TITLE:" in _INSTRUCTION
-        assert "%I2_TITLE:" in _INSTRUCTION
+    def test_two_industry_developments_referenced(self):
+        assert "%I1_" in _INSTRUCTION
+        assert "%I2_" in _INSTRUCTION
 
     def test_no_extra_main_article_slots(self):
         """Should not have M3 or higher."""

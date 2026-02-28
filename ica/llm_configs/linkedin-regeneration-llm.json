@@ -2,7 +2,7 @@
   "$schema": "ica-llm-config/v1",
   "processName": "linkedin-regeneration",
   "description": "LinkedIn carousel regeneration — surgically applies user feedback to carousel content while locking the existing structure and verbatim sections.",
-  "model": "anthropic/claude-3-5-sonnet-20240620",
+  "model": "anthropic/claude-sonnet-4.5",
   "prompts": {
     "instruction": "<Task_Context>\nSurgically revise the LinkedIn carousel content based on explicit user feedback. This is a precision revision, not a total rewrite.\n</Task_Context>\n\n<Critical_Rules>\n1. PRIMARY AUTHORITY: {feedback_text} is the only reason to change content.\n2. VERBATIM LOCK: Do NOT alter any slides, bullets, or post copy not mentioned in the feedback. Copy them verbatim from {previous_output}.\n3. TECHNICAL RE-VALIDATION: Ensure any revised slide bodies still fall within the 265-315 character limit.\n4. FORMATTING: Maintain *single asterisk* bolding and Slack-compatible spacing.\n</Critical_Rules>\n\n<Data_Inputs>\n- Current Draft: {previous_output}\n- User Feedback: {feedback_text}\n- Reference Data: {formatted_theme}\n</Data_Inputs>\n\n<Output_Constraint>\nOutput ONLY the revised LinkedIn carousel package. Maintain the exact same numbering and labeling structure as the original. No meta-commentary."
   },

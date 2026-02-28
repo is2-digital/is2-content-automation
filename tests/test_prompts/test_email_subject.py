@@ -25,11 +25,11 @@ class TestEmailSubjectSystemPrompt:
 
         assert _SYSTEM_PROMPT == get_system_prompt()
 
-    def test_contains_data_integrity_section(self):
-        assert "Data Integrity" in _SYSTEM_PROMPT
+    def test_contains_zero_hallucination(self):
+        assert "ZERO HALLUCINATION" in _SYSTEM_PROMPT
 
-    def test_contains_output_integrity_section(self):
-        assert "Output Integrity" in _SYSTEM_PROMPT
+    def test_contains_headless_api(self):
+        assert "HEADLESS API" in _SYSTEM_PROMPT
 
     def test_is_string(self):
         assert isinstance(_SYSTEM_PROMPT, str)
@@ -53,28 +53,28 @@ class TestEmailSubjectUserPrompt:
         assert "{newsletter_text}" in _INSTRUCTION
 
     def test_contains_output_format(self):
-        assert "Output Format" in _INSTRUCTION
+        assert "Output_Format_MANDATORY" in _INSTRUCTION
 
     def test_contains_mandatory_label(self):
         assert "MANDATORY" in _INSTRUCTION
 
-    def test_contains_subject_number_format(self):
-        assert "Subject_[number]" in _INSTRUCTION
+    def test_contains_subject_format(self):
+        assert "Subject_1:" in _INSTRUCTION
 
     def test_contains_separator_instruction(self):
-        assert '"-----"' in _INSTRUCTION
+        assert "----" in _INSTRUCTION
 
     def test_contains_recommendation_format(self):
         assert "RECOMMENDATION:" in _INSTRUCTION
 
     def test_contains_no_markdown_instruction(self):
-        assert "no markdown" in _INSTRUCTION
+        assert "No markdown" in _INSTRUCTION
 
-    def test_contains_no_duplicate_instruction(self):
-        assert "do not duplicate" in _INSTRUCTION
+    def test_contains_kevin_voice_rules(self):
+        assert "Kevin_Voice_Rules" in _INSTRUCTION
 
-    def test_contains_input_label(self):
-        assert "Input:" in _INSTRUCTION
+    def test_contains_technical_constraints(self):
+        assert "Technical_Constraints" in _INSTRUCTION
 
 
 # ---------------------------------------------------------------------------
@@ -150,7 +150,7 @@ class TestBuildEmailSubjectPrompt:
 
     def test_output_format_present_in_user_prompt(self):
         _, user_prompt = build_email_subject_prompt("newsletter")
-        assert "Subject_[number]" in user_prompt
+        assert "Subject_1:" in user_prompt
         assert "RECOMMENDATION:" in user_prompt
 
     def test_system_prompt_unchanged_with_feedback(self):

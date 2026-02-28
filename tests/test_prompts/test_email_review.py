@@ -25,11 +25,11 @@ class TestEmailReviewSystemPrompt:
 
         assert _SYSTEM == get_system_prompt()
 
-    def test_contains_data_integrity_section(self):
-        assert "Data Integrity" in _SYSTEM
+    def test_contains_zero_hallucination(self):
+        assert "ZERO HALLUCINATION" in _SYSTEM
 
-    def test_contains_output_integrity_section(self):
-        assert "Output Integrity" in _SYSTEM
+    def test_contains_headless_api(self):
+        assert "HEADLESS API" in _SYSTEM
 
     def test_no_feedback_section_in_system_prompt(self):
         """Feedback is injected in the user prompt, not the system prompt."""
@@ -51,13 +51,13 @@ class TestEmailReviewUserPromptTemplate:
         assert "{newsletter_text}" in _INSTRUCTION
 
     def test_contains_compose_instruction(self):
-        assert "Compose a full review" in _INSTRUCTION
+        assert "Compose the introduction now" in _INSTRUCTION
 
-    def test_contains_plain_text_instruction(self):
-        assert "no special characters or emojis" in _INSTRUCTION
+    def test_contains_quality_control(self):
+        assert "Quality_Control" in _INSTRUCTION
 
     def test_contains_input_label(self):
-        assert "Input text data as a source for the review" in _INSTRUCTION
+        assert "Input Source Content:" in _INSTRUCTION
 
 
 # ---------------------------------------------------------------------------
@@ -141,12 +141,11 @@ class TestBuildEmailReviewPrompt:
         assert "Leading whitespace feedback" in user
         assert "  \nLeading" not in user
 
-    def test_feedback_section_appears_before_newsletter_text(self):
+    def test_feedback_section_appears_in_user_prompt(self):
         feedback = "Be more concise"
         _, user = build_email_review_prompt(self.SAMPLE_NEWSLETTER, feedback)
-        feedback_pos = user.index("Editorial Improvement Context")
-        content_pos = user.index(self.SAMPLE_NEWSLETTER)
-        assert feedback_pos < content_pos
+        assert "Editorial Improvement Context" in user
+        assert self.SAMPLE_NEWSLETTER in user
 
     # -- No leftover placeholders ------------------------------------------
 
@@ -168,7 +167,7 @@ class TestBuildEmailReviewPrompt:
         """An empty newsletter should still produce valid prompts."""
         system, user = build_email_review_prompt("")
         assert system == _SYSTEM
-        assert "Compose a full review" in user
+        assert "Compose the introduction now" in user
 
     def test_newsletter_with_curly_braces(self):
         """Newsletter content with curly braces should not break formatting."""

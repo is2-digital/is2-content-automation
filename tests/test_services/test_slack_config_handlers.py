@@ -315,7 +315,7 @@ class TestDispatchConfigAction:
         mock_client.chat_postMessage.assert_awaited_once()
         call_kwargs = mock_client.chat_postMessage.call_args[1]
         assert "system prompt" in call_kwargs["text"]
-        assert "doc-new-123" in call_kwargs["text"]
+        assert "shared" in call_kwargs["text"]
 
     async def test_edit_instruction(
         self,
@@ -364,7 +364,7 @@ class TestDispatchConfigAction:
         )
         from ica.services.prompt_editor import _build_edit_header
 
-        header = _build_edit_header("test-process", "system", 2)
+        header = _build_edit_header("test-process", "instruction", 2)
         mock_docs.get_content.return_value = header + "Updated content."
 
         with patch.object(loader, "_CONFIGS_DIR", tmp_path):

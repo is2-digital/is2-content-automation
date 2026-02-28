@@ -80,11 +80,11 @@ class TestHtmlGenerationSystemPrompt:
     def test_prompt_is_not_empty(self) -> None:
         assert len(_GEN_SYSTEM) > 0
 
-    def test_contains_data_integrity_section(self) -> None:
-        assert "Data Integrity" in _GEN_SYSTEM
+    def test_contains_editorial_engine_identity(self) -> None:
+        assert "iS2 Editorial Engine" in _GEN_SYSTEM
 
-    def test_contains_output_integrity_section(self) -> None:
-        assert "Output Integrity" in _GEN_SYSTEM
+    def test_contains_headless_api_mode(self) -> None:
+        assert "HEADLESS API" in _GEN_SYSTEM
 
 
 class TestHtmlGenerationUserPrompt:
@@ -99,8 +99,8 @@ class TestHtmlGenerationUserPrompt:
     def test_contains_template_placeholder(self) -> None:
         assert "{html_template}" in _GEN_INSTRUCTION
 
-    def test_contains_date_placeholder(self) -> None:
-        assert "{newsletter_date}" in _GEN_INSTRUCTION
+    def test_contains_formatted_theme_placeholder(self) -> None:
+        assert "{formatted_theme}" in _GEN_INSTRUCTION
 
 
 # ---------------------------------------------------------------------------
@@ -119,11 +119,11 @@ class TestHtmlRegenerationSystemPrompt:
     def test_prompt_is_string(self) -> None:
         assert isinstance(_REGEN_SYSTEM, str)
 
-    def test_contains_data_integrity_section(self) -> None:
-        assert "Data Integrity" in _REGEN_SYSTEM
+    def test_contains_editorial_engine_identity(self) -> None:
+        assert "iS2 Editorial Engine" in _REGEN_SYSTEM
 
-    def test_contains_output_integrity_section(self) -> None:
-        assert "Output Integrity" in _REGEN_SYSTEM
+    def test_contains_headless_api_mode(self) -> None:
+        assert "HEADLESS API" in _REGEN_SYSTEM
 
 
 class TestHtmlRegenerationUserPrompt:
@@ -133,11 +133,9 @@ class TestHtmlRegenerationUserPrompt:
         assert isinstance(_REGEN_INSTRUCTION, str)
 
     def test_contains_all_placeholders(self) -> None:
-        assert "{previous_html}" in _REGEN_INSTRUCTION
-        assert "{markdown_content}" in _REGEN_INSTRUCTION
-        assert "{html_template}" in _REGEN_INSTRUCTION
+        assert "{original_html}" in _REGEN_INSTRUCTION
         assert "{user_feedback}" in _REGEN_INSTRUCTION
-        assert "{newsletter_date}" in _REGEN_INSTRUCTION
+        assert "{formatted_theme}" in _REGEN_INSTRUCTION
 
 
 # ---------------------------------------------------------------------------
@@ -192,13 +190,15 @@ class TestBuildHtmlGenerationPrompt:
         )
         assert SAMPLE_HTML_TEMPLATE in user
 
-    def test_user_prompt_contains_date(self) -> None:
+    def test_user_prompt_contains_formatted_theme(self) -> None:
+        theme = '{"articles": [{"title": "Test"}]}'
         _, user = build_html_generation_prompt(
             SAMPLE_MARKDOWN,
             SAMPLE_HTML_TEMPLATE,
             SAMPLE_DATE,
+            formatted_theme=theme,
         )
-        assert SAMPLE_DATE in user
+        assert theme in user
 
     def test_no_feedback_section_without_feedback(self) -> None:
         system, _ = build_html_generation_prompt(
@@ -310,25 +310,17 @@ class TestBuildHtmlRegenerationPrompt:
         )
         assert SAMPLE_PREVIOUS_HTML in user
 
-    def test_user_prompt_contains_markdown(self) -> None:
+    def test_user_prompt_contains_formatted_theme(self) -> None:
+        theme = '{"articles": [{"title": "Test"}]}'
         _, user = build_html_regeneration_prompt(
             SAMPLE_PREVIOUS_HTML,
             SAMPLE_MARKDOWN,
             SAMPLE_HTML_TEMPLATE,
             SAMPLE_FEEDBACK,
             SAMPLE_DATE,
+            formatted_theme=theme,
         )
-        assert SAMPLE_MARKDOWN in user
-
-    def test_user_prompt_contains_template(self) -> None:
-        _, user = build_html_regeneration_prompt(
-            SAMPLE_PREVIOUS_HTML,
-            SAMPLE_MARKDOWN,
-            SAMPLE_HTML_TEMPLATE,
-            SAMPLE_FEEDBACK,
-            SAMPLE_DATE,
-        )
-        assert SAMPLE_HTML_TEMPLATE in user
+        assert theme in user
 
     def test_user_prompt_contains_feedback(self) -> None:
         _, user = build_html_regeneration_prompt(
@@ -358,11 +350,9 @@ class TestBuildHtmlRegenerationPrompt:
             SAMPLE_FEEDBACK,
             SAMPLE_DATE,
         )
-        assert "{previous_html}" not in user
-        assert "{markdown_content}" not in user
-        assert "{html_template}" not in user
+        assert "{original_html}" not in user
         assert "{user_feedback}" not in user
-        assert "{newsletter_date}" not in user
+        assert "{formatted_theme}" not in user
 
 
 # ---------------------------------------------------------------------------
@@ -375,15 +365,15 @@ class TestHtmlGenerationEdgeCases:
 
     def test_empty_markdown(self) -> None:
         _, user = build_html_generation_prompt("", SAMPLE_HTML_TEMPLATE, SAMPLE_DATE)
-        assert "### Final Generated Markdown Content:" in user
+        assert "Markdown Content:" in user
 
     def test_empty_template(self) -> None:
         _, user = build_html_generation_prompt(SAMPLE_MARKDOWN, "", SAMPLE_DATE)
-        assert "### HTML Template:" in user
+        assert "HTML Master Template:" in user
 
-    def test_empty_date(self) -> None:
-        _, user = build_html_generation_prompt(SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, "")
-        assert "### Newsletter Date:" in user
+    def test_empty_formatted_theme(self) -> None:
+        _, user = build_html_generation_prompt(SAMPLE_MARKDOWN, SAMPLE_HTML_TEMPLATE, SAMPLE_DATE)
+        assert "Master Link List" in user
 
     def test_unicode_in_markdown(self) -> None:
         md = "Content with arrows \u2192 and em-dashes \u2014"
@@ -403,7 +393,7 @@ class TestHtmlGenerationEdgeCases:
             "",
             SAMPLE_DATE,
         )
-        assert "### User Feedback:" in user
+        assert "Fix Instructions:" in user
 
     def test_very_large_html(self) -> None:
         large_html = "<div>" * 1000 + "</div>" * 1000

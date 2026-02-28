@@ -1,14 +1,14 @@
 {
   "$schema": "ica-llm-config/v1",
-  "processName": "html-regeneration",
-  "description": "HTML regeneration — applies specific user feedback or technical fixes to existing HTML code.",
-  "model": "google/gemini-1.5-flash",
+  "processName": "markdown-regeneration",
+  "description": "Markdown regeneration — surgically revises the newsletter draft based on explicit user feedback while preserving voice, structure, and URL integrity.",
+  "model": "anthropic/claude-sonnet-4.5",
   "prompts": {
-    "instruction": "<Revision_Task>\nApply the User Feedback to the provided HTML code. You must perform a surgical update, modifying only the requested sections while keeping the rest of the code structure verbatim.\n</Revision_Task>\n\n<Original_HTML>\n{original_html}\n</Original_HTML>\n\n<User_Feedback>\n{user_feedback}\n</User_Feedback>\n\n<Rules>\n1. Maintain all table-based layouts and inline CSS styling.\n2. Ensure all <a> tags remain valid and clickable.\n3. Do NOT add triple backticks or 'Here is your update' text to the output.\n</Rules>\n\nReturn the fully revised HTML code now."
+    "instruction": "<Task_Context>\nSurgically revise the existing newsletter Markdown based on explicit user feedback. This is a targeted edit, not a full regeneration.\n</Task_Context>\n\n<Original_Markdown>\n{original_markdown}\n</Original_Markdown>\n\n<User_Feedback>\n{user_feedback}\n</User_Feedback>\n\n<Revision_Rules>\n1. SCOPE: Modify ONLY the sections explicitly mentioned in the feedback.\n2. VERBATIM LOCK: Copy all non-referenced sections, headings, URLs, and formatting VERBATIM from the original.\n3. VOICE PRESERVATION: Maintain Kevin's calibrated editorial voice (Pattern A, contractions, declarative authority) in revised sections.\n4. URL INTEGRITY: Never alter, remove, or fabricate URLs. All links must come from the original data.\n5. STRUCTURAL INTEGRITY: Preserve all 8 section headings and their ordering. Do not add or remove sections.\n6. CHARACTER LIMITS: If the revision affects a constrained section (e.g., Featured Article paragraphs at 300-400 chars), ensure the revised text still falls within limits.\n7. PRIORITY: If the feedback contradicts the original editorial guidelines, follow the feedback.\n</Revision_Rules>\n\n<Output_Constraint>\nOutput ONLY the complete revised newsletter in valid Markdown. No commentary, no explanations, no diff markers.\n</Output_Constraint>"
   },
   "metadata": {
     "googleDocId": null,
     "lastSyncedAt": "2026-02-28",
-    "version": 2
+    "version": 3
   }
 }

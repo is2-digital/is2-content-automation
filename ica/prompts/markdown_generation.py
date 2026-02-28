@@ -88,14 +88,11 @@ def build_markdown_generation_prompt(
         else ""
     )
 
-    system_prompt = system_prompt.format(
-        previous_markdown=previous_markdown or "NO_PREVIOUS_DRAFT",
-    )
-
     user_prompt = instruction.format(
         feedback_section=feedback_section,
         validator_errors_section=validator_errors_section,
         formatted_theme=formatted_theme,
+        previous_markdown=previous_markdown or "NO_PREVIOUS_DRAFT",
     )
 
     return system_prompt, user_prompt
@@ -127,13 +124,9 @@ def build_markdown_regeneration_prompt(
     """
     system_prompt, instruction = get_process_prompts("markdown-regeneration")
 
-    system_prompt = system_prompt.format(
+    user_prompt = instruction.format(
         original_markdown=original_markdown,
         user_feedback=user_feedback,
     )
-
-    # The instruction template contains just {user_feedback}, which resolves
-    # to the raw feedback string — matching the original behaviour.
-    user_prompt = instruction.format(user_feedback=user_feedback)
 
     return system_prompt, user_prompt

@@ -37,12 +37,9 @@ def build_structural_validation_prompt(
     """
     system_prompt, instruction = get_process_prompts("markdown-structural-validation")
 
-    system_prompt = system_prompt.format(
-        char_errors=char_errors,
-    )
-
     user_prompt = instruction.format(
         markdown_content=markdown_content,
+        char_errors=char_errors,
     )
 
     return system_prompt, user_prompt

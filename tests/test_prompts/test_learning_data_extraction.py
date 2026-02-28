@@ -36,41 +36,44 @@ class TestLearningDataExtractionPromptConstant:
         assert len(_COMBINED) > 0
 
     def test_contains_role_description(self) -> None:
-        assert "AI assistant" in _COMBINED
-        assert "user feedback" in _COMBINED
-        assert "learning data" in _COMBINED
+        assert "iS2 Editorial Engine" in _COMBINED
+        assert "Kevin" in _COMBINED
+        assert "Head Operations Analyst" in _COMBINED
 
-    def test_contains_three_inputs(self) -> None:
-        assert "original *input text*" in _COMBINED
-        assert "*model output*" in _COMBINED
-        assert "*user's feedback*" in _COMBINED
+    def test_contains_data_source_sections(self) -> None:
+        assert "Full Validation Log" in _COMBINED
+        assert "Final Approved Content" in _COMBINED
+        assert "Manual User Overrides" in _COMBINED
 
-    def test_contains_goal_steps(self) -> None:
-        assert "clear, actionable insights" in _COMBINED
-        assert "2-3 sentences max" in _COMBINED
+    def test_contains_analysis_protocol(self) -> None:
+        assert "LOOP EFFICIENCY" in _COMBINED
+        assert "VOICE DRIFT" in _COMBINED
+        assert "MANUAL OVERRIDES" in _COMBINED
+        assert "LINK/HTML INTEGRITY" in _COMBINED
 
-    def test_contains_focus_areas(self) -> None:
-        assert "tone" in _COMBINED
-        assert "accuracy" in _COMBINED
-        assert "length" in _COMBINED
-        assert "structure" in _COMBINED
+    def test_contains_xml_structure_tags(self) -> None:
+        assert "<Task_Context>" in _COMBINED
+        assert "<Data_Sources>" in _COMBINED
+        assert "<Analysis_Protocol>" in _COMBINED
+        assert "<Output_Format>" in _COMBINED
 
-    def test_contains_unclear_feedback_handling(self) -> None:
-        assert "unclear or generic" in _COMBINED
-        assert "infer the likely intent" in _COMBINED
+    def test_contains_output_format_categories(self) -> None:
+        assert "[RECURRING TECHNICAL FAIL]" in _COMBINED
+        assert "[VOICE CALIBRATION]" in _COMBINED
+        assert "[PROMPT OPTIMIZATION]" in _COMBINED
 
     def test_contains_feedback_placeholder(self) -> None:
-        assert "{feedback}" in _INSTRUCTION
+        assert "{feedback_section}" in _INSTRUCTION
 
     def test_contains_input_placeholder(self) -> None:
-        assert "{input_text}" in _INSTRUCTION
+        assert "{markdown_content}" in _INSTRUCTION
 
     def test_contains_output_placeholder(self) -> None:
-        assert "{model_output}" in _INSTRUCTION
+        assert "{validator_errors_section}" in _INSTRUCTION
 
     def test_contains_expected_output_format(self) -> None:
-        assert "learning_feedback" in _COMBINED
-        assert "Future responses should" in _COMBINED
+        assert "3-point summary" in _COMBINED
+        assert "for the next run" in _COMBINED
 
     def test_no_n8n_expression_syntax(self) -> None:
         assert "$json" not in _COMBINED
@@ -109,8 +112,9 @@ class TestBuildLearningDataExtractionPrompt:
             SAMPLE_INPUT,
             SAMPLE_OUTPUT,
         )
-        assert "AI system" in system
-        assert "IS2 Digital newsletter" in system
+        assert "iS2 Editorial Engine" in system
+        assert "Kevin" in system
+        assert "HEADLESS API" in system
 
     def test_user_prompt_contains_feedback(self) -> None:
         _, user = build_learning_data_extraction_prompt(
@@ -142,49 +146,48 @@ class TestBuildLearningDataExtractionPrompt:
             SAMPLE_INPUT,
             SAMPLE_OUTPUT,
         )
-        assert "{feedback}" not in user
-        assert "{input_text}" not in user
-        assert "{model_output}" not in user
+        assert "{feedback_section}" not in user
+        assert "{markdown_content}" not in user
+        assert "{validator_errors_section}" not in user
 
     def test_empty_feedback(self) -> None:
         _, user = build_learning_data_extraction_prompt("", SAMPLE_INPUT, SAMPLE_OUTPUT)
-        assert "**User Feedback:**" in user
+        assert "Manual User Overrides:" in user
         assert SAMPLE_INPUT in user
 
     def test_empty_input(self) -> None:
         _, user = build_learning_data_extraction_prompt(SAMPLE_FEEDBACK, "", SAMPLE_OUTPUT)
         assert SAMPLE_FEEDBACK in user
-        assert "**Input Provided:**" in user
+        assert "Final Approved Content:" in user
 
     def test_empty_model_output(self) -> None:
         _, user = build_learning_data_extraction_prompt(SAMPLE_FEEDBACK, SAMPLE_INPUT, "")
         assert SAMPLE_FEEDBACK in user
-        assert "**Model Output:**" in user
+        assert "Full Validation Log:" in user
 
     def test_feedback_with_special_characters(self) -> None:
         feedback = "Use more {concrete} data and $specific numbers"
         _, user = build_learning_data_extraction_prompt(feedback, SAMPLE_INPUT, SAMPLE_OUTPUT)
         assert feedback in user
 
-    def test_user_prompt_has_section_headers(self) -> None:
+    def test_user_prompt_has_xml_structure(self) -> None:
         _, user = build_learning_data_extraction_prompt(
             SAMPLE_FEEDBACK,
             SAMPLE_INPUT,
             SAMPLE_OUTPUT,
         )
-        assert "### Feedback Data" in user
-        assert "**User Feedback:**" in user
-        assert "**Input Provided:**" in user
-        assert "**Model Output:**" in user
-        assert "### Expected Output" in user
+        assert "<Task_Context>" in user
+        assert "<Data_Sources>" in user
+        assert "<Analysis_Protocol>" in user
+        assert "<Output_Format>" in user
 
-    def test_user_prompt_has_json_example(self) -> None:
+    def test_user_prompt_has_output_categories(self) -> None:
         _, user = build_learning_data_extraction_prompt(
             SAMPLE_FEEDBACK,
             SAMPLE_INPUT,
             SAMPLE_OUTPUT,
         )
-        assert '"learning_feedback"' in user
+        assert "[RECURRING TECHNICAL FAIL]" in user
 
 
 # ---------------------------------------------------------------------------
@@ -199,15 +202,15 @@ class TestCrossSubworkflowConsistency:
     pattern used in summarization, markdown, and HTML subworkflows.
     """
 
-    def test_prompt_mentions_json_output(self) -> None:
-        assert "JSON format" in _COMBINED
+    def test_prompt_mentions_post_mortem(self) -> None:
+        assert "post-mortem" in _COMBINED
 
-    def test_prompt_has_concise_constraint(self) -> None:
-        assert "2-3 sentences" in _COMBINED
+    def test_prompt_has_3_point_summary_constraint(self) -> None:
+        assert "3-point summary" in _COMBINED
 
-    def test_prompt_focuses_on_improvement(self) -> None:
-        assert "improved next time" in _COMBINED
+    def test_prompt_focuses_on_next_run(self) -> None:
+        assert "for the next run" in _COMBINED
 
-    def test_generic_feedback_examples(self) -> None:
-        assert '"good"' in _COMBINED
-        assert '"bad"' in _COMBINED
+    def test_prompt_has_character_constraint_awareness(self) -> None:
+        assert "character" in _COMBINED
+        assert "limit" in _COMBINED

@@ -36,6 +36,7 @@ def build_html_generation_prompt(
     html_template: str,
     newsletter_date: str,
     aggregated_feedback: str | None = None,
+    formatted_theme: str = "",
 ) -> tuple[str, str]:
     """Build the system and user messages for HTML generation.
 
@@ -49,27 +50,18 @@ def build_html_generation_prompt(
         newsletter_date: The newsletter publication date string.
         aggregated_feedback: Optional aggregated editorial feedback from
             prior review cycles.
+        formatted_theme: The formatted theme JSON containing article
+            metadata (titles, sources, URLs) used as the master link list.
 
     Returns:
         A ``(system_prompt, user_prompt)`` tuple ready to pass to the LLM.
     """
     system_prompt, instruction = get_process_prompts("html-generation")
 
-    if aggregated_feedback and aggregated_feedback.strip():
-        feedback_section = _FEEDBACK_SECTION_TEMPLATE.format(
-            aggregated_feedback=aggregated_feedback.strip(),
-        )
-    else:
-        feedback_section = ""
-
-    system_prompt = system_prompt.format(
-        feedback_section=feedback_section,
-    )
-
     user_prompt = instruction.format(
         markdown_content=markdown_content,
         html_template=html_template,
-        newsletter_date=newsletter_date,
+        formatted_theme=formatted_theme,
     )
 
     return system_prompt, user_prompt
@@ -81,6 +73,7 @@ def build_html_regeneration_prompt(
     html_template: str,
     user_feedback: str,
     newsletter_date: str,
+    formatted_theme: str = "",
 ) -> tuple[str, str]:
     """Build the system and user messages for scoped HTML regeneration.
 
@@ -96,6 +89,8 @@ def build_html_regeneration_prompt(
         user_feedback: The user's feedback specifying which sections
             to change and how.
         newsletter_date: The newsletter publication date string.
+        formatted_theme: The formatted theme JSON containing article
+            metadata used as the master link list for URL verification.
 
     Returns:
         A ``(system_prompt, user_prompt)`` tuple ready to pass to the LLM.
@@ -103,11 +98,9 @@ def build_html_regeneration_prompt(
     system_prompt, instruction = get_process_prompts("html-regeneration")
 
     user_prompt = instruction.format(
-        previous_html=previous_html,
-        markdown_content=markdown_content,
-        html_template=html_template,
+        original_html=previous_html,
         user_feedback=user_feedback,
-        newsletter_date=newsletter_date,
+        formatted_theme=formatted_theme,
     )
 
     return system_prompt, user_prompt

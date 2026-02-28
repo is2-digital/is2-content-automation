@@ -25,14 +25,14 @@ class TestSystemPrompt:
 
         assert _SYSTEM_PROMPT == get_system_prompt()
 
-    def test_contains_data_integrity_section(self):
-        assert "Data Integrity" in _SYSTEM_PROMPT
+    def test_contains_headless_api_mode(self):
+        assert "HEADLESS API" in _SYSTEM_PROMPT
 
-    def test_contains_output_integrity_section(self):
-        assert "Output Integrity" in _SYSTEM_PROMPT
+    def test_contains_zero_hallucination(self):
+        assert "ZERO HALLUCINATION" in _SYSTEM_PROMPT
 
-    def test_contains_audience_context_section(self):
-        assert "Audience Context" in _SYSTEM_PROMPT
+    def test_contains_voice_guardrails(self):
+        assert "VOICE & FORMATTING GUARDRAILS" in _SYSTEM_PROMPT
 
     def test_no_feedback_section_in_system_prompt(self):
         """Feedback is injected in the user prompt, not the system prompt."""
@@ -48,14 +48,14 @@ class TestUserPromptTemplate:
     def test_has_article_content_placeholder(self):
         assert "{article_content}" in _INSTRUCTION
 
-    def test_contains_output_format(self):
-        assert "Output Format (MANDATORY)" in _INSTRUCTION
+    def test_contains_output_schema(self):
+        assert "Output_Schema" in _INSTRUCTION
 
     def test_contains_url_field(self):
-        assert "URL: [article URL]" in _INSTRUCTION
+        assert "URL:" in _INSTRUCTION
 
     def test_contains_title_field(self):
-        assert "Title: [article title]" in _INSTRUCTION
+        assert "Title:" in _INSTRUCTION
 
     def test_contains_summary_field(self):
         assert "Summary:" in _INSTRUCTION
@@ -63,8 +63,8 @@ class TestUserPromptTemplate:
     def test_contains_business_relevance_field(self):
         assert "Business Relevance:" in _INSTRUCTION
 
-    def test_contains_plain_text_instruction(self):
-        assert "plain text and not JSON object" in _INSTRUCTION
+    def test_contains_constraint_rules(self):
+        assert "Constraint_Rules" in _INSTRUCTION
 
 
 class TestFeedbackSectionTemplate:
@@ -142,19 +142,11 @@ class TestBuildSummarizationPrompt:
         # Should not have leading/trailing whitespace around feedback
         assert "  \n•" not in user
 
-    def test_feedback_section_appears_before_output_format(self):
-        feedback = "• Be more concise"
-        _, user = build_summarization_prompt(self.SAMPLE_CONTENT, feedback)
-        feedback_pos = user.index("Editorial Improvement Context")
-        output_pos = user.index("Output Format (MANDATORY)")
-        assert feedback_pos < output_pos
-
-    def test_feedback_section_appears_before_article_content(self):
+    def test_feedback_section_present_in_user_prompt(self):
         feedback = "• Emphasize statistics"
         _, user = build_summarization_prompt(self.SAMPLE_CONTENT, feedback)
-        feedback_pos = user.index("Editorial Improvement Context")
-        content_pos = user.index(self.SAMPLE_CONTENT)
-        assert feedback_pos < content_pos
+        assert "Editorial Improvement Context" in user
+        assert "Emphasize statistics" in user
 
     # -- No leftover placeholders ------------------------------------------
 
@@ -176,7 +168,7 @@ class TestBuildSummarizationPrompt:
         """An empty article should still produce valid prompts."""
         system, user = build_summarization_prompt("")
         assert system == _SYSTEM_PROMPT
-        assert "Output Format (MANDATORY)" in user
+        assert "Output_Schema" in user
 
     def test_article_with_curly_braces(self):
         """Article content with curly braces should not break formatting."""

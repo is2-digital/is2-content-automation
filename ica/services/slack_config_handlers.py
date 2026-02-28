@@ -237,10 +237,12 @@ async def dispatch_config_action(
         model_id: New model identifier (only used with ``ACTION_EDIT_MODEL``).
     """
     if action_value == ACTION_EDIT_SYSTEM:
-        url = await editor.start_edit(process_name, "system")
         await client.chat_postMessage(
             channel=channel,
-            text=f"Edit *{process_name}* system prompt:\n<{url}>",
+            text=(
+                "The system prompt is now shared across all processes. "
+                "Use the system prompt editor to modify it."
+            ),
         )
     elif action_value == ACTION_EDIT_INSTRUCTION:
         url = await editor.start_edit(process_name, "instruction")

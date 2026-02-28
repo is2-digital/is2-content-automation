@@ -20,6 +20,7 @@ def build_linkedin_carousel_prompt(
     formatted_theme: str,
     newsletter_content: str,
     previous_output: str = "",
+    character_errors: str = "",
 ) -> tuple[str, str]:
     """Build the system and user messages for the LinkedIn carousel LLM call.
 
@@ -46,6 +47,7 @@ def build_linkedin_carousel_prompt(
         formatted_theme=formatted_theme,
         newsletter_content=newsletter_content,
         previous_output=previous_output if previous_output else "None",
+        character_errors=character_errors if character_errors else "None",
     )
 
     return system_prompt, user_prompt

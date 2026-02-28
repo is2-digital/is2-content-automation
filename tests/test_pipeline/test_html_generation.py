@@ -302,7 +302,7 @@ class TestCallHtmlLlm:
             assert SAMPLE_HTML_TEMPLATE in mock_call.call_args.kwargs["user_prompt"]
 
     @pytest.mark.asyncio
-    async def test_passes_newsletter_date(self):
+    async def test_passes_formatted_theme_in_user_prompt(self):
         mock_resp = _mock_llm_response(SAMPLE_HTML)
         with patch(
             "ica.pipeline.html_generation.completion",
@@ -315,10 +315,12 @@ class TestCallHtmlLlm:
                 SAMPLE_DATE,
                 model="test-model",
             )
-            assert SAMPLE_DATE in mock_call.call_args.kwargs["user_prompt"]
+            # The user prompt should contain the XML-tagged structure
+            assert "Markdown Content:" in mock_call.call_args.kwargs["user_prompt"]
 
     @pytest.mark.asyncio
-    async def test_with_feedback(self):
+    async def test_with_feedback_does_not_alter_system_prompt(self):
+        """Aggregated feedback is no longer injected into the system prompt."""
         mock_resp = _mock_llm_response(SAMPLE_HTML)
         with patch(
             "ica.pipeline.html_generation.completion",
@@ -332,7 +334,8 @@ class TestCallHtmlLlm:
                 aggregated_feedback="\u2022 feedback note",
                 model="test-model",
             )
-            assert "feedback note" in mock_call.call_args.kwargs["system_prompt"]
+            # System prompt is now the shared prompt — feedback is not injected
+            assert "iS2 Editorial Engine" in mock_call.call_args.kwargs["system_prompt"]
 
     @pytest.mark.asyncio
     async def test_without_feedback(self):
@@ -348,7 +351,8 @@ class TestCallHtmlLlm:
                 SAMPLE_DATE,
                 model="test-model",
             )
-            assert "Editorial Improvement Context" not in mock_call.call_args.kwargs["system_prompt"]
+            sys = mock_call.call_args.kwargs["system_prompt"]
+            assert "Editorial Improvement Context" not in sys
 
     @pytest.mark.asyncio
     async def test_default_model(self):
@@ -497,7 +501,8 @@ class TestCallHtmlRegeneration:
             assert "Make the footer italic" in mock_call.call_args.kwargs["user_prompt"]
 
     @pytest.mark.asyncio
-    async def test_scoped_update_system_prompt(self):
+    async def test_system_prompt_is_shared(self):
+        """Regeneration uses the shared system prompt (iS2 Editorial Engine)."""
         mock_resp = _mock_llm_response(SAMPLE_HTML)
         with patch(
             "ica.pipeline.html_generation.completion",
@@ -512,7 +517,7 @@ class TestCallHtmlRegeneration:
                 newsletter_date=SAMPLE_DATE,
                 model="m",
             )
-            assert "scoped update mode" in mock_call.call_args.kwargs["system_prompt"]
+            assert "iS2 Editorial Engine" in mock_call.call_args.kwargs["system_prompt"]
 
     @pytest.mark.asyncio
     async def test_default_model(self):
@@ -1247,13 +1252,13 @@ class TestRunHtmlGenerationLearningData:
                 "ica.pipeline.html_generation.completion",
                 new_callable=AsyncMock,
                 return_value=_mock_llm_response(SAMPLE_HTML),
-            ) as mock_call,
+            ),
             patch("ica.pipeline.html_generation.get_model", return_value="m"),
             patch(
                 "ica.pipeline.html_generation.get_recent_notes",
                 new_callable=AsyncMock,
                 return_value=notes,
-            ),
+            ) as mock_get_notes,
         ):
             await run_html_generation(
                 SAMPLE_MARKDOWN,
@@ -1263,10 +1268,10 @@ class TestRunHtmlGenerationLearningData:
                 session=AsyncMock(),
             )
 
-        # The LLM call should include the aggregated feedback
-        system_prompt = mock_call.call_args.kwargs["system_prompt"]
-        assert "Prior note 1" in system_prompt
-        assert "Prior note 2" in system_prompt
+        # Verify that learning data was fetched from the database
+        mock_get_notes.assert_called_once()
+        # Second positional arg is the note_type
+        assert mock_get_notes.call_args[0][1] == "user_htmlgenerator"
 
     @pytest.mark.asyncio
     async def test_no_learning_data_available(self):
