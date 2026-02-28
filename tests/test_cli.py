@@ -570,3 +570,207 @@ class TestEntryPoint:
 
         mod = importlib.import_module("ica.__main__")
         assert hasattr(mod, "main")
+
+
+# ---------------------------------------------------------------------------
+# config command
+# ---------------------------------------------------------------------------
+
+
+def _make_process_config(
+    *,
+    name: str = "test-process",
+    model: str = "anthropic/claude-sonnet-4.5",
+    system: str = "You are a helpful assistant.",
+    instruction: str = "Summarize the content.",
+    description: str = "Test process",
+    version: int = 1,
+    google_doc_id: str | None = None,
+):
+    """Build a ProcessConfig for testing."""
+    from ica.llm_configs.schema import ProcessConfig
+
+    return ProcessConfig(
+        **{
+            "$schema": "ica-llm-config/v1",
+            "processName": name,
+            "description": description,
+            "model": model,
+            "prompts": {"system": system, "instruction": instruction},
+            "metadata": {
+                "googleDocId": google_doc_id,
+                "lastSyncedAt": None,
+                "version": version,
+            },
+        }
+    )
+
+
+class TestConfigCommand:
+    """The config command edits LLM process configs via Google Docs."""
+
+    def test_config_in_help(self) -> None:
+        result = runner.invoke(app, ["config", "--help"])
+        assert result.exit_code == 0
+        assert "Google Docs" in result.output
+
+    def test_config_shows_table_and_quit(self) -> None:
+        """Entering 'q' at the selection prompt exits cleanly."""
+        configs = [
+            ("summarization", _make_process_config(name="summarization")),
+            ("theme", _make_process_config(name="theme")),
+        ]
+        with patch(
+            "ica.cli.config_editor.list_all_configs", return_value=configs
+        ):
+            result = runner.invoke(app, ["config"], input="q\n")
+
+        assert result.exit_code == 0
+        assert "Cancelled" in result.output
+
+    def test_config_invalid_selection(self) -> None:
+        """Non-numeric and out-of-range selections exit with error."""
+        configs = [("summarization", _make_process_config(name="summarization"))]
+        with patch(
+            "ica.cli.config_editor.list_all_configs", return_value=configs
+        ):
+            result = runner.invoke(app, ["config"], input="99\n")
+
+        assert result.exit_code == 1
+        assert "Invalid selection" in result.output
+
+    def test_config_invalid_selection_text(self) -> None:
+        """Non-numeric input exits with error."""
+        configs = [("summarization", _make_process_config(name="summarization"))]
+        with patch(
+            "ica.cli.config_editor.list_all_configs", return_value=configs
+        ):
+            result = runner.invoke(app, ["config"], input="abc\n")
+
+        assert result.exit_code == 1
+        assert "Invalid selection" in result.output
+
+    def test_config_no_configs_found(self) -> None:
+        """Exits with error when no configs exist."""
+        with patch("ica.cli.config_editor.list_all_configs", return_value=[]):
+            result = runner.invoke(app, ["config"])
+
+        assert result.exit_code == 1
+        assert "No LLM configs found" in result.output
+
+    def test_config_settings_error(self) -> None:
+        """Settings error is caught and reported."""
+        configs = [("summarization", _make_process_config(name="summarization"))]
+        with (
+            patch("ica.cli.config_editor.list_all_configs", return_value=configs),
+            patch(
+                "ica.config.settings.get_settings",
+                side_effect=Exception("Missing GOOGLE_SERVICE_ACCOUNT_CREDENTIALS_PATH"),
+            ),
+        ):
+            result = runner.invoke(app, ["config"], input="1\n")
+
+        assert result.exit_code == 1
+        assert "Configuration error" in result.output
+
+    def test_config_cancel_at_sync_prompt(self) -> None:
+        """Entering 'q' at the sync prompt cancels without syncing."""
+        configs = [("summarization", _make_process_config(name="summarization"))]
+        mock_settings = MagicMock()
+        mock_settings.google_service_account_credentials_path = "/fake/creds.json"
+        mock_settings.google_shared_drive_id = "drive-123"
+
+        mock_editor = AsyncMock()
+        mock_editor.start_full_edit.return_value = "https://docs.google.com/document/d/abc/edit"
+
+        with (
+            patch("ica.cli.config_editor.list_all_configs", return_value=configs),
+            patch("ica.config.settings.get_settings", return_value=mock_settings),
+            patch("ica.services.google_docs.GoogleDocsService"),
+            patch(
+                "ica.services.prompt_editor.PromptEditorService",
+                return_value=mock_editor,
+            ),
+        ):
+            # input: "1\n" selects config, "q\n" cancels sync
+            result = runner.invoke(app, ["config"], input="1\nq\n")
+
+        assert result.exit_code == 0
+        assert "docs.google.com" in result.output
+        assert "Sync cancelled" in result.output
+        mock_editor.sync_full_from_doc.assert_not_called()
+
+    def test_config_full_flow_no_changes(self) -> None:
+        """Full flow with no changes shows 'no changes' in summary."""
+        old_config = _make_process_config(name="summarization", version=1)
+        new_config = _make_process_config(name="summarization", version=2)
+
+        configs = [("summarization", old_config)]
+        mock_settings = MagicMock()
+        mock_settings.google_service_account_credentials_path = "/fake/creds.json"
+        mock_settings.google_shared_drive_id = "drive-123"
+
+        mock_editor = AsyncMock()
+        mock_editor.start_full_edit.return_value = "https://docs.google.com/document/d/abc/edit"
+        mock_editor.sync_full_from_doc.return_value = new_config
+
+        with (
+            patch("ica.cli.config_editor.list_all_configs", return_value=configs),
+            patch("ica.config.settings.get_settings", return_value=mock_settings),
+            patch("ica.services.google_docs.GoogleDocsService"),
+            patch(
+                "ica.services.prompt_editor.PromptEditorService",
+                return_value=mock_editor,
+            ),
+            patch(
+                "ica.llm_configs.loader.load_process_config", return_value=old_config
+            ),
+        ):
+            # input: "1\n" selects config, "\n" presses Enter to sync
+            result = runner.invoke(app, ["config"], input="1\n\n")
+
+        assert result.exit_code == 0
+        assert "no changes" in result.output
+        assert "Suggested commit" in result.output
+
+    def test_config_full_flow_with_changes(self) -> None:
+        """Full flow with model change shows diff in summary."""
+        old_config = _make_process_config(
+            name="summarization",
+            model="anthropic/claude-sonnet-4.5",
+            version=1,
+        )
+        new_config = _make_process_config(
+            name="summarization",
+            model="openai/gpt-4.1",
+            version=2,
+        )
+
+        configs = [("summarization", old_config)]
+        mock_settings = MagicMock()
+        mock_settings.google_service_account_credentials_path = "/fake/creds.json"
+        mock_settings.google_shared_drive_id = "drive-123"
+
+        mock_editor = AsyncMock()
+        mock_editor.start_full_edit.return_value = "https://docs.google.com/document/d/abc/edit"
+        mock_editor.sync_full_from_doc.return_value = new_config
+
+        with (
+            patch("ica.cli.config_editor.list_all_configs", return_value=configs),
+            patch("ica.config.settings.get_settings", return_value=mock_settings),
+            patch("ica.services.google_docs.GoogleDocsService"),
+            patch(
+                "ica.services.prompt_editor.PromptEditorService",
+                return_value=mock_editor,
+            ),
+            patch(
+                "ica.llm_configs.loader.load_process_config", return_value=old_config
+            ),
+        ):
+            result = runner.invoke(app, ["config"], input="1\n\n")
+
+        assert result.exit_code == 0
+        assert "anthropic/claude-sonnet-4.5" in result.output
+        assert "openai/gpt-4.1" in result.output
+        assert "Suggested commit" in result.output
+        assert "v2" in result.output

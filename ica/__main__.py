@@ -6,6 +6,7 @@ Usage::
     python -m ica run          # Trigger a pipeline run
     python -m ica status       # Show pipeline run status
     python -m ica collect-articles  # Manual article collection
+    python -m ica config       # Edit LLM process configs via Google Docs
 
 PRD Section 11.1: Secondary CLI interface for on-demand interaction and debugging.
 """
@@ -272,6 +273,106 @@ def filter_logs(
     )
     if count == 0:
         err_console.print("No matching log entries found.")
+
+
+@app.command()
+def config() -> None:
+    """Edit LLM process configs via Google Docs."""
+    asyncio.run(_config_editor())
+
+
+async def _config_editor() -> None:
+    """Interactive config editor: list configs, open in Google Docs, sync back."""
+    from ica.cli.config_editor import (
+        format_config_table,
+        format_sync_summary,
+        list_all_configs,
+    )
+    from ica.config.settings import get_settings
+    from ica.llm_configs.loader import load_process_config
+    from ica.services.google_docs import GoogleDocsService
+    from ica.services.prompt_editor import PromptEditorService
+
+    # (1) Display numbered list of all configs.
+    configs = list_all_configs()
+    if not configs:
+        err_console.print("[red]No LLM configs found.[/red]")
+        raise typer.Exit(code=1)
+
+    console.print(format_config_table(configs))
+
+    # (2) Prompt for selection, validating 1-N or q.
+    selection = typer.prompt(f"\nSelect a config to edit (1-{len(configs)} or q to quit)")
+    if selection.strip().lower() == "q":
+        console.print("[dim]Cancelled.[/dim]")
+        return
+
+    try:
+        idx = int(selection) - 1
+        if not (0 <= idx < len(configs)):
+            raise ValueError
+    except ValueError:
+        err_console.print(f"[red]Invalid selection:[/red] {selection}")
+        raise typer.Exit(code=1) from None
+
+    process_name, _ = configs[idx]
+
+    # (3) Instantiate services.
+    try:
+        settings = get_settings()
+    except Exception as exc:
+        err_console.print(f"[red]Configuration error:[/red] {exc}")
+        err_console.print("Ensure required environment variables are set (see .env.example).")
+        raise typer.Exit(code=1) from None
+
+    docs_service = GoogleDocsService(
+        credentials_path=settings.google_service_account_credentials_path,
+        drive_id=settings.google_shared_drive_id,
+    )
+    editor = PromptEditorService(docs_service)
+
+    # (4) Start full edit and print Google Doc URL.
+    url = await editor.start_full_edit(process_name)
+    console.print(f"\n[bold]Edit in Google Docs:[/bold] {url}")
+
+    # (5) Wait for user to finish editing.
+    response = typer.prompt(
+        "\nPress Enter to sync or q to cancel", default="", show_default=False
+    )
+    if response.strip().lower() == "q":
+        console.print("[dim]Sync cancelled.[/dim]")
+        return
+
+    # (6) Sync from doc and display summary.
+    old_config = load_process_config(process_name)
+    new_config = await editor.sync_full_from_doc(process_name)
+
+    changes: dict[str, str] = {}
+    if old_config.model != new_config.model:
+        changes["model"] = f"{old_config.model} -> {new_config.model}"
+    if old_config.description != new_config.description:
+        changes["description"] = (
+            f"{len(old_config.description)} chars -> {len(new_config.description)} chars"
+        )
+    if old_config.prompts.system != new_config.prompts.system:
+        changes["system"] = (
+            f"{len(old_config.prompts.system)} chars -> {len(new_config.prompts.system)} chars"
+        )
+    if old_config.prompts.instruction != new_config.prompts.instruction:
+        changes["instruction"] = (
+            f"{len(old_config.prompts.instruction)} chars"
+            f" -> {len(new_config.prompts.instruction)} chars"
+        )
+
+    summary = format_sync_summary(process_name, old_config, new_config, changes)
+    console.print(f"\n{summary}")
+
+    # (7) Print git commit suggestion.
+    console.print(
+        f"\n[dim]Suggested commit:"
+        f" git commit -m"
+        f' "chore: update {process_name} LLM config v{new_config.metadata.version}"[/dim]'
+    )
 
 
 def main() -> None:

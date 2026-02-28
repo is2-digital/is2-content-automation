@@ -2,7 +2,14 @@
 
 ## Current Status
 **Last Updated:** 2026-02-27
-**Tasks Completed:** ica-hlu.2 (Extend PromptEditorService with full-config edit methods)
+**Tasks Completed:** ica-hlu.3 (Add 'ica config' command to __main__.py)
+
+### 2026-02-27 — ica-hlu.3: Add 'ica config' command to __main__.py
+- Added `config` command and `_config_editor()` async function to `ica/__main__.py`
+- Full interactive flow: list configs table, select by number, open Google Doc for editing, sync back, display change summary, suggest git commit
+- Uses deferred imports matching existing CLI patterns; settings error handling follows `collect-articles` precedent
+- Added 9 tests to `tests/test_cli.py`: help text, quit at selection, invalid selection (number + text), no configs, settings error, cancel at sync, full flow no changes, full flow with model change
+- All 45 CLI tests pass; ruff clean; mypy has only pre-existing issues
 
 ### 2026-02-27 — ica-hlu.2: Extend PromptEditorService with full-config edit methods
 - Added `start_full_edit(process_name)` to `PromptEditorService` — creates Google Doc with all config fields via `build_full_doc_content()`, sets `google_doc_id` in metadata, returns doc URL
