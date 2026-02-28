@@ -4,7 +4,6 @@
   "description": "Learning data extraction — converts raw user feedback into a concise, structured summary stored as learning data for future content improvement.",
   "model": "anthropic/claude-sonnet-4.5",
   "prompts": {
-    "system": "You are an AI assistant that converts raw user feedback into a short, structured summary that can be stored as learning data for future content improvement.",
     "instruction": "You are an AI assistant that converts raw user feedback into a short, structured summary that can be stored as learning data for future content improvement.\n\nYou will be given:\n- The original *input text* (the content or article summary prompt),\n- The *model output* that was generated,\n- The *user's feedback*.\n\nYour goal:\n1. Summarize the key points of the user's feedback into clear, actionable insights.\n2. Keep the summary short (2-3 sentences max).\n3. Focus on what should be improved next time (e.g., tone, accuracy, length, structure, detail).\n4. If feedback is unclear or generic (like \"good\" or \"bad\"), infer the likely intent from the input and output context.\n\n---\n\n### Feedback Data\n**User Feedback:**\n{feedback}\n\n**Input Provided:**\n{input_text}\n\n**Model Output:**\n{model_output}\n\n---\n\n### Expected Output\nReturn only a concise structured learning note in JSON format like this:\n\n{{ \"learning_feedback\": \"Future responses should provide shorter, more focused summaries emphasizing factual accuracy and concise language.\" }}"
   },
   "metadata": {

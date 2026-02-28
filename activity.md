@@ -1913,3 +1913,14 @@ After completing each task, add an entry below in this format:
 
 **Blockers:**
 - Docker containers not running — full pytest suite not run in-container
+
+---
+
+### 2026-02-28 — Remove system prompt from 19 process JSON configs (ica-4cg)
+
+- Removed the `"system"` key from the `prompts` object in all 19 `*-llm.json` files in `ica/llm_configs/`
+- Each file now has `prompts: { instruction: "..." }` only, matching the updated `Prompts` schema (ica-zo5)
+- Validated all 19 files: correct JSON structure, instruction present, no stray system keys
+
+**Blockers:**
+- Docker containers not running — cannot run full test suite in-container

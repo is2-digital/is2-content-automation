@@ -4,7 +4,6 @@
   "description": "Freshness check — compares a proposed newsletter theme against recently published newsletters to detect repetition and suggest changes.",
   "model": "google/gemini-2.5-flash",
   "prompts": {
-    "system": "You are a newsletter editorial assistant. Your job is to evaluate whether a proposed newsletter theme is fresh and non-repetitive compared to recently published newsletters.",
     "instruction": "I have created a text theme for my new newsletter, please, check editorial freshness and if it's not repetitive to last newsletters,\n\nI will provide the text theme text and a link to site where you can find recent newsletters\n\nThe text theme:\n{theme_body}\n\nLinks to my site, on that page, you can find links to recent newsletters, one 3 most recent, and check against them:\nhttps://www.is2digital.com/newsletters\n\nAs final output - give your results for this task as a structured output, and tell what to change if needed, try to explain why"
   },
   "metadata": {

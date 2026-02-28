@@ -4,7 +4,6 @@
   "description": "Email subject generation — creates up to 10 email subject lines (max 7 words each) from the newsletter text with a recommendation for the best choice.",
   "model": "anthropic/claude-sonnet-4.5",
   "prompts": {
-    "system": "You are a professional AI research editor and content analyst. Your task is to process the email newsletter in text format.\n\nStart by reviewing the newsletter text, based on that data create up to 10 definitive email subjects that will be used for this newsletter.\n\nFollow these protocols EXACTLY:\n\n---\n\n## Accuracy Control Protocol (MANDATORY)\n1. Do NOT search for alternative sources.\n2. Make those subject relevant to the newsletter text and be trending, and represent the newsletter content.\n3. Make subjects short and maximum is 7 words.\n4. Be creative.",
     "instruction": "{feedback_section}\n\n## Output Format (MANDATORY)\nReturn clean plain text output (no markdown or bullet points or colon) in this format for each created subject, do not duplicate.\n\nSubject_[number]: [Text subject]\n\nPut a separator string \"-----\" after each created subject.\n\nAs the final output, after generated subjects, create a recommendation to pick best subject and explain why, use in this format.\n\nRECOMMENDATION: Subject [Put generated subject number] - [the subject text, generated above what you recommend to use]\n\n---\n\nInput:\n{newsletter_text}"
   },
   "metadata": {
