@@ -2,7 +2,7 @@
 
 ## Current Status
 **Last Updated:** 2026-02-27
-**Tasks Completed:** ica-hlu.3 (Add 'ica config' command to __main__.py)
+**Tasks Completed:** ica-hlu.4 (Tests for config_editor.py)
 
 ### 2026-02-27 — ica-hlu.3: Add 'ica config' command to __main__.py
 - Added `config` command and `_config_editor()` async function to `ica/__main__.py`
@@ -59,6 +59,13 @@
 - Tested container starts and serves requests: `/health`, `/status`, `/scheduler` all respond correctly
 - Confirmed Gunicorn config: 2 workers, 120s timeout, 30s graceful, 1000 max-requests with 50 jitter
 - Confirmed restart policies (`restart: always`), log rotation, resource limits all set in docker-compose.prod.yml
+
+## 2026-02-27 (session 9)
+- Created `tests/test_cli/test_config_editor.py` — 42 unit tests across 6 test classes for `ica/cli/config_editor.py` (ica-hlu.4)
+- Covers: TestListAllConfigs, TestFormatConfigTable, TestBuildFullDocContent, TestParseDocSections, TestApplyDocChanges, TestFormatSyncSummary
+- Restructured `tests/test_cli.py` → `tests/test_cli/test_main.py` to create proper test package
+- Found latent regex issue in `_SECTION_RE` (`\w[\w\s]*` matches across line boundaries for pure word+space content); tests use realistic punctuated content to match real-world usage
+- No blockers
 
 ## 2026-02-27 (session 8)
 - Created `ica/services/slack_config_handlers.py` — Slack Bolt handlers for LLM config editing (ica-7h4)
