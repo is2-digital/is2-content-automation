@@ -156,6 +156,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # Fall back to defaults so the app still starts.
         configure_logging()
 
+    # --- Preflight validation ---
+    from ica.config.validation import validate_config
+
+    result = validate_config()
+    if not result.ok:
+        for error in result.errors:
+            logger.error("Preflight: %s", error)
+        msg = f"Preflight validation failed with {len(result.errors)} error(s)"
+        raise SystemExit(msg)
+
     # --- Start scheduler if enabled ---
     scheduler = getattr(app.state, "scheduler", None)
     if scheduler is not None:

@@ -5,6 +5,7 @@ Usage::
     python -m ica serve              # Start FastAPI server
     python -m ica run                # Trigger a pipeline run
     python -m ica status             # Show pipeline run status
+    python -m ica preflight          # Validate all config before starting
     python -m ica guided             # Guided step-by-step pipeline test flow
     python -m ica guided artifacts   # Query artifact ledger for a test run
     python -m ica collect-articles   # Manual article collection
@@ -515,6 +516,26 @@ def filter_logs(
     )
     if count == 0:
         err_console.print("No matching log entries found.")
+
+
+@app.command(name="preflight")
+def preflight() -> None:
+    """Validate all configuration before starting the application.
+
+    Checks Settings env vars, timezone, all LLM JSON config files
+    (existence, schema, model format), and email config dependencies.
+    Exits with code 0 on success, 1 on failure.
+    """
+    from ica.config.validation import validate_config
+
+    result = validate_config()
+    if result.ok:
+        console.print("[green]All checks passed.[/green]")
+    else:
+        err_console.print(f"[red]Preflight failed — {len(result.errors)} error(s):[/red]")
+        for error in result.errors:
+            err_console.print(f"  - {error}")
+        raise typer.Exit(code=1)
 
 
 config_app = typer.Typer(
