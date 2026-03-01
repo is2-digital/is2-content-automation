@@ -5,11 +5,11 @@ __pycache__/
 .venv/
 
 # Claude Code sandbox sentinel files
-HEAD
-config
-hooks
-objects
-refs
+/HEAD
+/config
+/hooks
+/objects
+/refs
 
 # Tool caches
 .cache/
