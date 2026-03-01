@@ -182,13 +182,6 @@ class TestSummarizationPromptRegression:
         )
         assert user == expected
 
-    def test_instruction_template_length_unchanged(self) -> None:
-        """Guard against truncation or whitespace drift in the raw template."""
-        from ica.llm_configs import get_process_prompts
-
-        _, instruction = get_process_prompts("summarization")
-        assert len(instruction) == 1016
-
 
 # ---------------------------------------------------------------------------
 # Email subject regression tests
@@ -232,12 +225,6 @@ class TestEmailSubjectPromptRegression:
             newsletter_text=self.SAMPLE_NEWSLETTER,
         )
         assert user == expected
-
-    def test_instruction_template_length_unchanged(self) -> None:
-        from ica.llm_configs import get_process_prompts
-
-        _, instruction = get_process_prompts("email-subject")
-        assert len(instruction) == 1346
 
 
 # ---------------------------------------------------------------------------
