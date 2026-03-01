@@ -1,8 +1,16 @@
 # ims-tt - Activity Log
 
 ## Current Status
-**Last Updated:** 2026-02-28
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3
+**Last Updated:** 2026-03-01
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3
+
+### 2026-03-01 — ica-476.3.4: Add integration test for full Slack send-and-wait decision loop
+- New test file `tests/test_guided/test_slack_decision_loop.py` with 11 integration tests
+- TestFullDecisionLoop: verifies send_and_wait, form, and freetext responses captured in artifacts
+- TestRedoNewMessageWithAttempt: verifies redo sends attempt-tagged message, interactions accumulated
+- TestTimeoutTriggersFailStep: timeout marks step FAILED, redo after timeout succeeds
+- TestDecisionHistoryCompleteness: decisions span multiple steps, accumulate across redos, mixed types
+- Closed parent ica-476.3 (all 4 children complete, all acceptance criteria met)
 
 ### 2026-03-01 — ica-476.5.3: Implement redo semantics for Google Docs and Sheets
 - Added `artifact_history` field to `StepRecord` to preserve artifacts across redo attempts
