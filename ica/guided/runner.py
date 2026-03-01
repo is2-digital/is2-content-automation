@@ -20,6 +20,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from ica.guided.google_settings import GuidedGoogleSettingsError, validate_google_settings
 from ica.guided.slack_adapter import SlackTimeoutError
 from ica.guided.state import (
     InvalidTransitionError,
@@ -329,6 +330,17 @@ async def run_guided(
     ctx.run_id = run_id
     console.print(f"[bold]Run ID:[/bold] {run_id}")
     console.print(f"[bold]State dir:[/bold] {store_dir.resolve()}")
+
+    # --- Validate Google settings for steps in the run path ---
+    remaining_steps = [
+        StepName(s.name) for s in state.steps[state.current_step_index :]
+        if s.status != StepStatus.COMPLETED
+    ]
+    try:
+        validate_google_settings(remaining_steps)
+    except GuidedGoogleSettingsError as exc:
+        console.print(f"[red]{exc}[/red]")
+        return TestRunState(run_id=run_id, phase=RunPhase.ABORTED)
 
     # --- Install Slack override ---
     _prev_shared: Any = None

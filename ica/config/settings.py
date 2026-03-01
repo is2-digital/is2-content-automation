@@ -63,6 +63,12 @@ class Settings(BaseSettings):
     # auto-discover the first Shared Drive accessible to the service account.
     google_shared_drive_id: str = ""
 
+    # --- Guided test targets (optional — only for `ica guided`) ---
+    # Override the Google Spreadsheet and Drive folder used during guided test
+    # runs so real production resources are not modified.
+    guided_test_spreadsheet_id: str = ""
+    guided_test_drive_folder_id: str = ""
+
     # --- HTML template ---
     html_template_path: str = ""
 

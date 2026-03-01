@@ -288,6 +288,12 @@ def _mock_step(*, fail: bool = False) -> AsyncMock:
 class TestRunGuided:
     """Integration tests for the guided runner loop."""
 
+    @pytest.fixture(autouse=True)
+    def _skip_google_validation(self):
+        """Disable Google settings validation — runner tests focus on flow logic."""
+        with patch("ica.guided.runner.validate_google_settings"):
+            yield
+
     @pytest.fixture
     def store_dir(self, tmp_path: Path) -> Path:
         return tmp_path / "guided-runs"

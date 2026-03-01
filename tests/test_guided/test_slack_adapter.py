@@ -327,6 +327,11 @@ class TestMergeSlackInteractions:
 class TestRunGuidedWithSlackOverride:
     """Integration: slack_override wires adapter into the guided runner."""
 
+    @pytest.fixture(autouse=True)
+    def _skip_google_validation(self):
+        with patch("ica.guided.runner.validate_google_settings"):
+            yield
+
     @pytest.fixture
     def store_dir(self, tmp_path: Path) -> Path:
         return tmp_path / "guided-runs"
@@ -554,6 +559,11 @@ class TestClassifyStepError:
 
 class TestRunGuidedWithTimeout:
     """Integration: slack_timeout applies to the adapter during guided runs."""
+
+    @pytest.fixture(autouse=True)
+    def _skip_google_validation(self):
+        with patch("ica.guided.runner.validate_google_settings"):
+            yield
 
     @pytest.fixture
     def store_dir(self, tmp_path: Path) -> Path:
@@ -827,6 +837,11 @@ class TestMergeAccumulatesAcrossRedo:
 
 class TestRedoReplayIntegration:
     """Integration: redo sends new message with attempt tag and preserves history."""
+
+    @pytest.fixture(autouse=True)
+    def _skip_google_validation(self):
+        with patch("ica.guided.runner.validate_google_settings"):
+            yield
 
     @pytest.fixture
     def store_dir(self, tmp_path: Path) -> Path:

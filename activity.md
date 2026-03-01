@@ -2,7 +2,17 @@
 
 ## Current Status
 **Last Updated:** 2026-02-28
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1
+
+### 2026-03-01 — ica-476.5.1: Add configurable test target settings for guided Google integration
+- Added `guided_test_spreadsheet_id` and `guided_test_drive_folder_id` to Settings (optional, empty default)
+- New `ica/guided/google_settings.py`: step-to-Google-service mapping and `validate_google_settings()` fail-fast validation
+- Validation runs at guided-run startup — checks which steps in the run path need Google Sheets or Docs, and raises clear error with setup instructions if test-target IDs are missing
+- Wired into `run_guided()` before the main loop; returns ABORTED state on validation failure
+- Updated `.env-example` with new guided test target settings
+- 15 new tests covering step mappings, validation pass/fail scenarios, and error message content
+- Updated existing runner/Slack adapter tests to patch validation (4 test classes)
+- All 249 guided tests pass; ruff/mypy clean on new files
 
 ### 2026-03-01 — ica-476.3.3: Make Slack redo replay-safe with new message per attempt
 - Added `attempt` field to `SlackInteraction` dataclass and `GuidedSlackAdapter` tracking
