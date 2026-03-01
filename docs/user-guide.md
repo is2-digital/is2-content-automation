@@ -102,6 +102,10 @@ All commands run inside Docker containers via `make` targets. There is no local/
 
 For direct CLI access inside the container, use `make shell` to open a bash session in the app container.
 
+### Guided Pipeline Testing
+
+Run the full pipeline step-by-step with operator checkpoints, fixture data, and an artifact ledger for reviewing outputs. See the [Guided Testing Guide](guided-testing.md) for setup, commands, and troubleshooting.
+
 ### External Services
 
 * **LLMs**: Claude Sonnet 4.5 (Primary), GPT-4.1 (Validation), Gemini Flash (Freshness).
