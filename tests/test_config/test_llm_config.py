@@ -43,6 +43,7 @@ class TestDefaults:
             ("llm_summary_learning_data_model", _CLAUDE_SONNET),
             ("llm_markdown_model", _CLAUDE_SONNET),
             ("llm_markdown_validator_model", _GPT_4_1),
+            ("llm_markdown_voice_validator_model", _GPT_4_1),
             ("llm_markdown_regeneration_model", _CLAUDE_SONNET),
             ("llm_markdown_learning_data_model", _CLAUDE_SONNET),
             ("llm_html_model", _CLAUDE_SONNET),
@@ -66,10 +67,10 @@ class TestDefaults:
         cfg = _make_llm_config()
         assert getattr(cfg, field) == expected
 
-    def test_total_field_count_is_22(self) -> None:
-        """Ensure all 22 model mappings are represented."""
+    def test_total_field_count_is_23(self) -> None:
+        """Ensure all 23 model mappings are represented."""
         model_fields = [f for f in LLMConfig.model_fields if f.startswith("llm_")]
-        assert len(model_fields) == 22
+        assert len(model_fields) == 23
 
 
 # ---------------------------------------------------------------------------
@@ -112,8 +113,8 @@ class TestEnvOverrides:
 class TestLLMPurpose:
     """LLMPurpose enum should map to LLMConfig field names."""
 
-    def test_all_purposes_have_22_members(self) -> None:
-        assert len(LLMPurpose) == 22
+    def test_all_purposes_have_23_members(self) -> None:
+        assert len(LLMPurpose) == 23
 
     @pytest.mark.parametrize("purpose", list(LLMPurpose))
     def test_purpose_value_is_valid_field(self, purpose: LLMPurpose) -> None:
@@ -319,9 +320,9 @@ class TestPurposeToProcess:
                 f"_PURPOSE_TO_PROCESS key {field_name!r} is not an LLMConfig field"
             )
 
-    def test_mapping_covers_22_purposes(self) -> None:
-        """All 22 purposes have JSON config mappings."""
-        assert len(_PURPOSE_TO_PROCESS) == 22
+    def test_mapping_covers_23_purposes(self) -> None:
+        """All 23 purposes have JSON config mappings."""
+        assert len(_PURPOSE_TO_PROCESS) == 23
 
 
 # ---------------------------------------------------------------------------

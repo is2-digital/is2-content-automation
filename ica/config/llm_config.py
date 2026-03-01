@@ -31,6 +31,7 @@ class LLMPurpose(StrEnum):
     # Markdown generation
     MARKDOWN = "llm_markdown_model"
     MARKDOWN_VALIDATOR = "llm_markdown_validator_model"
+    MARKDOWN_VOICE_VALIDATOR = "llm_markdown_voice_validator_model"
     MARKDOWN_REGENERATION = "llm_markdown_regeneration_model"
     MARKDOWN_LEARNING_DATA = "llm_markdown_learning_data_model"
 
@@ -77,6 +78,7 @@ _PURPOSE_TO_PROCESS: dict[str, str] = {
     "llm_summary_learning_data_model": "learning-data-extraction",
     "llm_markdown_model": "markdown-generation",
     "llm_markdown_validator_model": "markdown-structural-validation",
+    "llm_markdown_voice_validator_model": "markdown-voice-validation",
     "llm_markdown_regeneration_model": "markdown-regeneration",
     "llm_markdown_learning_data_model": "learning-data-extraction",
     "llm_html_model": "html-generation",
@@ -118,6 +120,7 @@ class LLMConfig(BaseSettings):
     # --- Markdown generation ---
     llm_markdown_model: str = _CLAUDE_SONNET
     llm_markdown_validator_model: str = _GPT_4_1
+    llm_markdown_voice_validator_model: str = _GPT_4_1
     llm_markdown_regeneration_model: str = _CLAUDE_SONNET
     llm_markdown_learning_data_model: str = _CLAUDE_SONNET
 

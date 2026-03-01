@@ -328,7 +328,7 @@ async def run_voice_validation(
     )
 
     result = await completion(
-        purpose=LLMPurpose.MARKDOWN_VALIDATOR,
+        purpose=LLMPurpose.MARKDOWN_VOICE_VALIDATOR,
         model=model,
         system_prompt=system_prompt,
         user_prompt=user_prompt,

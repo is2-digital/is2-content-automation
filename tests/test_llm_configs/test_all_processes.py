@@ -383,6 +383,7 @@ class TestGetModelAllPurposes:
         LLMPurpose.SUMMARY_LEARNING_DATA: "google/gemini-2.5-flash",
         LLMPurpose.MARKDOWN: _DEFAULT_MODEL,
         LLMPurpose.MARKDOWN_VALIDATOR: "openai/gpt-4.1",
+        LLMPurpose.MARKDOWN_VOICE_VALIDATOR: "openai/gpt-4.1",
         LLMPurpose.MARKDOWN_REGENERATION: _DEFAULT_MODEL,
         LLMPurpose.MARKDOWN_LEARNING_DATA: "google/gemini-2.5-flash",
         LLMPurpose.HTML: "openai/gpt-4.1",
@@ -659,7 +660,7 @@ class TestEdgeCases:
 
 
 class TestLLMPurposeCompleteness:
-    """LLMPurpose enum has exactly 22 members covering all pipeline uses."""
+    """LLMPurpose enum has exactly 23 members covering all pipeline uses."""
 
     EXPECTED_PURPOSES: ClassVar[set[str]] = {
         "SUMMARY",
@@ -667,6 +668,7 @@ class TestLLMPurposeCompleteness:
         "SUMMARY_LEARNING_DATA",
         "MARKDOWN",
         "MARKDOWN_VALIDATOR",
+        "MARKDOWN_VOICE_VALIDATOR",
         "MARKDOWN_REGENERATION",
         "MARKDOWN_LEARNING_DATA",
         "HTML",

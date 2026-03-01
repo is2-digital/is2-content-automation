@@ -238,7 +238,7 @@ def _build_process_field_mapping() -> dict[str, str]:
         "markdown-regeneration": "llm_markdown_regeneration_model",
         "markdown-learning-data": "llm_markdown_learning_data_model",
         "markdown-structural-validation": "llm_markdown_validator_model",
-        "markdown-voice-validation": "llm_markdown_validator_model",
+        "markdown-voice-validation": "llm_markdown_voice_validator_model",
         "html-generation": "llm_html_model",
         "html-regeneration": "llm_html_regeneration_model",
         "html-learning-data": "llm_html_learning_data_model",
