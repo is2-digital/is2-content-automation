@@ -477,20 +477,34 @@ def _resolve_template(
     Sets ``ctx.extra["template_name"]``, ``ctx.extra["template_version"]``,
     and ``ctx.extra["template_html"]`` when a template is found.
 
-    Falls back silently when the template store has no matching template,
-    allowing the HTML step to use the file-based fallback from settings.
+    When *template_version* is explicitly pinned (not ``None``), raises
+    :class:`~ica.guided.templates.TemplateNotFoundError` with operator
+    recovery guidance instead of falling back silently.
+
+    When no version is pinned, falls back silently so the HTML step can
+    use the file-based fallback from settings.
     """
     from ica.guided.templates import TemplateNotFoundError, TemplateStore
 
     templates_dir = store_dir.parent / ".guided-templates"
     store = TemplateStore(templates_dir)
 
+    pinned = template_version is not None
+
     if not store.exists(template_name):
+        if pinned:
+            _raise_template_not_found(
+                template_name, template_version, store, templates_dir
+            )
         return
 
     try:
         record = store.get(template_name, template_version)
     except TemplateNotFoundError:
+        if pinned:
+            _raise_template_not_found(
+                template_name, template_version, store, templates_dir
+            )
         return
 
     ctx.extra["template_name"] = record.name
@@ -502,6 +516,62 @@ def _resolve_template(
         version_label = f"{record.version} (latest)"
     console.print(
         f"[cyan]Template: {record.name} v{version_label}[/cyan]"
+    )
+
+
+def _raise_template_not_found(
+    template_name: str,
+    template_version: str | None,
+    store: Any,
+    templates_dir: Path,
+) -> None:
+    """Build a descriptive error with operator recovery guidance.
+
+    Raises:
+        TemplateNotFoundError: Always — with contextual guidance depending
+            on whether the store is empty, the template is missing, or just
+            the requested version is missing.
+    """
+    from ica.guided.templates import TemplateNotFoundError
+
+    available_templates = store.list_templates()
+    import_hint = (
+        "To import a template:\n"
+        "  from ica.guided.templates import TemplateStore\n"
+        f"  store = TemplateStore(Path(\"{templates_dir}\"))\n"
+        f"  store.save(\"{template_name}\", html_content, \"{template_version or '1.0.0'}\")"
+    )
+
+    # Store is completely empty — first-time setup instructions
+    if not available_templates:
+        raise TemplateNotFoundError(
+            f"No templates found in the template store at {templates_dir}\n\n"
+            "First-time setup:\n"
+            "  1. Prepare your HTML newsletter template file\n"
+            "  2. Import it:\n"
+            f"       {import_hint}\n"
+            f"  3. Re-run with: template_name=\"{template_name}\", "
+            f"template_version=\"{template_version or '1.0.0'}\""
+        )
+
+    # Template name exists but the pinned version doesn't
+    if store.exists(template_name):
+        try:
+            versions = store.list_versions(template_name)
+            version_list = ", ".join(r.version for r in versions)
+        except Exception:
+            version_list = "(unable to list)"
+        raise TemplateNotFoundError(
+            f"Template '{template_name}' version '{template_version}' not found.\n"
+            f"Available versions: {version_list}\n\n"
+            f"{import_hint}"
+        )
+
+    # Template name not found, but other templates exist
+    raise TemplateNotFoundError(
+        f"Template '{template_name}' not found.\n"
+        f"Available templates: {', '.join(available_templates)}\n\n"
+        f"{import_hint}"
     )
 
 

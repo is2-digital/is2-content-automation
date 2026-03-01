@@ -14,6 +14,7 @@ from ica.guided.runner import (
     _google_doc_url,
     _google_sheet_url,
     _prepare_redo_context,
+    _raise_template_not_found,
     _resolve_template,
     parse_operator_input,
     prompt_operator,
@@ -700,21 +701,30 @@ class TestResolveTemplate:
         assert ctx.extra["template_version"] == "2.0.0"
         assert ctx.extra["template_html"] == "<html>v2</html>"
 
-    def test_noop_when_template_not_found(self, tmp_path: Path) -> None:
+    def test_noop_when_template_not_found_unpinned(self, tmp_path: Path) -> None:
         ctx = PipelineContext()
         console = Console(file=MagicMock())
-        _resolve_template("nonexistent", "1.0.0", tmp_path / "runs", ctx, console)
+        _resolve_template("nonexistent", None, tmp_path / "runs", ctx, console)
 
         assert "template_name" not in ctx.extra
         assert "template_version" not in ctx.extra
         assert "template_html" not in ctx.extra
 
-    def test_noop_when_version_not_found(self, template_dir: Path) -> None:
+    def test_raises_when_template_not_found_pinned(self, tmp_path: Path) -> None:
+        from ica.guided.templates import TemplateNotFoundError
+
         ctx = PipelineContext()
         console = Console(file=MagicMock())
-        _resolve_template("weekly", "9.9.9", template_dir / "runs", ctx, console)
+        with pytest.raises(TemplateNotFoundError):
+            _resolve_template("nonexistent", "1.0.0", tmp_path / "runs", ctx, console)
 
-        assert "template_name" not in ctx.extra
+    def test_raises_when_version_not_found_pinned(self, template_dir: Path) -> None:
+        from ica.guided.templates import TemplateNotFoundError
+
+        ctx = PipelineContext()
+        console = Console(file=MagicMock())
+        with pytest.raises(TemplateNotFoundError):
+            _resolve_template("weekly", "9.9.9", template_dir / "runs", ctx, console)
 
     def test_noop_when_store_empty(self, tmp_path: Path) -> None:
         ctx = PipelineContext()
@@ -757,3 +767,172 @@ class TestExtractArtifactsTemplateInfo:
         assert arts["template_name"] == "weekly"
         assert arts["template_version"] == "1.0.0"
         assert "html_doc_id" not in arts
+
+
+# ---------------------------------------------------------------------------
+# _resolve_template — pinned version error handling
+# ---------------------------------------------------------------------------
+
+
+class TestResolveTemplatePinnedErrors:
+    """When a template version is explicitly pinned, missing templates raise errors."""
+
+    @pytest.fixture
+    def template_dir(self, tmp_path: Path) -> Path:
+        """Create a template store with known templates for error testing."""
+        from ica.guided.templates import TemplateStore
+
+        store = TemplateStore(tmp_path / ".guided-templates")
+        store.save("weekly", "<html>v1</html>", "1.0.0", description="first")
+        store.save("weekly", "<html>v2</html>", "2.0.0", description="second")
+        store.save("daily", "<html>daily</html>", "1.0.0")
+        return tmp_path
+
+    def test_pinned_version_not_found_raises(self, template_dir: Path) -> None:
+        """Pinning a nonexistent version raises TemplateNotFoundError."""
+        from ica.guided.templates import TemplateNotFoundError
+
+        ctx = PipelineContext()
+        console = Console(file=MagicMock())
+        with pytest.raises(TemplateNotFoundError, match=r"version '9\.9\.9' not found"):
+            _resolve_template("weekly", "9.9.9", template_dir / "runs", ctx, console)
+
+    def test_pinned_version_not_found_lists_available(self, template_dir: Path) -> None:
+        """Error message includes available versions for the template."""
+        from ica.guided.templates import TemplateNotFoundError
+
+        ctx = PipelineContext()
+        console = Console(file=MagicMock())
+        with pytest.raises(TemplateNotFoundError, match=r"Available versions: 1\.0\.0, 2\.0\.0"):
+            _resolve_template("weekly", "9.9.9", template_dir / "runs", ctx, console)
+
+    def test_pinned_version_not_found_includes_import_hint(
+        self, template_dir: Path
+    ) -> None:
+        """Error message includes how to import a template."""
+        from ica.guided.templates import TemplateNotFoundError
+
+        ctx = PipelineContext()
+        console = Console(file=MagicMock())
+        with pytest.raises(TemplateNotFoundError, match=r"store\.save"):
+            _resolve_template("weekly", "9.9.9", template_dir / "runs", ctx, console)
+
+    def test_pinned_template_not_found_lists_alternatives(
+        self, template_dir: Path
+    ) -> None:
+        """When template name is missing, error lists other available templates."""
+        from ica.guided.templates import TemplateNotFoundError
+
+        ctx = PipelineContext()
+        console = Console(file=MagicMock())
+        with pytest.raises(TemplateNotFoundError, match=r"Available templates:.*weekly"):
+            _resolve_template("nope", "1.0.0", template_dir / "runs", ctx, console)
+
+    def test_pinned_template_not_found_includes_import_hint(
+        self, template_dir: Path
+    ) -> None:
+        """Error for missing template name includes import instructions."""
+        from ica.guided.templates import TemplateNotFoundError
+
+        ctx = PipelineContext()
+        console = Console(file=MagicMock())
+        with pytest.raises(TemplateNotFoundError, match=r"store\.save"):
+            _resolve_template("nope", "1.0.0", template_dir / "runs", ctx, console)
+
+    def test_empty_store_pinned_raises_setup_instructions(self, tmp_path: Path) -> None:
+        """Empty store with pinned version gives first-time setup instructions."""
+        from ica.guided.templates import TemplateNotFoundError
+
+        ctx = PipelineContext()
+        console = Console(file=MagicMock())
+        with pytest.raises(TemplateNotFoundError, match="First-time setup"):
+            _resolve_template("default", "1.0.0", tmp_path / "runs", ctx, console)
+
+    def test_empty_store_pinned_includes_import_steps(self, tmp_path: Path) -> None:
+        """First-time setup error includes step-by-step import instructions."""
+        from ica.guided.templates import TemplateNotFoundError
+
+        ctx = PipelineContext()
+        console = Console(file=MagicMock())
+        with pytest.raises(TemplateNotFoundError, match=r"store\.save"):
+            _resolve_template("default", "1.0.0", tmp_path / "runs", ctx, console)
+
+    def test_unpinned_still_falls_back_silently(self, tmp_path: Path) -> None:
+        """Without a pinned version, missing templates still fall back silently."""
+        ctx = PipelineContext()
+        console = Console(file=MagicMock())
+        _resolve_template("nonexistent", None, tmp_path / "runs", ctx, console)
+        assert "template_name" not in ctx.extra
+
+    def test_unpinned_missing_version_falls_back(self, template_dir: Path) -> None:
+        """Unpinned (latest) resolution still works when template exists."""
+        ctx = PipelineContext()
+        console = Console(file=MagicMock())
+        _resolve_template("weekly", None, template_dir / "runs", ctx, console)
+        assert ctx.extra["template_name"] == "weekly"
+        assert ctx.extra["template_version"] == "2.0.0"
+
+    def test_pinned_version_context_not_modified_on_error(
+        self, template_dir: Path
+    ) -> None:
+        """Context remains unmodified when a pinned version error is raised."""
+        from ica.guided.templates import TemplateNotFoundError
+
+        ctx = PipelineContext()
+        console = Console(file=MagicMock())
+        with pytest.raises(TemplateNotFoundError):
+            _resolve_template("weekly", "9.9.9", template_dir / "runs", ctx, console)
+        assert "template_name" not in ctx.extra
+        assert "template_version" not in ctx.extra
+        assert "template_html" not in ctx.extra
+
+
+# ---------------------------------------------------------------------------
+# _raise_template_not_found — unit tests for error message building
+# ---------------------------------------------------------------------------
+
+
+class TestRaiseTemplateNotFound:
+    """Direct tests for the error-building helper."""
+
+    def test_empty_store_error_mentions_store_path(self, tmp_path: Path) -> None:
+        from ica.guided.templates import TemplateNotFoundError, TemplateStore
+
+        templates_dir = tmp_path / ".guided-templates"
+        store = TemplateStore(templates_dir)
+        with pytest.raises(TemplateNotFoundError, match=str(templates_dir)):
+            _raise_template_not_found("default", "1.0.0", store, templates_dir)
+
+    def test_missing_name_lists_available(self, tmp_path: Path) -> None:
+        from ica.guided.templates import TemplateNotFoundError, TemplateStore
+
+        templates_dir = tmp_path / ".guided-templates"
+        store = TemplateStore(templates_dir)
+        store.save("weekly", "<html>w</html>", "1.0.0")
+        store.save("daily", "<html>d</html>", "1.0.0")
+        with pytest.raises(
+            TemplateNotFoundError, match="Available templates: daily, weekly"
+        ):
+            _raise_template_not_found("monthly", "1.0.0", store, templates_dir)
+
+    def test_missing_version_lists_versions(self, tmp_path: Path) -> None:
+        from ica.guided.templates import TemplateNotFoundError, TemplateStore
+
+        templates_dir = tmp_path / ".guided-templates"
+        store = TemplateStore(templates_dir)
+        store.save("weekly", "<html>v1</html>", "1.0.0")
+        store.save("weekly", "<html>v2</html>", "2.0.0")
+        with pytest.raises(
+            TemplateNotFoundError, match=r"Available versions: 1\.0\.0, 2\.0\.0"
+        ):
+            _raise_template_not_found("weekly", "3.0.0", store, templates_dir)
+
+    def test_import_hint_uses_requested_name_and_version(self, tmp_path: Path) -> None:
+        from ica.guided.templates import TemplateNotFoundError, TemplateStore
+
+        templates_dir = tmp_path / ".guided-templates"
+        store = TemplateStore(templates_dir)
+        with pytest.raises(
+            TemplateNotFoundError, match=r'store\.save\("custom", html_content, "5\.0\.0"\)'
+        ):
+            _raise_template_not_found("custom", "5.0.0", store, templates_dir)

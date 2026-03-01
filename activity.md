@@ -2,7 +2,16 @@
 
 ## Current Status
 **Last Updated:** 2026-03-01
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1, ica-476.7.2, ica-476.7.3
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1, ica-476.7.2, ica-476.7.3, ica-476.7.4
+
+### 2026-03-01 — ica-476.7.4: Add missing-template error handling with operator recovery guidance and tests
+- `_resolve_template()` now raises `TemplateNotFoundError` when a pinned version is not found (instead of silent fallback)
+- New `_raise_template_not_found()` helper builds contextual error messages with 3 scenarios: empty store (first-time setup instructions), missing template name (lists alternatives), missing version (lists available versions)
+- All error messages include import instructions with the requested template name/version
+- Unpinned (version=None) resolution retains silent fallback behavior
+- 15 new tests: `TestResolveTemplatePinnedErrors` (11) and `TestRaiseTemplateNotFound` (4)
+- Updated 2 existing tests to match new pinned-version behavior
+- All 125 guided tests passing, ruff clean
 
 ### 2026-02-28 — ica-476.7.3: Wire template version pinning into guided runner and HTML generation step
 - Added `--template-version` and `--template-name` CLI flags to `ica guided` command
