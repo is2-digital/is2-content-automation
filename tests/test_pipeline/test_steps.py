@@ -890,3 +890,73 @@ class TestContextPropagation:
         # The newsletter_date should have been passed to run_html_generation
         call_args = mock_gen.call_args
         assert call_args[0][2] == "03/01/2026"
+
+    @pytest.mark.asyncio
+    async def test_html_step_uses_template_from_context(
+        self,
+        mock_settings,
+        mock_slack,
+        mock_docs,
+    ):
+        """HTML step reads template_html from ctx.extra when set."""
+        from ica.pipeline.steps import run_html_generation_step
+
+        html_result = MagicMock()
+        html_result.html_doc_id = "doc-html-tpl"
+
+        with (
+            patch("ica.pipeline.steps._make_slack", return_value=mock_slack),
+            patch("ica.pipeline.steps._make_docs", return_value=mock_docs),
+            patch("ica.pipeline.steps._session", return_value=_fake_session_ctx()),
+            patch(
+                "ica.pipeline.html_generation.run_html_generation",
+                new_callable=AsyncMock,
+                return_value=html_result,
+            ) as mock_gen,
+        ):
+            ctx = PipelineContext(
+                run_id="html-tpl",
+                markdown_doc_id="doc-md",
+                extra={"template_html": "<html>pinned</html>"},
+            )
+            await run_html_generation_step(ctx)
+
+        # The template_html from context should have been passed as html_template
+        call_args = mock_gen.call_args
+        assert call_args[0][1] == "<html>pinned</html>"
+
+    @pytest.mark.asyncio
+    async def test_html_step_falls_back_to_settings_template(
+        self,
+        mock_slack,
+        mock_docs,
+        tmp_path,
+    ):
+        """HTML step falls back to settings.html_template_path when context has no template."""
+        from ica.pipeline.steps import run_html_generation_step
+
+        # Create a template file
+        tpl_file = tmp_path / "template.html"
+        tpl_file.write_text("<html>from-file</html>")
+        settings_with_tpl = FakeSettings(html_template_path=str(tpl_file))
+
+        html_result = MagicMock()
+        html_result.html_doc_id = "doc-html-fb"
+
+        with (
+            patch("ica.pipeline.steps._get_settings", return_value=settings_with_tpl),
+            patch("ica.pipeline.steps._make_slack", return_value=mock_slack),
+            patch("ica.pipeline.steps._make_docs", return_value=mock_docs),
+            patch("ica.pipeline.steps._session", return_value=_fake_session_ctx()),
+            patch(
+                "ica.pipeline.html_generation.run_html_generation",
+                new_callable=AsyncMock,
+                return_value=html_result,
+            ) as mock_gen,
+        ):
+            ctx = PipelineContext(run_id="html-fb", markdown_doc_id="doc-md")
+            await run_html_generation_step(ctx)
+
+        # Should use the file-based template
+        call_args = mock_gen.call_args
+        assert call_args[0][1] == "<html>from-file</html>"

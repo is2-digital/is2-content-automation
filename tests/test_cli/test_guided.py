@@ -170,3 +170,79 @@ class TestGuidedSlackTimeout:
         """--slack-timeout appears in the guided command help."""
         result = runner.invoke(app, ["guided", "--help"])
         assert "--slack-timeout" in result.output
+
+
+# ---------------------------------------------------------------------------
+# --template-version / --template-name flags
+# ---------------------------------------------------------------------------
+
+
+class TestGuidedTemplateFlags:
+    """The --template-version and --template-name flags control HTML template pinning."""
+
+    def test_default_template_name(self) -> None:
+        """Default --template-name is 'default'."""
+        state = TestRunState(run_id="test")
+        state.phase = RunPhase.COMPLETED
+
+        mock_run = AsyncMock(return_value=state)
+        with patch("ica.guided.runner.run_guided", mock_run):
+            result = runner.invoke(app, ["guided"])
+
+        assert result.exit_code == 0
+        call_kwargs = mock_run.call_args[1]
+        assert call_kwargs["template_name"] == "default"
+        assert call_kwargs["template_version"] is None
+
+    def test_custom_template_name(self) -> None:
+        """Custom --template-name is forwarded."""
+        state = TestRunState(run_id="test")
+        state.phase = RunPhase.COMPLETED
+
+        mock_run = AsyncMock(return_value=state)
+        with patch("ica.guided.runner.run_guided", mock_run):
+            result = runner.invoke(
+                app, ["guided", "--template-name", "weekly"]
+            )
+
+        assert result.exit_code == 0
+        call_kwargs = mock_run.call_args[1]
+        assert call_kwargs["template_name"] == "weekly"
+
+    def test_template_version_forwarded(self) -> None:
+        """--template-version is forwarded to run_guided."""
+        state = TestRunState(run_id="test")
+        state.phase = RunPhase.COMPLETED
+
+        mock_run = AsyncMock(return_value=state)
+        with patch("ica.guided.runner.run_guided", mock_run):
+            result = runner.invoke(
+                app, ["guided", "--template-version", "2.0.0"]
+            )
+
+        assert result.exit_code == 0
+        call_kwargs = mock_run.call_args[1]
+        assert call_kwargs["template_version"] == "2.0.0"
+
+    def test_both_flags_together(self) -> None:
+        """--template-name and --template-version can be combined."""
+        state = TestRunState(run_id="test")
+        state.phase = RunPhase.COMPLETED
+
+        mock_run = AsyncMock(return_value=state)
+        with patch("ica.guided.runner.run_guided", mock_run):
+            result = runner.invoke(
+                app,
+                ["guided", "--template-name", "weekly", "--template-version", "1.0.0"],
+            )
+
+        assert result.exit_code == 0
+        call_kwargs = mock_run.call_args[1]
+        assert call_kwargs["template_name"] == "weekly"
+        assert call_kwargs["template_version"] == "1.0.0"
+
+    def test_template_flags_in_help(self) -> None:
+        """--template-version and --template-name appear in help."""
+        result = runner.invoke(app, ["guided", "--help"])
+        assert "--template-version" in result.output
+        assert "--template-name" in result.output

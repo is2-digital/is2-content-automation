@@ -14,6 +14,7 @@ from ica.guided.runner import (
     _google_doc_url,
     _google_sheet_url,
     _prepare_redo_context,
+    _resolve_template,
     parse_operator_input,
     prompt_operator,
     render_checkpoint,
@@ -661,3 +662,98 @@ class TestRenderCheckpointArtifactHistory:
         console = Console(file=MagicMock(), force_terminal=True)
         render_checkpoint(state, console)
         # Smoke test — should not raise
+
+
+# ---------------------------------------------------------------------------
+# _resolve_template — template version pinning
+# ---------------------------------------------------------------------------
+
+
+class TestResolveTemplate:
+    """Template resolution loads from TemplateStore and injects into context."""
+
+    @pytest.fixture
+    def template_dir(self, tmp_path: Path) -> Path:
+        """Create a temporary template store with a known template."""
+        from ica.guided.templates import TemplateStore
+
+        store = TemplateStore(tmp_path / ".guided-templates")
+        store.save("weekly", "<html>v1</html>", "1.0.0", description="first")
+        store.save("weekly", "<html>v2</html>", "2.0.0", description="second")
+        return tmp_path
+
+    def test_resolves_specific_version(self, template_dir: Path) -> None:
+        ctx = PipelineContext()
+        console = Console(file=MagicMock())
+        _resolve_template("weekly", "1.0.0", template_dir / "runs", ctx, console)
+
+        assert ctx.extra["template_name"] == "weekly"
+        assert ctx.extra["template_version"] == "1.0.0"
+        assert ctx.extra["template_html"] == "<html>v1</html>"
+
+    def test_resolves_latest_when_no_version(self, template_dir: Path) -> None:
+        ctx = PipelineContext()
+        console = Console(file=MagicMock())
+        _resolve_template("weekly", None, template_dir / "runs", ctx, console)
+
+        assert ctx.extra["template_name"] == "weekly"
+        assert ctx.extra["template_version"] == "2.0.0"
+        assert ctx.extra["template_html"] == "<html>v2</html>"
+
+    def test_noop_when_template_not_found(self, tmp_path: Path) -> None:
+        ctx = PipelineContext()
+        console = Console(file=MagicMock())
+        _resolve_template("nonexistent", "1.0.0", tmp_path / "runs", ctx, console)
+
+        assert "template_name" not in ctx.extra
+        assert "template_version" not in ctx.extra
+        assert "template_html" not in ctx.extra
+
+    def test_noop_when_version_not_found(self, template_dir: Path) -> None:
+        ctx = PipelineContext()
+        console = Console(file=MagicMock())
+        _resolve_template("weekly", "9.9.9", template_dir / "runs", ctx, console)
+
+        assert "template_name" not in ctx.extra
+
+    def test_noop_when_store_empty(self, tmp_path: Path) -> None:
+        ctx = PipelineContext()
+        console = Console(file=MagicMock())
+        _resolve_template("default", None, tmp_path / "runs", ctx, console)
+
+        assert "template_html" not in ctx.extra
+
+
+# ---------------------------------------------------------------------------
+# _extract_artifacts — template info in HTML_GENERATION artifacts
+# ---------------------------------------------------------------------------
+
+
+class TestExtractArtifactsTemplateInfo:
+    """HTML generation artifact extraction includes template metadata."""
+
+    def test_includes_template_name_and_version(self) -> None:
+        ctx = PipelineContext(
+            html_doc_id="html-1",
+            extra={"template_name": "weekly", "template_version": "2.0.0"},
+        )
+        arts = _extract_artifacts(StepName.HTML_GENERATION, ctx)
+        assert arts["template_name"] == "weekly"
+        assert arts["template_version"] == "2.0.0"
+        assert arts["html_doc_id"] == "html-1"
+
+    def test_omits_template_when_not_set(self) -> None:
+        ctx = PipelineContext(html_doc_id="html-1")
+        arts = _extract_artifacts(StepName.HTML_GENERATION, ctx)
+        assert "template_name" not in arts
+        assert "template_version" not in arts
+        assert arts["html_doc_id"] == "html-1"
+
+    def test_includes_template_without_doc_id(self) -> None:
+        ctx = PipelineContext(
+            extra={"template_name": "weekly", "template_version": "1.0.0"},
+        )
+        arts = _extract_artifacts(StepName.HTML_GENERATION, ctx)
+        assert arts["template_name"] == "weekly"
+        assert arts["template_version"] == "1.0.0"
+        assert "html_doc_id" not in arts

@@ -485,9 +485,10 @@ async def run_html_generation_step(ctx: PipelineContext) -> PipelineContext:
     if ctx.markdown_doc_id:
         markdown_content = await docs.get_content(ctx.markdown_doc_id)
 
-    # Load HTML template from file (if configured)
-    html_template = ""
-    if settings.html_template_path:
+    # Load HTML template — prefer version-pinned template from context,
+    # fall back to file path from settings.
+    html_template = ctx.extra.get("template_html", "")
+    if not html_template and settings.html_template_path:
         from pathlib import Path
 
         template_path = Path(settings.html_template_path)

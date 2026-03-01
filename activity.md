@@ -2,7 +2,15 @@
 
 ## Current Status
 **Last Updated:** 2026-03-01
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1, ica-476.7.2
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1, ica-476.7.2, ica-476.7.3
+
+### 2026-02-28 — ica-476.7.3: Wire template version pinning into guided runner and HTML generation step
+- Added `--template-version` and `--template-name` CLI flags to `ica guided` command
+- `run_guided()` resolves template from `TemplateStore` at startup, injects into `ctx.extra`
+- HTML generation step (`steps.py`) reads `template_html` from context first, falls back to file-based setting
+- `_extract_artifacts()` includes `template_name` and `template_version` in HTML_GENERATION artifacts
+- 13 new tests across CLI (5), runner (8 — resolve + artifacts), and pipeline step (2 — context + fallback)
+- All 4208 tests passing, ruff + mypy clean on new code
 
 ### 2026-03-01 — ica-476.7.1: Design template storage model with version metadata and file-based persistence
 - New module `ica/guided/templates.py` with `TemplateRecord` dataclass and `TemplateStore` persistence class

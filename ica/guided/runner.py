@@ -265,6 +265,8 @@ async def run_guided(
     start_step: str | None = None,
     slack_override: Any = None,
     slack_timeout: float | None = None,
+    template_name: str = "default",
+    template_version: str | None = None,
 ) -> TestRunState:
     """Execute the guided pipeline flow.
 
@@ -288,6 +290,8 @@ async def run_guided(
             pipeline steps use it instead of creating a new ``SlackService``.
         slack_timeout: Timeout in seconds for each Slack send-and-wait call.
             ``None`` means no timeout (wait indefinitely).
+        template_name: HTML template name to use for HTML generation.
+        template_version: Pin a specific template version. ``None`` uses latest.
 
     Returns:
         The final :class:`TestRunState` after the run completes or is stopped.
@@ -345,6 +349,10 @@ async def run_guided(
             ctx = PipelineContext()
 
     ctx.run_id = run_id
+
+    # --- Resolve and pin HTML template ---
+    _resolve_template(template_name, template_version, store_dir, ctx, console)
+
     console.print(f"[bold]Run ID:[/bold] {run_id}")
     console.print(f"[bold]State dir:[/bold] {store_dir.resolve()}")
 
@@ -455,6 +463,46 @@ async def run_guided(
         if state.phase in (RunPhase.COMPLETED, RunPhase.ABORTED):
             _restore_shared_service(_prev_shared, slack_override)
             return state
+
+
+def _resolve_template(
+    template_name: str,
+    template_version: str | None,
+    store_dir: Path,
+    ctx: PipelineContext,
+    console: Console,
+) -> None:
+    """Load an HTML template from the TemplateStore and inject into context.
+
+    Sets ``ctx.extra["template_name"]``, ``ctx.extra["template_version"]``,
+    and ``ctx.extra["template_html"]`` when a template is found.
+
+    Falls back silently when the template store has no matching template,
+    allowing the HTML step to use the file-based fallback from settings.
+    """
+    from ica.guided.templates import TemplateNotFoundError, TemplateStore
+
+    templates_dir = store_dir.parent / ".guided-templates"
+    store = TemplateStore(templates_dir)
+
+    if not store.exists(template_name):
+        return
+
+    try:
+        record = store.get(template_name, template_version)
+    except TemplateNotFoundError:
+        return
+
+    ctx.extra["template_name"] = record.name
+    ctx.extra["template_version"] = record.version
+    ctx.extra["template_html"] = record.template_html
+
+    version_label = record.version
+    if template_version is None:
+        version_label = f"{record.version} (latest)"
+    console.print(
+        f"[cyan]Template: {record.name} v{version_label}[/cyan]"
+    )
 
 
 def _classify_step_error(exc: Exception) -> str:
@@ -618,6 +666,12 @@ def _extract_artifacts(step_name: StepName, ctx: PipelineContext) -> dict[str, A
         if ctx.html_doc_id:
             artifacts["html_doc_id"] = ctx.html_doc_id
             artifacts["document_url"] = _google_doc_url(ctx.html_doc_id)
+        tpl_name = ctx.extra.get("template_name")
+        tpl_ver = ctx.extra.get("template_version")
+        if tpl_name:
+            artifacts["template_name"] = tpl_name
+        if tpl_ver:
+            artifacts["template_version"] = tpl_ver
 
     elif step_name == StepName.EMAIL_SUBJECT:
         subject = ctx.extra.get("email_subject")

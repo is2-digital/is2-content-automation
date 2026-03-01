@@ -191,6 +191,16 @@ def guided(
         "--slack-timeout",
         help="Timeout in seconds for Slack send-and-wait calls (0 = no timeout).",
     ),
+    template_version: str | None = typer.Option(
+        None,
+        "--template-version",
+        help="Pin a specific HTML template version (e.g. '1.0.0'). Uses latest if omitted.",
+    ),
+    template_name: str = typer.Option(
+        "default",
+        "--template-name",
+        help="HTML template name to use for HTML generation.",
+    ),
 ) -> None:
     """Run the pipeline in guided mode — step-by-step with operator checkpoints.
 
@@ -234,7 +244,13 @@ def guided(
     effective_timeout = slack_timeout if slack_timeout > 0 else None
     asyncio.run(
         _run_guided(
-            run_id, store_path, seed=seed, start_step=step, slack_timeout=effective_timeout
+            run_id,
+            store_path,
+            seed=seed,
+            start_step=step,
+            slack_timeout=effective_timeout,
+            template_name=template_name,
+            template_version=template_version,
         )
     )
 
@@ -246,6 +262,8 @@ async def _run_guided(
     seed: int | None = None,
     start_step: str | None = None,
     slack_timeout: float | None = None,
+    template_name: str = "default",
+    template_version: str | None = None,
 ) -> None:
     """Execute the guided pipeline flow."""
     from ica.guided.runner import run_guided
@@ -258,6 +276,8 @@ async def _run_guided(
             seed=seed,
             start_step=start_step,
             slack_timeout=slack_timeout,
+            template_name=template_name,
+            template_version=template_version,
         )
         if state.phase.value == "completed":
             console.print("[green]Guided run completed successfully.[/green]")
