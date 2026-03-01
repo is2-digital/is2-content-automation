@@ -360,7 +360,12 @@ async def run_guided(
 
             # Tell the Slack adapter which step is about to run
             if slack_override is not None and hasattr(slack_override, "set_step"):
-                slack_override.set_step(step_name.value)
+                step_attempt = state.current_step.attempt
+                slack_override.set_step(step_name.value, attempt=step_attempt)
+                # On redo (attempt > 1), clear stale pending callbacks so old
+                # Slack buttons cannot resolve against the new attempt.
+                if step_attempt > 1 and hasattr(slack_override, "invalidate_pending"):
+                    slack_override.invalidate_pending()
 
             try:
                 ctx = await run_step(step_name.value, step_fn, ctx)
@@ -440,13 +445,19 @@ def _merge_slack_interactions(
     step_name: StepName,
     state: TestRunState,
 ) -> None:
-    """Merge adapter interaction records into step artifacts and decision history."""
+    """Merge adapter interaction records into step artifacts and decision history.
+
+    Interactions are *accumulated* across redo attempts so the full decision
+    history is preserved.  Each interaction carries an ``attempt`` field
+    identifying which attempt it belongs to.
+    """
     interactions = adapter.drain_step_interactions(step_name.value)
     if not interactions:
         return
 
     step_record = state.current_step
-    step_record.artifacts["slack_interactions"] = interactions
+    existing = step_record.artifacts.get("slack_interactions", [])
+    step_record.artifacts["slack_interactions"] = existing + interactions
 
     for interaction in interactions:
         method = interaction.get("method", "")

@@ -2,7 +2,16 @@
 
 ## Current Status
 **Last Updated:** 2026-02-28
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3
+
+### 2026-03-01 — ica-476.3.3: Make Slack redo replay-safe with new message per attempt
+- Added `attempt` field to `SlackInteraction` dataclass and `GuidedSlackAdapter` tracking
+- Message tags now include attempt number on redo: `[run_id/step (attempt N)]`
+- `drain_step_interactions` now actually drains (removes) returned interactions
+- `_merge_slack_interactions` accumulates interactions across redo attempts instead of overwriting
+- New `invalidate_pending()` method clears stale Slack callbacks on redo to prevent old buttons resolving
+- Runner passes `attempt` to `set_step()` and calls `invalidate_pending()` on redo (attempt > 1)
+- 16 new tests covering attempt tracking, drain semantics, merge accumulation, and redo integration
 
 ### 2026-03-01 — ica-476.4: Create automated per-step test data provisioning
 - New `ica/guided/fixtures.py`: `FixtureProvider` class generates deterministic test data for every pipeline step

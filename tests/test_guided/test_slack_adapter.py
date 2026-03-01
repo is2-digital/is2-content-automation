@@ -348,10 +348,10 @@ class TestRunGuidedWithSlackOverride:
         adapter = GuidedSlackAdapter(inner, run_id="override-test")
         console = MagicMock()
 
-        with self._patch_steps(), patch(
-            "ica.services.slack.set_shared_service"
-        ) as mock_set, patch(
-            "ica.services.slack.get_shared_service", return_value=None
+        with (
+            self._patch_steps(),
+            patch("ica.services.slack.set_shared_service") as mock_set,
+            patch("ica.services.slack.get_shared_service", return_value=None),
         ):
             state = await run_guided(
                 store_dir=store_dir,
@@ -369,12 +369,12 @@ class TestRunGuidedWithSlackOverride:
         inner = _make_inner()
         adapter = GuidedSlackAdapter(inner, run_id="step-track")
         console = MagicMock()
-        steps_seen: list[str] = []
+        steps_seen: list[tuple[str, int]] = []
         original_set_step = adapter.set_step
 
-        def tracking_set_step(name: str) -> None:
-            steps_seen.append(name)
-            original_set_step(name)
+        def tracking_set_step(name: str, *, attempt: int = 1) -> None:
+            steps_seen.append((name, attempt))
+            original_set_step(name, attempt=attempt)
 
         adapter.set_step = tracking_set_step  # type: ignore[method-assign]
 
@@ -386,15 +386,13 @@ class TestRunGuidedWithSlackOverride:
                 slack_override=adapter,
             )
 
-        assert steps_seen == ["curation"]
+        assert steps_seen == [("curation", 1)]
 
     async def test_no_override_no_side_effects(self, store_dir: Path) -> None:
         """Without slack_override, no shared service manipulation occurs."""
         console = MagicMock()
 
-        with self._patch_steps(), patch(
-            "ica.services.slack.set_shared_service"
-        ) as mock_set:
+        with self._patch_steps(), patch("ica.services.slack.set_shared_service") as mock_set:
             await run_guided(
                 store_dir=store_dir,
                 console=console,
@@ -577,9 +575,11 @@ class TestRunGuidedWithTimeout:
         console = MagicMock()
         assert adapter.timeout is None
 
-        with self._patch_steps(), patch(
-            "ica.services.slack.set_shared_service"
-        ), patch("ica.services.slack.get_shared_service", return_value=None):
+        with (
+            self._patch_steps(),
+            patch("ica.services.slack.set_shared_service"),
+            patch("ica.services.slack.get_shared_service", return_value=None),
+        ):
             await run_guided(
                 store_dir=store_dir,
                 console=console,
@@ -596,9 +596,11 @@ class TestRunGuidedWithTimeout:
         adapter = GuidedSlackAdapter(inner, run_id="no-timeout")
         console = MagicMock()
 
-        with self._patch_steps(), patch(
-            "ica.services.slack.set_shared_service"
-        ), patch("ica.services.slack.get_shared_service", return_value=None):
+        with (
+            self._patch_steps(),
+            patch("ica.services.slack.set_shared_service"),
+            patch("ica.services.slack.get_shared_service", return_value=None),
+        ):
             await run_guided(
                 store_dir=store_dir,
                 console=console,
@@ -617,11 +619,13 @@ class TestRunGuidedWithTimeout:
         async def hanging_step(ctx: PipelineContext) -> PipelineContext:
             raise SlackTimeoutError("send_and_wait", 0.01)
 
-        with patch(
-            "ica.guided.runner.get_step_fn",
-            return_value=AsyncMock(side_effect=hanging_step),
-        ), patch("ica.services.slack.set_shared_service"), patch(
-            "ica.services.slack.get_shared_service", return_value=None
+        with (
+            patch(
+                "ica.guided.runner.get_step_fn",
+                return_value=AsyncMock(side_effect=hanging_step),
+            ),
+            patch("ica.services.slack.set_shared_service"),
+            patch("ica.services.slack.get_shared_service", return_value=None),
         ):
             state = await run_guided(
                 store_dir=store_dir,
@@ -634,3 +638,269 @@ class TestRunGuidedWithTimeout:
         assert state.steps[0].status == StepStatus.FAILED
         assert "timeout" in state.steps[0].error.lower()
         assert state.phase == RunPhase.ABORTED
+
+
+# ---------------------------------------------------------------------------
+# Redo replay-safety
+# ---------------------------------------------------------------------------
+
+
+class TestAttemptTracking:
+    """Attempt number is tracked on interactions and message tags."""
+
+    def test_default_attempt_is_one(self) -> None:
+        adapter = GuidedSlackAdapter(_make_inner(), run_id="r1")
+        assert adapter.current_attempt == 1
+
+    def test_set_step_with_attempt(self) -> None:
+        adapter = GuidedSlackAdapter(_make_inner(), run_id="r1")
+        adapter.set_step("curation", attempt=3)
+        assert adapter.current_step == "curation"
+        assert adapter.current_attempt == 3
+
+    def test_set_step_resets_attempt_default(self) -> None:
+        adapter = GuidedSlackAdapter(_make_inner(), run_id="r1")
+        adapter.set_step("curation", attempt=2)
+        adapter.set_step("summarization")
+        assert adapter.current_attempt == 1
+
+    async def test_interaction_records_attempt(self) -> None:
+        adapter = GuidedSlackAdapter(_make_inner(), run_id="r1")
+        adapter.set_step("curation", attempt=2)
+
+        await adapter.send_message("#ch", "Hello")
+
+        assert adapter.interactions[0].attempt == 2
+
+    async def test_tag_includes_attempt_when_gt_one(self) -> None:
+        inner = _make_inner()
+        adapter = GuidedSlackAdapter(inner, run_id="abc")
+        adapter.set_step("theme_generation", attempt=2)
+
+        await adapter.send_message("#ch", "Pick theme")
+
+        inner.send_message.assert_awaited_once_with(
+            "#ch", "[abc/theme_generation (attempt 2)] Pick theme"
+        )
+
+    async def test_tag_omits_attempt_when_one(self) -> None:
+        inner = _make_inner()
+        adapter = GuidedSlackAdapter(inner, run_id="abc")
+        adapter.set_step("curation", attempt=1)
+
+        await adapter.send_message("#ch", "Hello")
+
+        inner.send_message.assert_awaited_once_with("#ch", "[abc/curation] Hello")
+
+    async def test_drain_includes_attempt_field(self) -> None:
+        adapter = GuidedSlackAdapter(_make_inner(), run_id="r1")
+        adapter.set_step("curation", attempt=2)
+        await adapter.send_and_wait("#ch", "Go?")
+
+        result = adapter.drain_step_interactions("curation")
+
+        assert len(result) == 1
+        assert result[0]["attempt"] == 2
+
+
+class TestDrainActuallyDrains:
+    """drain_step_interactions removes returned interactions from internal list."""
+
+    async def test_drain_removes_interactions(self) -> None:
+        adapter = GuidedSlackAdapter(_make_inner(), run_id="r1")
+        adapter.set_step("curation")
+        await adapter.send_message("#ch", "Hello")
+
+        result = adapter.drain_step_interactions("curation")
+        assert len(result) == 1
+
+        # Second drain returns empty — already consumed
+        result2 = adapter.drain_step_interactions("curation")
+        assert result2 == []
+
+    async def test_drain_preserves_other_steps(self) -> None:
+        adapter = GuidedSlackAdapter(_make_inner(), run_id="r1")
+        adapter.set_step("curation")
+        await adapter.send_message("#ch", "Cur msg")
+        adapter.set_step("summarization")
+        await adapter.send_message("#ch", "Sum msg")
+
+        # Drain only curation
+        adapter.drain_step_interactions("curation")
+
+        # Summarization interactions are still present
+        assert len(adapter.step_interactions("summarization")) == 1
+        assert len(adapter.interactions) == 1
+
+    async def test_drain_across_redo_attempts(self) -> None:
+        """Simulate redo: drain attempt 1, then record attempt 2, drain again."""
+        adapter = GuidedSlackAdapter(_make_inner(), run_id="r1")
+
+        # Attempt 1
+        adapter.set_step("curation", attempt=1)
+        await adapter.send_and_wait("#ch", "Go?")
+        first = adapter.drain_step_interactions("curation")
+        assert len(first) == 1
+        assert first[0]["attempt"] == 1
+
+        # Attempt 2
+        adapter.set_step("curation", attempt=2)
+        await adapter.send_and_wait("#ch", "Go again?")
+        second = adapter.drain_step_interactions("curation")
+        assert len(second) == 1
+        assert second[0]["attempt"] == 2
+
+
+class TestInvalidatePending:
+    """invalidate_pending clears stale callbacks from the inner service."""
+
+    def test_clears_pending_dict(self) -> None:
+        inner = _make_inner()
+        inner.pending = {"cb-123": MagicMock(), "cb-456": MagicMock()}
+        adapter = GuidedSlackAdapter(inner, run_id="r1")
+
+        count = adapter.invalidate_pending()
+
+        assert count == 2
+        assert inner.pending == {}
+
+    def test_noop_when_no_pending(self) -> None:
+        inner = _make_inner()
+        inner.pending = {}
+        adapter = GuidedSlackAdapter(inner, run_id="r1")
+
+        count = adapter.invalidate_pending()
+
+        assert count == 0
+
+
+class TestMergeAccumulatesAcrossRedo:
+    """_merge_slack_interactions accumulates interactions across redo attempts."""
+
+    def _make_state_at_step(self, step_index: int = 0) -> TestRunState:
+        state = TestRunState(run_id="r1")
+        state.current_step_index = step_index
+        state.steps[step_index].status = StepStatus.COMPLETED
+        return state
+
+    async def test_merge_accumulates_on_redo(self) -> None:
+        adapter = GuidedSlackAdapter(_make_inner(), run_id="r1")
+        state = self._make_state_at_step(0)
+
+        # Attempt 1
+        adapter.set_step("curation", attempt=1)
+        await adapter.send_and_wait("#ch", "Ready?")
+        _merge_slack_interactions(adapter, StepName.CURATION, state)
+        assert len(state.steps[0].artifacts["slack_interactions"]) == 1
+
+        # Attempt 2
+        adapter.set_step("curation", attempt=2)
+        await adapter.send_and_wait("#ch", "Ready again?")
+        _merge_slack_interactions(adapter, StepName.CURATION, state)
+
+        # Both attempts' interactions should be present
+        interactions = state.steps[0].artifacts["slack_interactions"]
+        assert len(interactions) == 2
+        assert interactions[0]["attempt"] == 1
+        assert interactions[1]["attempt"] == 2
+
+    async def test_decisions_accumulate_across_redo(self) -> None:
+        adapter = GuidedSlackAdapter(_make_inner(), run_id="r1")
+        state = self._make_state_at_step(0)
+
+        # Attempt 1
+        adapter.set_step("curation", attempt=1)
+        await adapter.send_and_wait("#ch", "Ready?")
+        _merge_slack_interactions(adapter, StepName.CURATION, state)
+        assert len(state.decisions) == 1
+
+        # Attempt 2
+        adapter.set_step("curation", attempt=2)
+        await adapter.send_and_wait("#ch", "Ready again?")
+        _merge_slack_interactions(adapter, StepName.CURATION, state)
+
+        # Both decisions preserved
+        assert len(state.decisions) == 2
+        assert state.decisions[0].action == "slack:send_and_wait"
+        assert state.decisions[1].action == "slack:send_and_wait"
+
+
+class TestRedoReplayIntegration:
+    """Integration: redo sends new message with attempt tag and preserves history."""
+
+    @pytest.fixture
+    def store_dir(self, tmp_path: Path) -> Path:
+        return tmp_path / "guided-runs"
+
+    def _patch_steps(self):
+        def _get_step(name: StepName) -> AsyncMock:
+            async def step_fn(ctx: PipelineContext) -> PipelineContext:
+                return ctx
+
+            return AsyncMock(side_effect=step_fn)
+
+        return patch("ica.guided.runner.get_step_fn", side_effect=_get_step)
+
+    async def test_redo_passes_incremented_attempt(self, store_dir: Path) -> None:
+        """On redo, set_step receives attempt=2."""
+        inner = _make_inner()
+        adapter = GuidedSlackAdapter(inner, run_id="redo-test")
+        console = MagicMock()
+        attempts_seen: list[int] = []
+        original_set_step = adapter.set_step
+
+        def tracking_set_step(name: str, *, attempt: int = 1) -> None:
+            attempts_seen.append(attempt)
+            original_set_step(name, attempt=attempt)
+
+        adapter.set_step = tracking_set_step  # type: ignore[method-assign]
+
+        # Redo first step, then stop
+        inputs = iter(["r", "s"])
+
+        with (
+            self._patch_steps(),
+            patch("ica.services.slack.set_shared_service"),
+            patch("ica.services.slack.get_shared_service", return_value=None),
+        ):
+            state = await run_guided(
+                store_dir=store_dir,
+                console=console,
+                prompt_fn=lambda _: next(inputs),
+                slack_override=adapter,
+            )
+
+        assert state.steps[0].attempt == 2
+        assert attempts_seen == [1, 2]
+
+    async def test_redo_invalidates_pending_callbacks(self, store_dir: Path) -> None:
+        """On redo, invalidate_pending is called to clear stale callbacks."""
+        inner = _make_inner()
+        adapter = GuidedSlackAdapter(inner, run_id="inv-test")
+        console = MagicMock()
+        invalidate_calls: list[bool] = []
+        original_invalidate = adapter.invalidate_pending
+
+        def tracking_invalidate() -> int:
+            invalidate_calls.append(True)
+            return original_invalidate()
+
+        adapter.invalidate_pending = tracking_invalidate  # type: ignore[method-assign]
+
+        # Redo first step, then stop
+        inputs = iter(["r", "s"])
+
+        with (
+            self._patch_steps(),
+            patch("ica.services.slack.set_shared_service"),
+            patch("ica.services.slack.get_shared_service", return_value=None),
+        ):
+            await run_guided(
+                store_dir=store_dir,
+                console=console,
+                prompt_fn=lambda _: next(inputs),
+                slack_override=adapter,
+            )
+
+        # invalidate_pending should have been called on the redo (attempt 2)
+        assert len(invalidate_calls) == 1

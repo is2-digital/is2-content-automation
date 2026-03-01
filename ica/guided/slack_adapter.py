@@ -46,6 +46,7 @@ class SlackInteraction:
     timestamp: str
     message: str = ""
     response: dict[str, str] | str | None = None
+    attempt: int = 1
 
 
 def _now_iso() -> str:
@@ -92,6 +93,7 @@ class GuidedSlackAdapter:
         self._run_id = run_id
         self._timeout = timeout
         self._current_step: str = ""
+        self._attempt: int = 1
         self._interactions: list[SlackInteraction] = []
 
     # --- Configuration ---
@@ -107,14 +109,27 @@ class GuidedSlackAdapter:
 
     # --- Step tracking ---
 
-    def set_step(self, step_name: str) -> None:
-        """Set the current pipeline step name for interaction correlation."""
+    def set_step(self, step_name: str, *, attempt: int = 1) -> None:
+        """Set the current pipeline step name and attempt for interaction correlation.
+
+        Args:
+            step_name: Pipeline step name (e.g. ``"theme_generation"``).
+            attempt: Current attempt number (1-based).  On redo the runner
+                passes the incremented attempt so messages and interaction
+                records carry the correct attempt tag.
+        """
         self._current_step = step_name
+        self._attempt = attempt
 
     @property
     def current_step(self) -> str:
         """The currently active step name."""
         return self._current_step
+
+    @property
+    def current_attempt(self) -> int:
+        """The attempt number for the current step."""
+        return self._attempt
 
     # --- Interaction log ---
 
@@ -128,8 +143,38 @@ class GuidedSlackAdapter:
         return [i for i in self._interactions if i.step == step_name]
 
     def drain_step_interactions(self, step_name: str) -> list[dict[str, Any]]:
-        """Return serialised interactions for *step_name* (for artifact storage)."""
-        return [asdict(i) for i in self.step_interactions(step_name)]
+        """Remove and return serialised interactions for *step_name*.
+
+        Interactions are removed from the internal list so that a subsequent
+        redo of the same step does not re-return earlier attempt interactions.
+        """
+        kept: list[SlackInteraction] = []
+        drained: list[SlackInteraction] = []
+        for i in self._interactions:
+            if i.step == step_name:
+                drained.append(i)
+            else:
+                kept.append(i)
+        self._interactions = kept
+        return [asdict(i) for i in drained]
+
+    # --- Redo support ---
+
+    def invalidate_pending(self) -> int:
+        """Remove any pending callbacks from the inner service.
+
+        Call before starting a redo to prevent stale callbacks from a previous
+        attempt being resolved when the operator clicks an outdated button.
+
+        Returns:
+            Number of invalidated callbacks.
+        """
+        pending = self._inner.pending
+        count = len(pending)
+        if count:
+            pending.clear()
+            logger.info("Invalidated %d pending Slack callback(s)", count)
+        return count
 
     # --- Internal helpers ---
 
@@ -145,17 +190,25 @@ class GuidedSlackAdapter:
             timestamp=_now_iso(),
             message=message,
             response=response,
+            attempt=self._attempt,
         )
         self._interactions.append(interaction)
         logger.debug(
-            "Recorded Slack interaction: step=%s method=%s",
+            "Recorded Slack interaction: step=%s method=%s attempt=%d",
             self._current_step,
             method,
+            self._attempt,
         )
         return interaction
 
     def _tag(self, text: str) -> str:
-        """Prepend run/step metadata to message text."""
+        """Prepend run/step metadata to message text.
+
+        For attempt > 1, the attempt number is appended so the operator can
+        distinguish a redo message from the original.
+        """
+        if self._attempt > 1:
+            return f"[{self._run_id}/{self._current_step} (attempt {self._attempt})] {text}"
         return f"[{self._run_id}/{self._current_step}] {text}"
 
     # --- Delegated SlackService interface ---
@@ -198,9 +251,7 @@ class GuidedSlackAdapter:
         tagged = self._tag(text)
         try:
             async with asyncio.timeout(self._timeout):
-                await self._inner.send_and_wait(
-                    channel, tagged, approve_label=approve_label
-                )
+                await self._inner.send_and_wait(channel, tagged, approve_label=approve_label)
         except TimeoutError:
             self._record("send_and_wait", text, response={"error": "timeout"})
             raise SlackTimeoutError("send_and_wait", self._timeout or 0) from None
