@@ -1,0 +1,77 @@
+{
+  "_description": "Expected state after stopping at step 4 (markdown_generation), then resuming and completing. Pre-stop artifacts persist, resumed step gets attempt 2, remaining steps get attempt 1.",
+  "stop_after_step": "theme_generation",
+  "stop_step_index": 2,
+  "resume_step": "markdown_generation",
+  "resume_step_index": 3,
+  "pre_stop_entries": [
+    {
+      "step_name": "curation",
+      "artifact_type": "llm_output",
+      "key": "article_count",
+      "attempt_number": 1
+    },
+    {
+      "step_name": "curation",
+      "artifact_type": "llm_output",
+      "key": "newsletter_id",
+      "attempt_number": 1
+    },
+    {
+      "step_name": "curation",
+      "artifact_type": "google_sheet",
+      "key": "curated_articles_sheet",
+      "attempt_number": 1
+    },
+    {
+      "step_name": "summarization",
+      "artifact_type": "llm_output",
+      "key": "summary_count",
+      "attempt_number": 1
+    },
+    {
+      "step_name": "summarization",
+      "artifact_type": "google_sheet",
+      "key": "article_summaries_sheet",
+      "attempt_number": 1
+    },
+    {
+      "step_name": "theme_generation",
+      "artifact_type": "llm_output",
+      "key": "theme_name",
+      "attempt_number": 1
+    }
+  ],
+  "post_resume_entries_include": [
+    {
+      "step_name": "markdown_generation",
+      "artifact_type": "google_doc",
+      "key": "markdown_doc"
+    },
+    {
+      "step_name": "html_generation",
+      "artifact_type": "google_doc",
+      "key": "html_doc"
+    },
+    {
+      "step_name": "email_subject",
+      "artifact_type": "llm_output",
+      "key": "email_subject"
+    },
+    {
+      "step_name": "social_media",
+      "artifact_type": "google_doc",
+      "key": "social_media_doc"
+    },
+    {
+      "step_name": "linkedin_carousel",
+      "artifact_type": "google_doc",
+      "key": "linkedin_carousel_doc"
+    }
+  ],
+  "state": {
+    "final_phase": "completed",
+    "completed_steps": 9,
+    "decisions_include_stop": true
+  }
+}

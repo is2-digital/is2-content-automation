@@ -1,0 +1,90 @@
+{
+  "_description": "Expected artifact entries for a full 9-step happy-path guided run. Volatile fields (run_id, timestamp) are omitted — tests compare structural keys only.",
+  "entries": [
+    {
+      "step_name": "curation",
+      "artifact_type": "llm_output",
+      "key": "article_count",
+      "attempt_number": 1
+    },
+    {
+      "step_name": "curation",
+      "artifact_type": "llm_output",
+      "key": "newsletter_id",
+      "attempt_number": 1
+    },
+    {
+      "step_name": "curation",
+      "artifact_type": "google_sheet",
+      "key": "curated_articles_sheet",
+      "attempt_number": 1
+    },
+    {
+      "step_name": "summarization",
+      "artifact_type": "llm_output",
+      "key": "summary_count",
+      "attempt_number": 1
+    },
+    {
+      "step_name": "summarization",
+      "artifact_type": "google_sheet",
+      "key": "article_summaries_sheet",
+      "attempt_number": 1
+    },
+    {
+      "step_name": "theme_generation",
+      "artifact_type": "llm_output",
+      "key": "theme_name",
+      "attempt_number": 1
+    },
+    {
+      "step_name": "markdown_generation",
+      "artifact_type": "google_doc",
+      "key": "markdown_doc",
+      "attempt_number": 1
+    },
+    {
+      "step_name": "html_generation",
+      "artifact_type": "google_doc",
+      "key": "html_doc",
+      "attempt_number": 1
+    },
+    {
+      "step_name": "alternates_html",
+      "artifact_type": "llm_output",
+      "key": "unused_article_count",
+      "attempt_number": 1
+    },
+    {
+      "step_name": "email_subject",
+      "artifact_type": "llm_output",
+      "key": "email_subject",
+      "attempt_number": 1
+    },
+    {
+      "step_name": "email_subject",
+      "artifact_type": "google_doc",
+      "key": "email_doc",
+      "attempt_number": 1
+    },
+    {
+      "step_name": "social_media",
+      "artifact_type": "google_doc",
+      "key": "social_media_doc",
+      "attempt_number": 1
+    },
+    {
+      "step_name": "linkedin_carousel",
+      "artifact_type": "google_doc",
+      "key": "linkedin_carousel_doc",
+      "attempt_number": 1
+    }
+  ],
+  "state": {
+    "phase": "completed",
+    "completed_steps": 9,
+    "pending_steps": 0,
+    "failed_steps": 0,
+    "max_attempt": 1
+  }
+}

@@ -2,7 +2,17 @@
 
 ## Current Status
 **Last Updated:** 2026-03-01
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1, ica-476.7.2, ica-476.7.3, ica-476.7.4, ica-476.8.1, ica-476.8.2, ica-476.8.3, ica-476.8.4, ica-476.8.5
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1, ica-476.7.2, ica-476.7.3, ica-476.7.4, ica-476.8.1, ica-476.8.2, ica-476.8.3, ica-476.8.4, ica-476.8.5, ica-476.9
+
+### 2026-03-01 — ica-476.9: Add full guided-flow verification suite and replay fixtures
+- New `tests/test_guided/test_verification.py` with 36 tests across 4 test classes
+- `TestHappyPathVerification` (9 tests): full 9-step flow with state+artifact consistency, golden-file comparison, state summary validation, disk round-trip, context snapshot
+- `TestRedoBranchVerification` (8 tests): redo theme_generation, verify both attempts in ledger, artifact history, fixture comparison, decisions include redo
+- `TestResumeAfterInterruption` (8 tests): crash via KeyboardInterrupt on step 4, resume from persisted RUNNING state, verify pre-crash artifacts survive, post-resume artifacts present, consistency
+- `TestConsistencyInvariants` (11 tests): parameterized across 6 scenarios (happy path, redo first/last/middle, double redo, stop early), step count alignment, partial run alignment, entry type/key/value validation
+- `assert_state_artifact_consistency()` checks 6 invariants: completed steps have entries, attempt alignment, run_id match, history implies multi-attempt entries, pending steps clean, chronological ordering
+- 3 replay fixture JSON files in `tests/test_guided/fixtures/`: `happy_path.json`, `redo_branch.json`, `resume_after_stop.json` for golden-file regression testing
+- All 452 guided tests pass, 130 CLI tests pass, ruff clean
 
 ### 2026-03-01 — ica-476.8.5: Add tests verifying artifact completeness across full guided flow
 - New test file `tests/test_guided/test_artifact_completeness.py` with 24 tests across 5 test classes
