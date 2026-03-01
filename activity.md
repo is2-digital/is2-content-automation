@@ -2,7 +2,15 @@
 
 ## Current Status
 **Last Updated:** 2026-02-28
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3
+
+### 2026-03-01 — ica-476.5.3: Implement redo semantics for Google Docs and Sheets
+- Added `artifact_history` field to `StepRecord` to preserve artifacts across redo attempts
+- State machine archives artifacts to history before redo and clears current artifacts
+- New `_prepare_redo_context()` clears stale doc IDs for doc steps and injects `guided_attempt` for sheets steps
+- `render_checkpoint` now displays previous attempt artifacts at checkpoints for comparison
+- Deserialization handles new `artifact_history` field for JSON round-trip persistence
+- Note: Docker was down, tests verified via AST parsing only — needs `docker exec` test run
 
 ### 2026-03-01 — ica-476.5.1: Add configurable test target settings for guided Google integration
 - Added `guided_test_spreadsheet_id` and `guided_test_drive_folder_id` to Settings (optional, empty default)

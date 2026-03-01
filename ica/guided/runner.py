@@ -135,6 +135,23 @@ def render_checkpoint(state: TestRunState, console: Console) -> None:
         if step.error:
             console.print(f"  Error: {step.error}")
 
+    # Show previous attempt artifacts so the operator can compare
+    # Google Docs / Sheets resources across redo attempts.
+    if step.artifact_history:
+        console.print(f"\n[dim]Previous attempts ({len(step.artifact_history)}):[/dim]")
+        for entry in step.artifact_history:
+            attempt_num = entry.get("attempt", "?")
+            arts = entry.get("artifacts", {})
+            # Show only Google resource IDs for concise output
+            doc_keys = [k for k in arts if k.endswith("_doc_id") or k == "document_url"]
+            if doc_keys:
+                for k in doc_keys:
+                    console.print(f"  [dim]attempt {attempt_num}: {k}={arts[k]}[/dim]")
+            else:
+                summary = ", ".join(f"{k}={v}" for k, v in arts.items() if k != "slack_interactions")
+                if summary:
+                    console.print(f"  [dim]attempt {attempt_num}: {summary}[/dim]")
+
 
 # ---------------------------------------------------------------------------
 # Operator prompt
@@ -370,9 +387,16 @@ async def run_guided(
             step_fn = get_step_fn(step_name)
             console.print(f"\n[cyan]Running step: {step_name.value}[/cyan]")
 
+            step_attempt = state.current_step.attempt
+
+            # Redo preparation — clear stale Google resource references
+            # and inject attempt metadata so the step creates fresh
+            # resources rather than overwriting previous attempts.
+            if step_attempt > 1:
+                _prepare_redo_context(step_name, step_attempt, ctx)
+
             # Tell the Slack adapter which step is about to run
             if slack_override is not None and hasattr(slack_override, "set_step"):
-                step_attempt = state.current_step.attempt
                 slack_override.set_step(step_name.value, attempt=step_attempt)
                 # On redo (attempt > 1), clear stale pending callbacks so old
                 # Slack buttons cannot resolve against the new attempt.
@@ -510,6 +534,61 @@ def _get_sheets_refs() -> dict[str, str]:
         refs["spreadsheet_url"] = _google_sheet_url(spreadsheet_id)
         refs["sheet_name"] = "Sheet1"
     return refs
+
+
+# ---------------------------------------------------------------------------
+# Redo context preparation
+# ---------------------------------------------------------------------------
+
+# Steps that create Google Docs — on redo, stale doc IDs are cleared from
+# context so the pipeline step creates a fresh document rather than
+# potentially referencing an old one.
+_DOC_STEPS: dict[StepName, list[str]] = {
+    StepName.MARKDOWN_GENERATION: ["markdown_doc_id"],
+    StepName.HTML_GENERATION: ["html_doc_id"],
+}
+
+# Steps whose doc IDs live in ctx.extra rather than top-level attributes.
+_EXTRA_DOC_STEPS: dict[StepName, list[str]] = {
+    StepName.EMAIL_SUBJECT: ["email_doc_id"],
+    StepName.SOCIAL_MEDIA: ["social_media_doc_id"],
+    StepName.LINKEDIN_CAROUSEL: ["linkedin_carousel_doc_id"],
+}
+
+# Steps that write to Google Sheets — on redo, the attempt number is
+# injected into ctx.extra["guided_attempt"] so the step can tag rows
+# with which attempt produced them.
+_SHEETS_STEPS: frozenset[StepName] = frozenset({
+    StepName.CURATION,
+    StepName.SUMMARIZATION,
+})
+
+
+def _prepare_redo_context(step_name: StepName, attempt: int, ctx: PipelineContext) -> None:
+    """Prepare the PipelineContext for a redo execution.
+
+    Redo semantics differ by resource type:
+
+    * **Google Docs** — clear the stale doc ID from context so the step
+      creates a *new* document.  The old doc still exists on Drive; its
+      ID is preserved in ``StepRecord.artifact_history``.
+    * **Google Sheets** — inject ``ctx.extra["guided_attempt"]`` so the
+      step can tag appended rows with the attempt number, keeping data
+      from all attempts visible in the same spreadsheet.
+
+    Called before re-running a step when ``attempt > 1``.
+    """
+    # Clear stale Google Doc IDs from top-level context attributes
+    for attr in _DOC_STEPS.get(step_name, ()):
+        setattr(ctx, attr, None)
+
+    # Clear stale Google Doc IDs from ctx.extra
+    for key in _EXTRA_DOC_STEPS.get(step_name, ()):
+        ctx.extra.pop(key, None)
+
+    # Inject attempt tag for Google Sheets steps
+    if step_name in _SHEETS_STEPS:
+        ctx.extra["guided_attempt"] = attempt
 
 
 def _extract_artifacts(step_name: StepName, ctx: PipelineContext) -> dict[str, Any]:

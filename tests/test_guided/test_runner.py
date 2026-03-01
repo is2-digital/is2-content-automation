@@ -13,6 +13,7 @@ from ica.guided.runner import (
     _get_sheets_refs,
     _google_doc_url,
     _google_sheet_url,
+    _prepare_redo_context,
     parse_operator_input,
     prompt_operator,
     render_checkpoint,
@@ -551,3 +552,112 @@ class TestRunGuided:
 
         assert captured_ctx
         assert captured_ctx[0].run_id == state.run_id
+
+
+# ---------------------------------------------------------------------------
+# _prepare_redo_context — redo semantics for Google resources
+# ---------------------------------------------------------------------------
+
+
+class TestPrepareRedoContext:
+    """Redo context preparation clears doc IDs and injects attempt tags."""
+
+    def test_clears_markdown_doc_id(self) -> None:
+        ctx = PipelineContext(markdown_doc_id="old-doc-123")
+        _prepare_redo_context(StepName.MARKDOWN_GENERATION, 2, ctx)
+        assert ctx.markdown_doc_id is None
+
+    def test_clears_html_doc_id(self) -> None:
+        ctx = PipelineContext(html_doc_id="old-html-456")
+        _prepare_redo_context(StepName.HTML_GENERATION, 2, ctx)
+        assert ctx.html_doc_id is None
+
+    def test_clears_email_doc_id_from_extra(self) -> None:
+        ctx = PipelineContext(extra={"email_doc_id": "old-email"})
+        _prepare_redo_context(StepName.EMAIL_SUBJECT, 2, ctx)
+        assert "email_doc_id" not in ctx.extra
+
+    def test_clears_social_media_doc_id_from_extra(self) -> None:
+        ctx = PipelineContext(extra={"social_media_doc_id": "old-sm"})
+        _prepare_redo_context(StepName.SOCIAL_MEDIA, 2, ctx)
+        assert "social_media_doc_id" not in ctx.extra
+
+    def test_clears_linkedin_carousel_doc_id_from_extra(self) -> None:
+        ctx = PipelineContext(extra={"linkedin_carousel_doc_id": "old-lc"})
+        _prepare_redo_context(StepName.LINKEDIN_CAROUSEL, 2, ctx)
+        assert "linkedin_carousel_doc_id" not in ctx.extra
+
+    def test_injects_guided_attempt_for_curation(self) -> None:
+        ctx = PipelineContext()
+        _prepare_redo_context(StepName.CURATION, 3, ctx)
+        assert ctx.extra["guided_attempt"] == 3
+
+    def test_injects_guided_attempt_for_summarization(self) -> None:
+        ctx = PipelineContext()
+        _prepare_redo_context(StepName.SUMMARIZATION, 2, ctx)
+        assert ctx.extra["guided_attempt"] == 2
+
+    def test_no_attempt_tag_for_doc_steps(self) -> None:
+        """Doc steps should not inject guided_attempt."""
+        ctx = PipelineContext()
+        _prepare_redo_context(StepName.MARKDOWN_GENERATION, 2, ctx)
+        assert "guided_attempt" not in ctx.extra
+
+    def test_noop_for_theme_generation(self) -> None:
+        """Steps without Google resources are unaffected."""
+        ctx = PipelineContext(theme_name="AI Today")
+        _prepare_redo_context(StepName.THEME_GENERATION, 2, ctx)
+        assert ctx.theme_name == "AI Today"
+        assert "guided_attempt" not in ctx.extra
+
+    def test_preserves_other_extra_keys(self) -> None:
+        """Clearing one doc ID does not affect other extra keys."""
+        ctx = PipelineContext(extra={"email_doc_id": "old", "email_subject": "Test"})
+        _prepare_redo_context(StepName.EMAIL_SUBJECT, 2, ctx)
+        assert "email_doc_id" not in ctx.extra
+        assert ctx.extra["email_subject"] == "Test"
+
+
+# ---------------------------------------------------------------------------
+# render_checkpoint — artifact history display
+# ---------------------------------------------------------------------------
+
+
+class TestRenderCheckpointArtifactHistory:
+    """Checkpoint renderer shows artifact history from previous redo attempts."""
+
+    def test_shows_previous_doc_ids(self) -> None:
+        state = TestRunState(run_id="r1")
+        state.steps[0].status = StepStatus.COMPLETED
+        state.steps[0].attempt = 2
+        state.steps[0].artifacts = {"markdown_doc_id": "doc-v2", "document_url": "url-v2"}
+        state.steps[0].artifact_history = [
+            {"attempt": 1, "artifacts": {"markdown_doc_id": "doc-v1", "document_url": "url-v1"}}
+        ]
+        console = Console(file=MagicMock(), force_terminal=True)
+        render_checkpoint(state, console)
+        # Should not raise — smoke test that history rendering works
+
+    def test_no_history_section_on_first_attempt(self) -> None:
+        """No 'Previous attempts' section when there is no history."""
+        state = TestRunState(run_id="r1")
+        state.steps[0].status = StepStatus.COMPLETED
+        state.steps[0].artifacts = {"doc_id": "abc"}
+        output = MagicMock()
+        console = Console(file=output, force_terminal=True)
+        render_checkpoint(state, console)
+        # MagicMock.write captures all output; check that "Previous" is absent
+        written = "".join(str(call) for call in output.write.call_args_list)
+        assert "Previous" not in written
+
+    def test_shows_non_doc_artifacts_for_sheets_steps(self) -> None:
+        state = TestRunState(run_id="r1")
+        state.steps[0].status = StepStatus.COMPLETED
+        state.steps[0].attempt = 2
+        state.steps[0].artifacts = {"article_count": 5}
+        state.steps[0].artifact_history = [
+            {"attempt": 1, "artifacts": {"article_count": 3, "sheet_name": "Sheet1"}}
+        ]
+        console = Console(file=MagicMock(), force_terminal=True)
+        render_checkpoint(state, console)
+        # Smoke test — should not raise

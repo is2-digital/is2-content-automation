@@ -286,6 +286,55 @@ class TestRedo:
         sm.apply_decision(OperatorAction.REDO)
         assert sm.state.current_step.attempt == 3
 
+    def test_redo_archives_artifacts(self, tmp_path: Path):
+        """Redo saves the current attempt's artifacts into artifact_history."""
+        sm = _at_checkpoint(tmp_path)
+        step = sm.state.current_step
+        assert step.artifacts == {"doc_id": "abc"}
+        sm.apply_decision(OperatorAction.REDO)
+        assert step.artifacts == {}
+        assert len(step.artifact_history) == 1
+        assert step.artifact_history[0] == {"attempt": 1, "artifacts": {"doc_id": "abc"}}
+
+    def test_redo_skips_archive_when_no_artifacts(self, tmp_path: Path):
+        """Redo with empty artifacts does not create a history entry."""
+        sm = _started_sm(tmp_path)
+        sm.complete_step()  # No artifacts
+        sm.apply_decision(OperatorAction.REDO)
+        assert sm.state.current_step.artifact_history == []
+
+    def test_multiple_redos_build_artifact_history(self, tmp_path: Path):
+        """Each redo appends a new entry to artifact_history."""
+        sm = _at_checkpoint(tmp_path)  # attempt 1 with {"doc_id": "abc"}
+        sm.apply_decision(OperatorAction.REDO)
+        sm.complete_step(artifacts={"doc_id": "def"})  # attempt 2
+        sm.apply_decision(OperatorAction.REDO)
+        sm.complete_step(artifacts={"doc_id": "ghi"})  # attempt 3
+        sm.apply_decision(OperatorAction.REDO)
+
+        step = sm.state.current_step
+        assert step.attempt == 4
+        assert len(step.artifact_history) == 3
+        assert step.artifact_history[0]["artifacts"]["doc_id"] == "abc"
+        assert step.artifact_history[1]["artifacts"]["doc_id"] == "def"
+        assert step.artifact_history[2]["artifacts"]["doc_id"] == "ghi"
+
+    def test_redo_clears_current_artifacts(self, tmp_path: Path):
+        """Current artifacts dict is empty after redo, ready for fresh data."""
+        sm = _at_checkpoint(tmp_path)
+        assert sm.state.current_step.artifacts != {}
+        sm.apply_decision(OperatorAction.REDO)
+        assert sm.state.current_step.artifacts == {}
+
+    def test_artifact_history_persists_through_save_load(self, tmp_path: Path):
+        """Artifact history survives a save/load round-trip."""
+        sm = _at_checkpoint(tmp_path)
+        sm.apply_decision(OperatorAction.REDO)
+        loaded = sm._store.load("run-001")
+        step = loaded.steps[0]
+        assert len(step.artifact_history) == 1
+        assert step.artifact_history[0] == {"attempt": 1, "artifacts": {"doc_id": "abc"}}
+
 
 # ---------------------------------------------------------------------------
 # State machine — apply_decision: RESTART

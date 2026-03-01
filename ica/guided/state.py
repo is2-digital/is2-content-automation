@@ -76,7 +76,22 @@ GUIDED_STEP_ORDER: list[StepName] = [
 
 @dataclass
 class StepRecord:
-    """Record of a single step execution within a test run."""
+    """Record of a single step execution within a test run.
+
+    Redo semantics for Google resources:
+
+    * **Google Docs** — each redo creates a *new* document so the operator
+      can compare attempts side-by-side.  The previous document ID is
+      preserved in ``artifact_history``; it is **not** overwritten or
+      deleted.
+    * **Google Sheets** — each redo appends new rows tagged with an
+      ``attempt`` number so data from all attempts remains visible in
+      the same spreadsheet.
+    * ``artifact_history`` accumulates one entry per completed attempt
+      before a redo, keyed by attempt number.  This lets the operator
+      (and downstream integration tests) trace every Google resource
+      created across the run.
+    """
 
     name: str
     status: StepStatus = StepStatus.PENDING
@@ -85,6 +100,7 @@ class StepRecord:
     error: str | None = None
     attempt: int = 1
     artifacts: dict[str, Any] = field(default_factory=dict)
+    artifact_history: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -277,6 +293,14 @@ class TestRunStateMachine:
                 next_step.started_at = _now_iso()
 
         elif action == OperatorAction.REDO:
+            # Archive the current attempt's artifacts before resetting so
+            # the operator can trace every Google Doc / Sheet produced
+            # across attempts.
+            if current.artifacts:
+                current.artifact_history.append(
+                    {"attempt": current.attempt, "artifacts": dict(current.artifacts)}
+                )
+            current.artifacts = {}
             current.status = StepStatus.RUNNING
             current.started_at = _now_iso()
             current.completed_at = None
@@ -416,6 +440,7 @@ def _deserialize_state(data: dict[str, Any]) -> TestRunState:
             error=s.get("error"),
             attempt=s.get("attempt", 1),
             artifacts=s.get("artifacts", {}),
+            artifact_history=s.get("artifact_history", []),
         )
         for s in data.pop("steps", [])
     ]
