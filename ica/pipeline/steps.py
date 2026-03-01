@@ -60,7 +60,10 @@ def _make_sheets() -> GoogleSheetsService:
     from ica.services.google_sheets import GoogleSheetsService
 
     s = _get_settings()
-    return GoogleSheetsService(credentials_path=s.google_service_account_credentials_path)
+    return GoogleSheetsService(
+        credentials_path=s.google_service_account_credentials_path,
+        drive_id=s.google_shared_drive_id,
+    )
 
 
 def _make_docs() -> GoogleDocsService:
@@ -134,14 +137,26 @@ async def run_curation_step(ctx: PipelineContext) -> PipelineContext:
 
     Composes :func:`~ica.pipeline.article_curation.prepare_curation_data`
     and :func:`~ica.pipeline.article_curation.run_approval_flow`.
+
+    Ensures the spreadsheet and required tabs exist before proceeding.
+    If ``CURATED_ARTICLES_GOOGLE_SHEET_ID`` is empty or inaccessible,
+    a new spreadsheet is created automatically.
     """
     from ica.pipeline.article_curation import prepare_curation_data, run_approval_flow
 
     settings = _get_settings()
     slack = _make_slack()
     sheets = _make_sheets()
-    spreadsheet_id = settings.curated_articles_google_sheet_id
     channel = settings.slack_channel
+
+    # Ensure spreadsheet exists (creates one if needed)
+    spreadsheet_id = await sheets.ensure_spreadsheet(
+        settings.curated_articles_google_sheet_id,
+        title="IS2 Curated Articles",
+    )
+
+    # Ensure main tab exists
+    await sheets.ensure_tab(spreadsheet_id, "Sheet1")
 
     # Phase 1: prepare curation data (DB → Sheet)
     async with _session() as session:

@@ -743,6 +743,7 @@ class TestServiceFactories:
             _make_sheets()
             mock_sheets_cls.assert_called_once_with(
                 credentials_path="/tmp/google-sa.json",
+                drive_id="",
             )
 
     def test_make_docs_creates_service(self, mock_settings):

@@ -2,7 +2,18 @@
 
 ## Current Status
 **Last Updated:** 2026-03-01
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf
+
+### 2026-03-01 — ica-epf: Make Google Sheets setup resilient
+- Added Drive API scope and `_build_drive_service()` to `ica/services/google_sheets.py`
+- Added `drive_id` and `drive_service` params to `GoogleSheetsService` constructor
+- Added `create_spreadsheet(title)` — creates spreadsheet in Shared Drive (or via Sheets API fallback)
+- Added `ensure_spreadsheet(spreadsheet_id, title)` — validates existing ID or creates new one
+- Added `ensure_tab(spreadsheet_id, tab_name)` — creates tab if missing (supports future 'Rejected' tab from ica-zqm)
+- Updated `_make_sheets()` in `steps.py` to pass `drive_id=s.google_shared_drive_id`
+- Updated `run_curation_step()` to call `ensure_spreadsheet` and `ensure_tab` before curation
+- Added 12 new tests (create_spreadsheet, ensure_spreadsheet, ensure_tab) + updated existing init/factory tests
+- All 3719 tests pass, ruff + mypy clean
 
 ### 2026-03-01 — ica-vk5: Create LLM relevance assessment config and module
 - Created `ica/llm_configs/relevance-assessment-llm.json` — Gemini Flash config with structured JSON output (accept/reject + reason)

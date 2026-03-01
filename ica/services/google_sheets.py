@@ -1,4 +1,4 @@
-"""Google Sheets service wrapping the Sheets API v4.
+"""Google Sheets service wrapping the Sheets API v4 and Drive API v3.
 
 Provides :class:`GoogleSheetsService` that satisfies the Sheet protocol
 contracts used in the pipeline:
@@ -6,6 +6,12 @@ contracts used in the pipeline:
 * :class:`~ica.pipeline.article_curation.SheetWriter` — clear and append
 * :class:`~ica.pipeline.article_curation.SheetReader` — read rows
 * :class:`~ica.pipeline.summarization.SheetReader` — read rows
+
+Also provides spreadsheet lifecycle management:
+
+* :meth:`create_spreadsheet` — create a new spreadsheet in a Shared Drive
+* :meth:`ensure_spreadsheet` — return existing or create new spreadsheet
+* :meth:`ensure_tab` — create a sheet tab if it doesn't exist
 
 All Google API calls are synchronous under the hood
 (``google-api-python-client``), so each call is wrapped in
@@ -35,8 +41,12 @@ from ica.services.google_auth import load_credentials
 
 logger = get_logger(__name__)
 
-# Scopes required for read/write access to Google Sheets.
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+# Scopes required for read/write access to Google Sheets and Drive
+# (creating spreadsheets in Shared Drives requires the Drive scope).
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+]
 
 # Default range covering all columns (A through Z) to capture any data.
 DEFAULT_RANGE = "A:Z"
@@ -47,27 +57,174 @@ def _build_service(credentials: ServiceAccountCredentials) -> Resource:
     return build("sheets", "v4", credentials=credentials, cache_discovery=False)
 
 
+def _build_drive_service(credentials: ServiceAccountCredentials) -> Resource:
+    """Build a Google Drive API v3 service resource."""
+    return build("drive", "v3", credentials=credentials, cache_discovery=False)
+
+
 class GoogleSheetsService:
     """Async Google Sheets client satisfying pipeline SheetWriter/SheetReader.
 
     Args:
         credentials_path: Path to a Google service account JSON key file.
+        drive_id: Shared Drive ID where new spreadsheets are created.
+            Required for service accounts that have no Drive storage quota.
         service: Optional pre-built API service resource (for testing).
+        drive_service: Optional pre-built Drive API service resource (for testing).
     """
 
     def __init__(
         self,
         credentials_path: str | Path | None = None,
         *,
+        drive_id: str = "",
         service: Resource | None = None,
+        drive_service: Resource | None = None,
     ) -> None:
         if service is not None:
             self._service = service
+            self._drive_service = drive_service
         elif credentials_path is not None:
             creds = load_credentials(Path(credentials_path), SCOPES)
             self._service = _build_service(creds)
+            self._drive_service = _build_drive_service(creds)
         else:
             raise ValueError("Either credentials_path or service must be provided")
+        self._drive_id = drive_id
+
+    # ------------------------------------------------------------------
+    # Public API — spreadsheet lifecycle
+    # ------------------------------------------------------------------
+
+    async def create_spreadsheet(self, title: str) -> str:
+        """Create a new Google Sheets spreadsheet and return its ID.
+
+        When a Shared Drive ID is configured, the spreadsheet is created
+        via the Drive API inside the Shared Drive (service accounts have
+        no personal Drive storage quota).  Otherwise falls back to the
+        Sheets API directly.
+
+        Args:
+            title: The spreadsheet title.
+
+        Returns:
+            The spreadsheet ID of the newly created spreadsheet.
+        """
+        logger.info("Creating spreadsheet", extra={"title": title})
+
+        if self._drive_id and self._drive_service:
+            result = await asyncio.to_thread(
+                self._drive_service.files()
+                .create(
+                    body={
+                        "name": title,
+                        "mimeType": "application/vnd.google-apps.spreadsheet",
+                        "parents": [self._drive_id],
+                    },
+                    fields="id",
+                    supportsAllDrives=True,
+                )
+                .execute,
+            )
+            spreadsheet_id: str = result["id"]
+        else:
+            result = await asyncio.to_thread(
+                self._service.spreadsheets()
+                .create(
+                    body={"properties": {"title": title}},
+                    fields="spreadsheetId",
+                )
+                .execute,
+            )
+            spreadsheet_id = result["spreadsheetId"]
+
+        logger.info(
+            "Spreadsheet created",
+            extra={"spreadsheet_id": spreadsheet_id, "title": title},
+        )
+        return spreadsheet_id
+
+    async def ensure_spreadsheet(self, spreadsheet_id: str, title: str) -> str:
+        """Return the existing spreadsheet ID, or create a new spreadsheet.
+
+        Validates that the given ``spreadsheet_id`` points to an accessible
+        spreadsheet.  If the ID is empty or the spreadsheet cannot be found,
+        a new spreadsheet is created with the given ``title``.
+
+        Args:
+            spreadsheet_id: The spreadsheet ID to check (may be empty).
+            title: Title for the new spreadsheet if one must be created.
+
+        Returns:
+            A valid spreadsheet ID (existing or newly created).
+        """
+        if spreadsheet_id:
+            try:
+                await asyncio.to_thread(
+                    self._service.spreadsheets()
+                    .get(
+                        spreadsheetId=spreadsheet_id,
+                        fields="spreadsheetId",
+                    )
+                    .execute,
+                )
+                return spreadsheet_id
+            except Exception:
+                logger.warning(
+                    "Spreadsheet %s not accessible, creating a new one",
+                    spreadsheet_id,
+                )
+
+        new_id = await self.create_spreadsheet(title)
+        logger.warning(
+            "Set CURATED_ARTICLES_GOOGLE_SHEET_ID=%s in your .env file",
+            new_id,
+        )
+        return new_id
+
+    async def ensure_tab(self, spreadsheet_id: str, tab_name: str) -> None:
+        """Create a sheet tab if it doesn't already exist.
+
+        Fetches the spreadsheet metadata to check for existing tabs,
+        then creates the tab via ``batchUpdate`` if missing.
+
+        Args:
+            spreadsheet_id: The spreadsheet to check.
+            tab_name: The tab/sheet name to ensure exists.
+        """
+        result = await asyncio.to_thread(
+            self._service.spreadsheets()
+            .get(
+                spreadsheetId=spreadsheet_id,
+                fields="sheets.properties.title",
+            )
+            .execute,
+        )
+
+        existing_tabs = [
+            sheet["properties"]["title"] for sheet in result.get("sheets", [])
+        ]
+
+        if tab_name in existing_tabs:
+            return
+
+        logger.info(
+            "Creating tab",
+            extra={"spreadsheet_id": spreadsheet_id, "tab_name": tab_name},
+        )
+
+        await asyncio.to_thread(
+            self._service.spreadsheets()
+            .batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={
+                    "requests": [
+                        {"addSheet": {"properties": {"title": tab_name}}}
+                    ]
+                },
+            )
+            .execute,
+        )
 
     # ------------------------------------------------------------------
     # Public API — matches pipeline protocol contracts

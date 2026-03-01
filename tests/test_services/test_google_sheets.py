@@ -94,11 +94,17 @@ class TestInit:
                 "ica.services.google_sheets._build_service",
                 return_value=MagicMock(),
             ) as build_mock,
+            patch(
+                "ica.services.google_sheets._build_drive_service",
+                return_value=MagicMock(),
+            ) as drive_build_mock,
         ):
             svc = GoogleSheetsService(credentials_path=path)
             load_mock.assert_called_once_with(path, SCOPES)
             build_mock.assert_called_once()
+            drive_build_mock.assert_called_once()
             assert svc._service is build_mock.return_value
+            assert svc._drive_service is drive_build_mock.return_value
 
     def test_no_args_raises(self) -> None:
         with pytest.raises(ValueError, match="credentials_path or service"):
@@ -108,6 +114,21 @@ class TestInit:
         """When both are provided, service is used (credentials_path ignored)."""
         svc = GoogleSheetsService(credentials_path="/fake/path", service=mock_service)
         assert svc._service is mock_service
+
+    def test_drive_id_stored(self, mock_service: MagicMock) -> None:
+        svc = GoogleSheetsService(service=mock_service, drive_id="drive-123")
+        assert svc._drive_id == "drive-123"
+
+    def test_drive_service_stored(self, mock_service: MagicMock) -> None:
+        mock_drive = MagicMock()
+        svc = GoogleSheetsService(
+            service=mock_service, drive_service=mock_drive, drive_id="d1"
+        )
+        assert svc._drive_service is mock_drive
+
+    def test_drive_id_defaults_empty(self, mock_service: MagicMock) -> None:
+        svc = GoogleSheetsService(service=mock_service)
+        assert svc._drive_id == ""
 
     def test_credentials_path_string(self, tmp_path: Path) -> None:
         """Accepts string paths in addition to Path objects."""
@@ -119,6 +140,10 @@ class TestInit:
             ),
             patch(
                 "ica.services.google_sheets._build_service",
+                return_value=MagicMock(),
+            ),
+            patch(
+                "ica.services.google_sheets._build_drive_service",
                 return_value=MagicMock(),
             ),
         ):
@@ -741,3 +766,222 @@ class TestConstants:
 
     def test_scopes_contains_spreadsheets(self) -> None:
         assert any("spreadsheets" in s for s in SCOPES)
+
+    def test_scopes_contains_drive(self) -> None:
+        assert any("drive" in s for s in SCOPES)
+
+
+# ===========================================================================
+# create_spreadsheet
+# ===========================================================================
+
+
+class TestCreateSpreadsheet:
+    """Tests for GoogleSheetsService.create_spreadsheet()."""
+
+    @pytest.mark.asyncio
+    async def test_creates_via_drive_api_when_drive_id_set(self) -> None:
+        mock_sheets = MagicMock(spec=["spreadsheets"])
+        mock_drive = MagicMock()
+        mock_drive.files.return_value.create.return_value.execute.return_value = {
+            "id": "new-sheet-id"
+        }
+
+        svc = GoogleSheetsService(
+            service=mock_sheets, drive_service=mock_drive, drive_id="drive-abc"
+        )
+        result = await svc.create_spreadsheet("My Sheet")
+
+        assert result == "new-sheet-id"
+        mock_drive.files.return_value.create.assert_called_once_with(
+            body={
+                "name": "My Sheet",
+                "mimeType": "application/vnd.google-apps.spreadsheet",
+                "parents": ["drive-abc"],
+            },
+            fields="id",
+            supportsAllDrives=True,
+        )
+
+    @pytest.mark.asyncio
+    async def test_creates_via_sheets_api_when_no_drive(
+        self,
+        mock_service: MagicMock,
+    ) -> None:
+        mock_service.spreadsheets.return_value.create.return_value.execute.return_value = {
+            "spreadsheetId": "sheets-created-id"
+        }
+
+        svc = GoogleSheetsService(service=mock_service)
+        result = await svc.create_spreadsheet("My Sheet")
+
+        assert result == "sheets-created-id"
+        mock_service.spreadsheets.return_value.create.assert_called_once_with(
+            body={"properties": {"title": "My Sheet"}},
+            fields="spreadsheetId",
+        )
+
+    @pytest.mark.asyncio
+    async def test_creates_via_sheets_api_when_drive_id_empty(
+        self,
+        mock_service: MagicMock,
+    ) -> None:
+        """Empty drive_id string falls back to Sheets API."""
+        mock_service.spreadsheets.return_value.create.return_value.execute.return_value = {
+            "spreadsheetId": "fallback-id"
+        }
+
+        svc = GoogleSheetsService(service=mock_service, drive_id="")
+        result = await svc.create_spreadsheet("Title")
+
+        assert result == "fallback-id"
+
+
+# ===========================================================================
+# ensure_spreadsheet
+# ===========================================================================
+
+
+class TestEnsureSpreadsheet:
+    """Tests for GoogleSheetsService.ensure_spreadsheet()."""
+
+    @pytest.mark.asyncio
+    async def test_returns_existing_id_when_accessible(
+        self,
+        mock_service: MagicMock,
+    ) -> None:
+        mock_service.spreadsheets.return_value.get.return_value.execute.return_value = {
+            "spreadsheetId": "existing-id"
+        }
+        svc = GoogleSheetsService(service=mock_service)
+
+        result = await svc.ensure_spreadsheet("existing-id", "Title")
+
+        assert result == "existing-id"
+
+    @pytest.mark.asyncio
+    async def test_creates_when_id_empty(
+        self,
+        mock_service: MagicMock,
+    ) -> None:
+        mock_service.spreadsheets.return_value.create.return_value.execute.return_value = {
+            "spreadsheetId": "brand-new-id"
+        }
+        svc = GoogleSheetsService(service=mock_service)
+
+        result = await svc.ensure_spreadsheet("", "New Sheet")
+
+        assert result == "brand-new-id"
+
+    @pytest.mark.asyncio
+    async def test_creates_when_existing_not_accessible(
+        self,
+        mock_service: MagicMock,
+    ) -> None:
+        """If get() raises, creates a new spreadsheet."""
+        mock_service.spreadsheets.return_value.get.return_value.execute.side_effect = (
+            Exception("not found")
+        )
+        mock_service.spreadsheets.return_value.create.return_value.execute.return_value = {
+            "spreadsheetId": "replacement-id"
+        }
+        svc = GoogleSheetsService(service=mock_service)
+
+        result = await svc.ensure_spreadsheet("bad-id", "Replacement")
+
+        assert result == "replacement-id"
+
+    @pytest.mark.asyncio
+    async def test_does_not_call_get_when_id_empty(
+        self,
+        mock_service: MagicMock,
+    ) -> None:
+        mock_service.spreadsheets.return_value.create.return_value.execute.return_value = {
+            "spreadsheetId": "new-id"
+        }
+        svc = GoogleSheetsService(service=mock_service)
+
+        await svc.ensure_spreadsheet("", "Title")
+
+        mock_service.spreadsheets.return_value.get.assert_not_called()
+
+
+# ===========================================================================
+# ensure_tab
+# ===========================================================================
+
+
+class TestEnsureTab:
+    """Tests for GoogleSheetsService.ensure_tab()."""
+
+    @pytest.mark.asyncio
+    async def test_noop_when_tab_exists(
+        self,
+        mock_service: MagicMock,
+    ) -> None:
+        mock_service.spreadsheets.return_value.get.return_value.execute.return_value = {
+            "sheets": [
+                {"properties": {"title": "Sheet1"}},
+                {"properties": {"title": "Rejected"}},
+            ]
+        }
+        svc = GoogleSheetsService(service=mock_service)
+
+        await svc.ensure_tab("sid", "Sheet1")
+
+        mock_service.spreadsheets.return_value.batchUpdate.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_creates_tab_when_missing(
+        self,
+        mock_service: MagicMock,
+    ) -> None:
+        mock_service.spreadsheets.return_value.get.return_value.execute.return_value = {
+            "sheets": [{"properties": {"title": "Sheet1"}}]
+        }
+        mock_service.spreadsheets.return_value.batchUpdate.return_value.execute.return_value = {}
+        svc = GoogleSheetsService(service=mock_service)
+
+        await svc.ensure_tab("sid", "Rejected")
+
+        mock_service.spreadsheets.return_value.batchUpdate.assert_called_once_with(
+            spreadsheetId="sid",
+            body={
+                "requests": [
+                    {"addSheet": {"properties": {"title": "Rejected"}}}
+                ]
+            },
+        )
+
+    @pytest.mark.asyncio
+    async def test_creates_tab_when_no_sheets(
+        self,
+        mock_service: MagicMock,
+    ) -> None:
+        """Empty sheets list → tab must be created."""
+        mock_service.spreadsheets.return_value.get.return_value.execute.return_value = {
+            "sheets": []
+        }
+        mock_service.spreadsheets.return_value.batchUpdate.return_value.execute.return_value = {}
+        svc = GoogleSheetsService(service=mock_service)
+
+        await svc.ensure_tab("sid", "Sheet1")
+
+        mock_service.spreadsheets.return_value.batchUpdate.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_passes_correct_fields_param(
+        self,
+        mock_service: MagicMock,
+    ) -> None:
+        mock_service.spreadsheets.return_value.get.return_value.execute.return_value = {
+            "sheets": [{"properties": {"title": "Sheet1"}}]
+        }
+        svc = GoogleSheetsService(service=mock_service)
+
+        await svc.ensure_tab("sid", "Sheet1")
+
+        mock_service.spreadsheets.return_value.get.assert_called_once_with(
+            spreadsheetId="sid",
+            fields="sheets.properties.title",
+        )
