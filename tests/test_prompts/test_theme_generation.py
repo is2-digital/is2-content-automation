@@ -39,8 +39,9 @@ class TestSystemPrompt:
     def test_contains_headless_api_mode(self):
         assert "HEADLESS API" in _SYSTEM
 
-    def test_contains_marker_token_protocol(self):
-        assert "MARKER & TOKEN PROTOCOL" in _SYSTEM
+    def test_marker_protocol_not_in_shared_prompt(self):
+        """Marker protocol rules live in the per-process theme-generation config."""
+        assert "MARKER & TOKEN PROTOCOL" not in _SYSTEM
 
     def test_no_feedback_in_system_prompt(self):
         """Feedback is injected into the user prompt, not the system prompt."""
