@@ -5,6 +5,7 @@ Usage::
     python -m ica serve        # Start FastAPI server
     python -m ica run          # Trigger a pipeline run
     python -m ica status       # Show pipeline run status
+    python -m ica guided       # Guided step-by-step pipeline test flow
     python -m ica collect-articles  # Manual article collection
     python -m ica config        # Edit LLM process configs via Google Docs
     python -m ica config system # Edit the shared system prompt via Google Docs
@@ -165,6 +166,64 @@ def _status_color(status: str) -> str:
         "completed": "green",
         "failed": "red",
     }.get(status, "white")
+
+
+@app.command()
+def guided(
+    run_id: str | None = typer.Option(None, "--run-id", "-r", help="Resume an existing run."),
+    store_dir: str = typer.Option(
+        ".guided-runs", "--store-dir", help="Directory for persisted run state."
+    ),
+    list_runs: bool = typer.Option(False, "--list", "-l", help="List existing guided runs."),
+) -> None:
+    """Run the pipeline in guided mode — step-by-step with operator checkpoints.
+
+    Each step pauses for approval before proceeding. You can continue, redo the
+    current step, or stop. State is persisted to disk so you can resume after
+    interruptions.
+    """
+    from pathlib import Path
+
+    from ica.guided.state import TestRunStore
+
+    store_path = Path(store_dir)
+
+    if list_runs:
+        store = TestRunStore(store_path)
+        runs = store.list_runs()
+        if not runs:
+            console.print("[dim]No guided runs found.[/dim]")
+        else:
+            for rid in runs:
+                state = store.load(rid)
+                phase_str = state.phase.value
+                step_info = f"step {state.current_step_index + 1}/{len(state.steps)}"
+                console.print(f"  {rid}  {phase_str:<12}  {step_info}")
+        return
+
+    asyncio.run(_run_guided(run_id, store_path))
+
+
+async def _run_guided(run_id: str | None, store_dir: Any) -> None:
+    """Execute the guided pipeline flow."""
+    from ica.guided.runner import run_guided
+
+    try:
+        state = await run_guided(
+            run_id=run_id,
+            store_dir=store_dir,
+            console=console,
+        )
+        if state.phase.value == "completed":
+            console.print("[green]Guided run completed successfully.[/green]")
+        elif state.phase.value == "aborted":
+            console.print("[yellow]Guided run stopped.[/yellow]")
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Interrupted. Run state has been saved.[/yellow]")
+        console.print("Resume with: ica guided --run-id <run-id>")
+    except Exception as exc:
+        err_console.print(f"[red]Guided run failed:[/red] {exc}")
+        raise typer.Exit(code=1) from None
 
 
 @app.command(name="collect-articles")

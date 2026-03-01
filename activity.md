@@ -1,8 +1,8 @@
 # ims-tt - Activity Log
 
 ## Current Status
-**Last Updated:** 2026-03-01
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1
+**Last Updated:** 2026-02-28
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2
 
 ### 2026-03-01 — ica-476.1: Implement pipeline test-run state machine and checkpoints
 - New `ica/guided/` package with `state.py` — test-run state machine for guided pipeline test flow
@@ -2043,5 +2043,20 @@ After completing each task, add an entry below in this format:
 - Updated CLI `collect-articles` command output with status column and accepted/rejected counts
 - Updated scheduler tests (`test_scheduler.py`) to match new BraveSearchClient and summary keys
 - All 3704 tests pass
+
+**Blockers:** None
+
+---
+
+### 2026-02-28 — ica-476.2: Add guided CLI command for end-to-end user test flow
+
+**What was done:**
+- Created `ica/guided/runner.py` — core async guided runner that drives each pipeline step sequentially, pausing at checkpoints for operator decisions (continue/redo/stop)
+- Added `ica guided` command to `ica/__main__.py` with `--run-id` (resume), `--store-dir`, and `--list` options
+- Runner features: Rich console display (header panel, step table, checkpoint info), operator prompting with input validation, PipelineContext snapshot/restore for resume, artifact extraction per step
+- State is persisted to JSON files via TestRunStore after every transition — survives process restarts
+- Created `tests/test_guided/test_runner.py` (49 tests) covering input parsing, prompting, context snapshots, artifact extraction, render helpers, and full integration flows (complete all steps, stop, redo, failure+retry, resume, persistence)
+- Created `tests/test_cli/test_guided.py` (9 tests) covering help, listing, delegation to run_guided, custom options, error handling
+- All 201 guided+CLI tests pass, ruff clean
 
 **Blockers:** None
