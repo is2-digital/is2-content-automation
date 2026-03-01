@@ -10,9 +10,11 @@ helpers at the bottom of this module keep the format round-trippable.
 
 from __future__ import annotations
 
+import json
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
 # ---------------------------------------------------------------------------
@@ -118,6 +120,65 @@ def deserialize_ledger(data: list[dict[str, Any]]) -> ArtifactLedger:
         for d in data
     ]
     return ArtifactLedger(entries=entries)
+
+
+# ---------------------------------------------------------------------------
+# Persistence
+# ---------------------------------------------------------------------------
+
+
+class ArtifactStore:
+    """JSON-file-based persistence for artifact ledgers.
+
+    Each test run's artifacts are stored in a ``{run_id}-artifacts.json``
+    file alongside the ``{run_id}.json`` state file managed by
+    :class:`~ica.guided.state.TestRunStore`.  The file is append-only
+    during a run — each call to :meth:`append_artifact` reads, appends,
+    and rewrites the full list.
+    """
+
+    def __init__(self, base_dir: Path) -> None:
+        self._base_dir = base_dir
+
+    @property
+    def base_dir(self) -> Path:
+        return self._base_dir
+
+    def append_artifact(self, run_id: str, entry: ArtifactEntry) -> None:
+        """Append *entry* to the ledger file for *run_id*."""
+        self._base_dir.mkdir(parents=True, exist_ok=True)
+        path = self._ledger_path(run_id)
+        data: list[dict[str, Any]] = []
+        if path.exists():
+            data = json.loads(path.read_text())
+        data.append(asdict(entry))
+        path.write_text(json.dumps(data, indent=2))
+
+    def get_ledger(self, run_id: str) -> ArtifactLedger:
+        """Load the full artifact ledger for *run_id*.
+
+        Returns an empty ledger if no artifact file exists yet.
+        """
+        path = self._ledger_path(run_id)
+        if not path.exists():
+            return ArtifactLedger()
+        data = json.loads(path.read_text())
+        return deserialize_ledger(data)
+
+    def get_artifacts_for_step(
+        self, run_id: str, step: str
+    ) -> list[ArtifactEntry]:
+        """Return artifact entries for a specific pipeline *step*."""
+        return self.get_ledger(run_id).by_step(step)
+
+    def delete(self, run_id: str) -> None:
+        """Delete the artifact file for *run_id*.  No-op if absent."""
+        path = self._ledger_path(run_id)
+        if path.exists():
+            path.unlink()
+
+    def _ledger_path(self, run_id: str) -> Path:
+        return self._base_dir / f"{run_id}-artifacts.json"
 
 
 # ---------------------------------------------------------------------------

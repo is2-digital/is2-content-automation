@@ -2,7 +2,16 @@
 
 ## Current Status
 **Last Updated:** 2026-03-01
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1, ica-476.7.2, ica-476.7.3, ica-476.7.4, ica-476.8.1
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1, ica-476.7.2, ica-476.7.3, ica-476.7.4, ica-476.8.1, ica-476.8.2
+
+### 2026-03-01 — ica-476.8.2: Implement artifact ledger persistence extending TestRunStore
+- Added `ArtifactStore` class to `ica/guided/artifacts.py` with JSON-file persistence using `{run_id}-artifacts.json` files
+- Methods: `append_artifact(run_id, entry)`, `get_ledger(run_id) -> ArtifactLedger`, `get_artifacts_for_step(run_id, step)`, `delete(run_id)`
+- Append-only design: each `append_artifact` reads existing JSON, appends, and rewrites
+- Uses same `base_dir` as `TestRunStore` — artifact files sit alongside state files
+- Serialization via `dataclasses.asdict()` matching the `TestRunStore` pattern
+- 14 new tests across 4 test classes covering append, get_ledger, get_for_step, and delete
+- All 39 tests pass, ruff and mypy clean
 
 ### 2026-03-01 — ica-476.8.1: Design structured artifact entry data model with full provenance fields
 - Created `ica/guided/artifacts.py` with `ArtifactType` StrEnum (6 types: slack_decision, google_doc, google_sheet, llm_output, validation_result, fixture_data)

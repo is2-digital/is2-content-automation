@@ -1,12 +1,15 @@
-"""Tests for ica.guided.artifacts — artifact ledger data model."""
+"""Tests for ica.guided.artifacts — artifact ledger data model and persistence."""
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from unittest.mock import patch
 
 from ica.guided.artifacts import (
     ArtifactEntry,
     ArtifactLedger,
+    ArtifactStore,
     ArtifactType,
     deserialize_ledger,
     serialize_ledger,
@@ -267,3 +270,139 @@ class TestSerialization:
         ledger.add(entry)
         restored = deserialize_ledger(serialize_ledger(ledger))
         assert restored.entries[0].metadata == {"source": "test", "count": 42}
+
+
+# ---------------------------------------------------------------------------
+# ArtifactStore
+# ---------------------------------------------------------------------------
+
+
+def _make_store(tmp_path: Path) -> ArtifactStore:
+    return ArtifactStore(tmp_path / "test-runs")
+
+
+class TestArtifactStoreAppend:
+    def test_append_creates_file(self, tmp_path: Path):
+        store = _make_store(tmp_path)
+        store.append_artifact("run-001", _entry())
+        path = store.base_dir / "run-001-artifacts.json"
+        assert path.exists()
+
+    def test_append_creates_directory(self, tmp_path: Path):
+        nested = tmp_path / "deep" / "nested" / "runs"
+        store = ArtifactStore(nested)
+        store.append_artifact("r1", _entry())
+        assert nested.exists()
+
+    def test_append_produces_valid_json(self, tmp_path: Path):
+        store = _make_store(tmp_path)
+        store.append_artifact("run-001", _entry())
+        path = store.base_dir / "run-001-artifacts.json"
+        data = json.loads(path.read_text())
+        assert isinstance(data, list)
+        assert len(data) == 1
+        assert data[0]["key"] == "spreadsheet_id"
+
+    def test_append_is_additive(self, tmp_path: Path):
+        store = _make_store(tmp_path)
+        store.append_artifact("run-001", _entry(key="first"))
+        store.append_artifact("run-001", _entry(key="second"))
+        store.append_artifact("run-001", _entry(key="third"))
+        ledger = store.get_ledger("run-001")
+        assert [e.key for e in ledger.entries] == ["first", "second", "third"]
+
+    def test_append_preserves_all_fields(self, tmp_path: Path):
+        store = _make_store(tmp_path)
+        entry = ArtifactEntry(
+            run_id="run-001",
+            step_name="summarization",
+            artifact_type=ArtifactType.LLM_OUTPUT,
+            key="summaries",
+            value={"text": "hello"},
+            timestamp=FIXED_TS,
+            attempt_number=2,
+            metadata={"model": "claude"},
+        )
+        store.append_artifact("run-001", entry)
+        loaded = store.get_ledger("run-001").entries[0]
+        assert loaded.run_id == "run-001"
+        assert loaded.step_name == "summarization"
+        assert loaded.artifact_type == ArtifactType.LLM_OUTPUT
+        assert loaded.key == "summaries"
+        assert loaded.value == {"text": "hello"}
+        assert loaded.timestamp == FIXED_TS
+        assert loaded.attempt_number == 2
+        assert loaded.metadata == {"model": "claude"}
+
+    def test_separate_runs_have_separate_files(self, tmp_path: Path):
+        store = _make_store(tmp_path)
+        store.append_artifact("run-a", _entry(key="a"))
+        store.append_artifact("run-b", _entry(key="b"))
+        assert len(store.get_ledger("run-a").entries) == 1
+        assert len(store.get_ledger("run-b").entries) == 1
+        assert store.get_ledger("run-a").entries[0].key == "a"
+        assert store.get_ledger("run-b").entries[0].key == "b"
+
+
+class TestArtifactStoreGetLedger:
+    def test_returns_empty_ledger_when_no_file(self, tmp_path: Path):
+        store = _make_store(tmp_path)
+        ledger = store.get_ledger("nonexistent")
+        assert ledger.entries == []
+
+    def test_returns_populated_ledger(self, tmp_path: Path):
+        store = _make_store(tmp_path)
+        store.append_artifact("run-001", _entry(step="curation", key="sheet"))
+        store.append_artifact("run-001", _entry(step="summarization", key="llm"))
+        ledger = store.get_ledger("run-001")
+        assert len(ledger.entries) == 2
+
+    def test_ledger_query_methods_work(self, tmp_path: Path):
+        store = _make_store(tmp_path)
+        store.append_artifact(
+            "run-001",
+            _entry(step="curation", atype=ArtifactType.GOOGLE_SHEET, key="sheet"),
+        )
+        store.append_artifact(
+            "run-001",
+            _entry(step="curation", atype=ArtifactType.SLACK_DECISION, key="approval"),
+        )
+        store.append_artifact(
+            "run-001",
+            _entry(step="summarization", atype=ArtifactType.LLM_OUTPUT, key="out"),
+        )
+        ledger = store.get_ledger("run-001")
+        assert len(ledger.by_step("curation")) == 2
+        assert len(ledger.by_type(ArtifactType.LLM_OUTPUT)) == 1
+
+
+class TestArtifactStoreGetForStep:
+    def test_filters_by_step(self, tmp_path: Path):
+        store = _make_store(tmp_path)
+        store.append_artifact("run-001", _entry(step="curation", key="a"))
+        store.append_artifact("run-001", _entry(step="summarization", key="b"))
+        store.append_artifact("run-001", _entry(step="curation", key="c"))
+        result = store.get_artifacts_for_step("run-001", "curation")
+        assert len(result) == 2
+        assert all(e.step_name == "curation" for e in result)
+
+    def test_returns_empty_for_unknown_step(self, tmp_path: Path):
+        store = _make_store(tmp_path)
+        store.append_artifact("run-001", _entry(step="curation"))
+        assert store.get_artifacts_for_step("run-001", "nonexistent") == []
+
+    def test_returns_empty_for_nonexistent_run(self, tmp_path: Path):
+        store = _make_store(tmp_path)
+        assert store.get_artifacts_for_step("no-run", "curation") == []
+
+
+class TestArtifactStoreDelete:
+    def test_deletes_file(self, tmp_path: Path):
+        store = _make_store(tmp_path)
+        store.append_artifact("run-001", _entry())
+        store.delete("run-001")
+        assert store.get_ledger("run-001").entries == []
+
+    def test_delete_nonexistent_is_noop(self, tmp_path: Path):
+        store = _make_store(tmp_path)
+        store.delete("nope")  # should not raise
