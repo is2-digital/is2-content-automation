@@ -249,13 +249,13 @@ class TestGetModelThreeTier:
 
         assert model == "anthropic/claude-sonnet-4.5"
 
-    def test_purpose_without_mapping_uses_default(self) -> None:
-        """Purposes not in _PURPOSE_TO_PROCESS fall back to env/default."""
+    def test_learning_data_purposes_resolve_via_json(self) -> None:
+        """Learning-data purposes resolve to JSON config model (gemini-flash)."""
         get_llm_config.cache_clear()
         with patch.dict("os.environ", {}, clear=False):
             model = get_model(LLMPurpose.MARKDOWN_LEARNING_DATA)
 
-        assert model == "anthropic/claude-sonnet-4.5"
+        assert model == "google/gemini-2.5-flash"
 
     def test_json_config_for_non_default_model(self, tmp_path: Path) -> None:
         """Verify JSON works for purposes with non-sonnet defaults (e.g. GPT)."""
@@ -319,9 +319,9 @@ class TestPurposeToProcess:
                 f"_PURPOSE_TO_PROCESS key {field_name!r} is not an LLMConfig field"
             )
 
-    def test_mapping_covers_19_purposes(self) -> None:
-        """19 of 22 purposes have JSON configs (3 learning-data only have defaults)."""
-        assert len(_PURPOSE_TO_PROCESS) == 19
+    def test_mapping_covers_22_purposes(self) -> None:
+        """All 22 purposes have JSON config mappings."""
+        assert len(_PURPOSE_TO_PROCESS) == 22
 
 
 # ---------------------------------------------------------------------------
