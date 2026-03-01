@@ -20,6 +20,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from ica.guided.slack_adapter import SlackTimeoutError
 from ica.guided.state import (
     InvalidTransitionError,
     OperatorAction,
@@ -245,6 +246,7 @@ async def run_guided(
     seed: int | None = None,
     start_step: str | None = None,
     slack_override: Any = None,
+    slack_timeout: float | None = None,
 ) -> TestRunState:
     """Execute the guided pipeline flow.
 
@@ -266,6 +268,8 @@ async def run_guided(
             (or any object implementing the ``SlackService`` interface).  When
             provided, it is installed as the shared Slack service so all
             pipeline steps use it instead of creating a new ``SlackService``.
+        slack_timeout: Timeout in seconds for each Slack send-and-wait call.
+            ``None`` means no timeout (wait indefinitely).
 
     Returns:
         The final :class:`TestRunState` after the run completes or is stopped.
@@ -333,6 +337,10 @@ async def run_guided(
 
         _prev_shared = get_shared_service()
         set_shared_service(slack_override)  # type: ignore[arg-type]
+        # Apply CLI timeout to adapter if it supports it
+        if slack_timeout is not None and hasattr(slack_override, "timeout"):
+            slack_override.timeout = slack_timeout
+            console.print(f"[cyan]Slack timeout: {slack_timeout:.0f}s[/cyan]")
         console.print("[cyan]Using Slack override adapter[/cyan]")
 
     # --- Main loop ---
@@ -365,7 +373,7 @@ async def run_guided(
                 _restore_shared_service(_prev_shared, slack_override)
                 return state
             except Exception as exc:
-                error_msg = f"{type(exc).__name__}: {exc}"
+                error_msg = _classify_step_error(exc)
                 console.print(f"\n[red]Step failed:[/red] {error_msg}")
                 with contextlib.suppress(InvalidTransitionError):
                     sm.fail_step(error_msg)
@@ -406,6 +414,17 @@ async def run_guided(
         if state.phase in (RunPhase.COMPLETED, RunPhase.ABORTED):
             _restore_shared_service(_prev_shared, slack_override)
             return state
+
+
+def _classify_step_error(exc: Exception) -> str:
+    """Map an exception to a descriptive error message for the step record."""
+    if isinstance(exc, SlackTimeoutError):
+        return f"Slack timeout: {exc}"
+    # Slack SDK API errors (e.g. network failure, invalid token, rate limits)
+    exc_type = type(exc).__name__
+    if exc_type == "SlackApiError" or "slack" in exc_type.lower():
+        return f"Slack API error: {exc}"
+    return f"{exc_type}: {exc}"
 
 
 def _restore_shared_service(prev: Any, slack_override: Any) -> None:

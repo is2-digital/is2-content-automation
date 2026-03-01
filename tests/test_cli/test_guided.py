@@ -117,3 +117,56 @@ class TestGuidedRun:
 
         assert result.exit_code == 1
         assert "Guided run failed" in result.output
+
+
+# ---------------------------------------------------------------------------
+# --slack-timeout flag
+# ---------------------------------------------------------------------------
+
+
+class TestGuidedSlackTimeout:
+    """The --slack-timeout flag controls Slack send-and-wait timeout."""
+
+    def test_default_timeout_300(self) -> None:
+        """Default --slack-timeout is 300s, passed as slack_timeout to run_guided."""
+        state = TestRunState(run_id="test")
+        state.phase = RunPhase.COMPLETED
+
+        mock_run = AsyncMock(return_value=state)
+        with patch("ica.guided.runner.run_guided", mock_run):
+            result = runner.invoke(app, ["guided"])
+
+        assert result.exit_code == 0
+        call_kwargs = mock_run.call_args[1]
+        assert call_kwargs["slack_timeout"] == 300.0
+
+    def test_custom_timeout(self) -> None:
+        """Custom --slack-timeout value is forwarded."""
+        state = TestRunState(run_id="test")
+        state.phase = RunPhase.COMPLETED
+
+        mock_run = AsyncMock(return_value=state)
+        with patch("ica.guided.runner.run_guided", mock_run):
+            result = runner.invoke(app, ["guided", "--slack-timeout", "60"])
+
+        assert result.exit_code == 0
+        call_kwargs = mock_run.call_args[1]
+        assert call_kwargs["slack_timeout"] == 60.0
+
+    def test_zero_timeout_means_no_timeout(self) -> None:
+        """--slack-timeout 0 maps to None (no timeout)."""
+        state = TestRunState(run_id="test")
+        state.phase = RunPhase.COMPLETED
+
+        mock_run = AsyncMock(return_value=state)
+        with patch("ica.guided.runner.run_guided", mock_run):
+            result = runner.invoke(app, ["guided", "--slack-timeout", "0"])
+
+        assert result.exit_code == 0
+        call_kwargs = mock_run.call_args[1]
+        assert call_kwargs["slack_timeout"] is None
+
+    def test_slack_timeout_in_help(self) -> None:
+        """--slack-timeout appears in the guided command help."""
+        result = runner.invoke(app, ["guided", "--help"])
+        assert "--slack-timeout" in result.output

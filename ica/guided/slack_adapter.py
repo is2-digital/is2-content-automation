@@ -22,6 +22,7 @@ Usage::
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -53,6 +54,22 @@ def _now_iso() -> str:
 
 
 # ---------------------------------------------------------------------------
+# Errors
+# ---------------------------------------------------------------------------
+
+
+class SlackTimeoutError(Exception):
+    """Raised when a Slack send-and-wait call exceeds the configured timeout."""
+
+    def __init__(self, method: str, timeout: float) -> None:
+        self.method = method
+        self.timeout = timeout
+        super().__init__(
+            f"Slack {method} timed out after {timeout:.0f}s waiting for operator response"
+        )
+
+
+# ---------------------------------------------------------------------------
 # Adapter
 # ---------------------------------------------------------------------------
 
@@ -70,11 +87,23 @@ class GuidedSlackAdapter:
         run_id: Unique identifier for the current guided test run.
     """
 
-    def __init__(self, inner: Any, *, run_id: str) -> None:
+    def __init__(self, inner: Any, *, run_id: str, timeout: float | None = None) -> None:
         self._inner = inner
         self._run_id = run_id
+        self._timeout = timeout
         self._current_step: str = ""
         self._interactions: list[SlackInteraction] = []
+
+    # --- Configuration ---
+
+    @property
+    def timeout(self) -> float | None:
+        """Timeout in seconds for send-and-wait calls, or ``None`` for no timeout."""
+        return self._timeout
+
+    @timeout.setter
+    def timeout(self, value: float | None) -> None:
+        self._timeout = value
 
     # --- Step tracking ---
 
@@ -167,7 +196,14 @@ class GuidedSlackAdapter:
     ) -> None:
         """Post an approval button (tagged) and block until clicked."""
         tagged = self._tag(text)
-        await self._inner.send_and_wait(channel, tagged, approve_label=approve_label)
+        try:
+            async with asyncio.timeout(self._timeout):
+                await self._inner.send_and_wait(
+                    channel, tagged, approve_label=approve_label
+                )
+        except TimeoutError:
+            self._record("send_and_wait", text, response={"error": "timeout"})
+            raise SlackTimeoutError("send_and_wait", self._timeout or 0) from None
         self._record("send_and_wait", text, response={"action": "approved"})
 
     # SlackSummaryReview.send_and_wait_form
@@ -182,13 +218,18 @@ class GuidedSlackAdapter:
     ) -> dict[str, str]:
         """Post a form trigger (tagged) and block until the user submits."""
         tagged = self._tag(message)
-        result = await self._inner.send_and_wait_form(
-            tagged,
-            form_fields=form_fields,
-            button_label=button_label,
-            form_title=form_title,
-            form_description=form_description,
-        )
+        try:
+            async with asyncio.timeout(self._timeout):
+                result = await self._inner.send_and_wait_form(
+                    tagged,
+                    form_fields=form_fields,
+                    button_label=button_label,
+                    form_title=form_title,
+                    form_description=form_description,
+                )
+        except TimeoutError:
+            self._record("send_and_wait_form", message, response={"error": "timeout"})
+            raise SlackTimeoutError("send_and_wait_form", self._timeout or 0) from None
         self._record("send_and_wait_form", message, response=result)
         return result
 
@@ -203,12 +244,17 @@ class GuidedSlackAdapter:
     ) -> str:
         """Post a freetext trigger (tagged) and block until the user submits."""
         tagged = self._tag(message)
-        result = await self._inner.send_and_wait_freetext(
-            tagged,
-            button_label=button_label,
-            form_title=form_title,
-            form_description=form_description,
-        )
+        try:
+            async with asyncio.timeout(self._timeout):
+                result = await self._inner.send_and_wait_freetext(
+                    tagged,
+                    button_label=button_label,
+                    form_title=form_title,
+                    form_description=form_description,
+                )
+        except TimeoutError:
+            self._record("send_and_wait_freetext", message, response={"error": "timeout"})
+            raise SlackTimeoutError("send_and_wait_freetext", self._timeout or 0) from None
         self._record("send_and_wait_freetext", message, response=result)
         return result
 

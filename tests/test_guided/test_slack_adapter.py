@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from ica.guided.runner import _merge_slack_interactions, run_guided
-from ica.guided.slack_adapter import GuidedSlackAdapter
+from ica.guided.runner import _classify_step_error, _merge_slack_interactions, run_guided
+from ica.guided.slack_adapter import GuidedSlackAdapter, SlackTimeoutError
 from ica.guided.state import RunPhase, StepStatus, TestRunState
 from ica.pipeline.orchestrator import PipelineContext, StepName
 
@@ -401,3 +402,235 @@ class TestRunGuidedWithSlackOverride:
             )
 
         mock_set.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Timeout handling
+# ---------------------------------------------------------------------------
+
+
+class TestSlackTimeoutError:
+    """SlackTimeoutError carries method and timeout metadata."""
+
+    def test_message_includes_method_and_timeout(self) -> None:
+        err = SlackTimeoutError("send_and_wait", 300)
+        assert "send_and_wait" in str(err)
+        assert "300" in str(err)
+        assert err.method == "send_and_wait"
+        assert err.timeout == 300
+
+
+class TestAdapterTimeout:
+    """GuidedSlackAdapter enforces timeout on send-and-wait methods."""
+
+    def test_default_timeout_is_none(self) -> None:
+        adapter = GuidedSlackAdapter(_make_inner(), run_id="r1")
+        assert adapter.timeout is None
+
+    def test_timeout_set_via_constructor(self) -> None:
+        adapter = GuidedSlackAdapter(_make_inner(), run_id="r1", timeout=60.0)
+        assert adapter.timeout == 60.0
+
+    def test_timeout_set_via_property(self) -> None:
+        adapter = GuidedSlackAdapter(_make_inner(), run_id="r1")
+        adapter.timeout = 120.0
+        assert adapter.timeout == 120.0
+
+    async def test_send_and_wait_timeout(self) -> None:
+        inner = _make_inner()
+
+        async def hang(*_a: object, **_kw: object) -> None:
+            await asyncio.sleep(999)
+
+        inner.send_and_wait = hang
+        adapter = GuidedSlackAdapter(inner, run_id="r1", timeout=0.01)
+        adapter.set_step("curation")
+
+        with pytest.raises(SlackTimeoutError) as exc_info:
+            await adapter.send_and_wait("#ch", "Ready?")
+
+        assert exc_info.value.method == "send_and_wait"
+        assert exc_info.value.timeout == 0.01
+        # Timeout interaction should be recorded
+        assert len(adapter.interactions) == 1
+        assert adapter.interactions[0].response == {"error": "timeout"}
+
+    async def test_send_and_wait_form_timeout(self) -> None:
+        inner = _make_inner()
+
+        async def hang(*_a: object, **_kw: object) -> dict[str, str]:
+            await asyncio.sleep(999)
+            return {}
+
+        inner.send_and_wait_form = hang
+        adapter = GuidedSlackAdapter(inner, run_id="r1", timeout=0.01)
+        adapter.set_step("theme_generation")
+
+        with pytest.raises(SlackTimeoutError) as exc_info:
+            await adapter.send_and_wait_form("Pick", form_fields=[])
+
+        assert exc_info.value.method == "send_and_wait_form"
+        assert len(adapter.interactions) == 1
+        assert adapter.interactions[0].response == {"error": "timeout"}
+
+    async def test_send_and_wait_freetext_timeout(self) -> None:
+        inner = _make_inner()
+
+        async def hang(*_a: object, **_kw: object) -> str:
+            await asyncio.sleep(999)
+            return ""
+
+        inner.send_and_wait_freetext = hang
+        adapter = GuidedSlackAdapter(inner, run_id="r1", timeout=0.01)
+        adapter.set_step("summarization")
+
+        with pytest.raises(SlackTimeoutError) as exc_info:
+            await adapter.send_and_wait_freetext("Feedback?")
+
+        assert exc_info.value.method == "send_and_wait_freetext"
+        assert len(adapter.interactions) == 1
+        assert adapter.interactions[0].response == {"error": "timeout"}
+
+    async def test_no_timeout_when_none(self) -> None:
+        """With timeout=None, send_and_wait completes normally."""
+        inner = _make_inner()
+        adapter = GuidedSlackAdapter(inner, run_id="r1", timeout=None)
+        adapter.set_step("curation")
+
+        await adapter.send_and_wait("#ch", "Ready?")
+
+        assert len(adapter.interactions) == 1
+        assert adapter.interactions[0].response == {"action": "approved"}
+
+    async def test_successful_call_within_timeout(self) -> None:
+        """Fast responses complete without timeout."""
+        inner = _make_inner()
+        adapter = GuidedSlackAdapter(inner, run_id="r1", timeout=10.0)
+        adapter.set_step("curation")
+
+        await adapter.send_and_wait("#ch", "Ready?")
+
+        assert len(adapter.interactions) == 1
+        assert adapter.interactions[0].response == {"action": "approved"}
+
+
+# ---------------------------------------------------------------------------
+# Error classification
+# ---------------------------------------------------------------------------
+
+
+class TestClassifyStepError:
+    """_classify_step_error maps exceptions to descriptive messages."""
+
+    def test_slack_timeout_error(self) -> None:
+        err = SlackTimeoutError("send_and_wait", 300)
+        msg = _classify_step_error(err)
+        assert msg.startswith("Slack timeout:")
+        assert "send_and_wait" in msg
+
+    def test_generic_exception(self) -> None:
+        err = ValueError("bad value")
+        msg = _classify_step_error(err)
+        assert msg == "ValueError: bad value"
+
+    def test_slack_api_error_by_class_name(self) -> None:
+        """Exceptions with 'Slack' in the class name get Slack API prefix."""
+
+        class SlackApiError(Exception):
+            pass
+
+        err = SlackApiError("channel_not_found")
+        msg = _classify_step_error(err)
+        assert msg.startswith("Slack API error:")
+
+    def test_runtime_error(self) -> None:
+        err = RuntimeError("something broke")
+        msg = _classify_step_error(err)
+        assert msg == "RuntimeError: something broke"
+
+
+# ---------------------------------------------------------------------------
+# Timeout in run_guided integration
+# ---------------------------------------------------------------------------
+
+
+class TestRunGuidedWithTimeout:
+    """Integration: slack_timeout applies to the adapter during guided runs."""
+
+    @pytest.fixture
+    def store_dir(self, tmp_path: Path) -> Path:
+        return tmp_path / "guided-runs"
+
+    def _patch_steps(self):
+        def _get_step(name: StepName) -> AsyncMock:
+            async def step_fn(ctx: PipelineContext) -> PipelineContext:
+                return ctx
+
+            return AsyncMock(side_effect=step_fn)
+
+        return patch("ica.guided.runner.get_step_fn", side_effect=_get_step)
+
+    async def test_slack_timeout_applied_to_adapter(self, store_dir: Path) -> None:
+        """slack_timeout is applied to the adapter's timeout property."""
+        inner = _make_inner()
+        adapter = GuidedSlackAdapter(inner, run_id="timeout-test")
+        console = MagicMock()
+        assert adapter.timeout is None
+
+        with self._patch_steps(), patch(
+            "ica.services.slack.set_shared_service"
+        ), patch("ica.services.slack.get_shared_service", return_value=None):
+            await run_guided(
+                store_dir=store_dir,
+                console=console,
+                prompt_fn=lambda _: "s",
+                slack_override=adapter,
+                slack_timeout=120.0,
+            )
+
+        assert adapter.timeout == 120.0
+
+    async def test_no_timeout_when_not_specified(self, store_dir: Path) -> None:
+        """Without slack_timeout, adapter timeout remains None."""
+        inner = _make_inner()
+        adapter = GuidedSlackAdapter(inner, run_id="no-timeout")
+        console = MagicMock()
+
+        with self._patch_steps(), patch(
+            "ica.services.slack.set_shared_service"
+        ), patch("ica.services.slack.get_shared_service", return_value=None):
+            await run_guided(
+                store_dir=store_dir,
+                console=console,
+                prompt_fn=lambda _: "s",
+                slack_override=adapter,
+            )
+
+        assert adapter.timeout is None
+
+    async def test_timeout_step_failure_records_error(self, store_dir: Path) -> None:
+        """SlackTimeoutError transitions step to FAILED with timeout message."""
+        inner = _make_inner()
+        adapter = GuidedSlackAdapter(inner, run_id="timeout-fail", timeout=0.01)
+        console = MagicMock()
+
+        async def hanging_step(ctx: PipelineContext) -> PipelineContext:
+            raise SlackTimeoutError("send_and_wait", 0.01)
+
+        with patch(
+            "ica.guided.runner.get_step_fn",
+            return_value=AsyncMock(side_effect=hanging_step),
+        ), patch("ica.services.slack.set_shared_service"), patch(
+            "ica.services.slack.get_shared_service", return_value=None
+        ):
+            state = await run_guided(
+                store_dir=store_dir,
+                console=console,
+                prompt_fn=lambda _: "s",
+                slack_override=adapter,
+            )
+
+        # First step should have failed with a timeout error
+        assert state.steps[0].status == StepStatus.FAILED
+        assert "timeout" in state.steps[0].error.lower()
+        assert state.phase == RunPhase.ABORTED

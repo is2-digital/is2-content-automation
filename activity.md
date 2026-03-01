@@ -2,7 +2,7 @@
 
 ## Current Status
 **Last Updated:** 2026-02-28
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2
 
 ### 2026-03-01 — ica-476.4: Create automated per-step test data provisioning
 - New `ica/guided/fixtures.py`: `FixtureProvider` class generates deterministic test data for every pipeline step
@@ -2082,6 +2082,19 @@ After completing each task, add an entry below in this format:
 - Added `_merge_slack_interactions()` helper that extracts serialised interaction dicts into step artifacts and records interactive methods (send_and_wait*) as `OperatorDecision` entries with `slack:` prefix
 - Created `tests/test_guided/test_slack_adapter.py` (23 tests) covering init/property delegation, message tagging for all 6 methods, interaction recording, step correlation, drain serialisation, handler delegation, merge helper, and runner integration
 - All 187 guided tests pass, ruff clean
+
+**Blockers:** None
+
+### 2026-02-28 — ica-476.3.2: Implement timeout handling and cancellation for guided Slack prompts
+
+**What was done:**
+- Added `SlackTimeoutError` exception to `ica/guided/slack_adapter.py` with method/timeout metadata
+- Added `timeout` constructor parameter and property to `GuidedSlackAdapter`; all 3 `send_and_wait*` methods now wrap inner calls with `asyncio.timeout()`, recording timeout interactions before raising
+- Added `_classify_step_error()` helper in `ica/guided/runner.py` to produce descriptive error messages for Slack timeouts, Slack API errors, and generic exceptions
+- Added `slack_timeout` parameter to `run_guided()`, applied to adapter via property setter during run setup
+- Added `--slack-timeout` CLI flag to `ica guided` command (default: 300s, 0 = no timeout)
+- Added 22 new tests across `test_slack_adapter.py` and `test_cli/test_guided.py` covering timeout enforcement, error classification, CLI flag behavior, and runner integration
+- All 216 guided+CLI tests pass, ruff clean
 
 **Blockers:** None
 

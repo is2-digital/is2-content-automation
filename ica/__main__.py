@@ -186,6 +186,11 @@ def guided(
     cleanup: bool = typer.Option(
         False, "--cleanup", help="Remove fixture-generated test-run state files and exit."
     ),
+    slack_timeout: float = typer.Option(
+        300.0,
+        "--slack-timeout",
+        help="Timeout in seconds for Slack send-and-wait calls (0 = no timeout).",
+    ),
 ) -> None:
     """Run the pipeline in guided mode — step-by-step with operator checkpoints.
 
@@ -226,7 +231,12 @@ def guided(
         err_console.print("[red]--step requires --seed[/red] to provision fixture data.")
         raise typer.Exit(code=1)
 
-    asyncio.run(_run_guided(run_id, store_path, seed=seed, start_step=step))
+    effective_timeout = slack_timeout if slack_timeout > 0 else None
+    asyncio.run(
+        _run_guided(
+            run_id, store_path, seed=seed, start_step=step, slack_timeout=effective_timeout
+        )
+    )
 
 
 async def _run_guided(
@@ -235,6 +245,7 @@ async def _run_guided(
     *,
     seed: int | None = None,
     start_step: str | None = None,
+    slack_timeout: float | None = None,
 ) -> None:
     """Execute the guided pipeline flow."""
     from ica.guided.runner import run_guided
@@ -246,6 +257,7 @@ async def _run_guided(
             console=console,
             seed=seed,
             start_step=start_step,
+            slack_timeout=slack_timeout,
         )
         if state.phase.value == "completed":
             console.print("[green]Guided run completed successfully.[/green]")
