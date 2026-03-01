@@ -2,7 +2,15 @@
 
 ## Current Status
 **Last Updated:** 2026-03-01
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1, ica-476.7.2, ica-476.7.3, ica-476.7.4
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1, ica-476.7.2, ica-476.7.3, ica-476.7.4, ica-476.8.1
+
+### 2026-03-01 — ica-476.8.1: Design structured artifact entry data model with full provenance fields
+- Created `ica/guided/artifacts.py` with `ArtifactType` StrEnum (6 types: slack_decision, google_doc, google_sheet, llm_output, validation_result, fixture_data)
+- `ArtifactEntry` dataclass: run_id, step_name, artifact_type, key, value, timestamp (auto-populated), attempt_number, metadata dict
+- `ArtifactLedger` dataclass: append-only list with query methods `by_step()`, `by_type()`, `by_attempt()`
+- Serialization helpers (`serialize_ledger`/`deserialize_ledger`) for JSON persistence
+- 25 tests covering enum values, entry defaults, ledger queries, and round-trip serialization
+- All tests pass, ruff and mypy clean
 
 ### 2026-03-01 — ica-476.7.4: Add missing-template error handling with operator recovery guidance and tests
 - `_resolve_template()` now raises `TemplateNotFoundError` when a pinned version is not found (instead of silent fallback)
