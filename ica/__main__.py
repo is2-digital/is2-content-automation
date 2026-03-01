@@ -2,13 +2,14 @@
 
 Usage::
 
-    python -m ica serve        # Start FastAPI server
-    python -m ica run          # Trigger a pipeline run
-    python -m ica status       # Show pipeline run status
-    python -m ica guided       # Guided step-by-step pipeline test flow
-    python -m ica collect-articles  # Manual article collection
-    python -m ica config        # Edit LLM process configs via Google Docs
-    python -m ica config system # Edit the shared system prompt via Google Docs
+    python -m ica serve              # Start FastAPI server
+    python -m ica run                # Trigger a pipeline run
+    python -m ica status             # Show pipeline run status
+    python -m ica guided             # Guided step-by-step pipeline test flow
+    python -m ica guided artifacts   # Query artifact ledger for a test run
+    python -m ica collect-articles   # Manual article collection
+    python -m ica config             # Edit LLM process configs via Google Docs
+    python -m ica config system      # Edit the shared system prompt via Google Docs
 
 PRD Section 11.1: Secondary CLI interface for on-demand interaction and debugging.
 """
@@ -168,8 +169,17 @@ def _status_color(status: str) -> str:
     }.get(status, "white")
 
 
-@app.command()
+guided_app = typer.Typer(
+    name="guided",
+    help="Guided step-by-step pipeline testing.",
+    invoke_without_command=True,
+)
+app.add_typer(guided_app, name="guided")
+
+
+@guided_app.callback(invoke_without_command=True)
 def guided(
+    ctx: typer.Context,
     run_id: str | None = typer.Option(None, "--run-id", "-r", help="Resume an existing run."),
     store_dir: str = typer.Option(
         ".guided-runs", "--store-dir", help="Directory for persisted run state."
@@ -211,6 +221,9 @@ def guided(
     Use --seed to auto-provision test data. Combine with --step to start from
     a specific step with all prerequisite data pre-populated.
     """
+    if ctx.invoked_subcommand is not None:
+        return
+
     from pathlib import Path
 
     from ica.guided.state import TestRunStore
@@ -253,6 +266,107 @@ def guided(
             template_version=template_version,
         )
     )
+
+
+@guided_app.command(name="artifacts")
+def guided_artifacts(
+    run_id: str = typer.Argument(..., help="Run ID to display artifacts for."),
+    store_dir: str = typer.Option(
+        ".guided-runs", "--store-dir", help="Directory for persisted run state."
+    ),
+    step_filter: str | None = typer.Option(
+        None, "--step", help="Filter by pipeline step name."
+    ),
+    type_filter: str | None = typer.Option(
+        None, "--type", help="Filter by artifact type."
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Show full artifact values instead of truncated."
+    ),
+    json_output: bool = typer.Option(
+        False, "--json", help="Output as JSON for machine consumption."
+    ),
+) -> None:
+    """Display the artifact ledger for a guided test run.
+
+    Shows all artifacts recorded during a run in a Rich table.
+    Use filters to narrow results by step or artifact type.
+    """
+    import json
+    from dataclasses import asdict
+    from pathlib import Path
+
+    from ica.guided.artifacts import ArtifactStore, ArtifactType
+
+    store = ArtifactStore(Path(store_dir))
+    ledger = store.get_ledger(run_id)
+    entries = ledger.entries
+
+    if not entries:
+        console.print(f"[dim]No artifacts found for run {run_id}.[/dim]")
+        return
+
+    if step_filter:
+        entries = [e for e in entries if e.step_name == step_filter]
+
+    if type_filter:
+        try:
+            artifact_type = ArtifactType(type_filter)
+        except ValueError:
+            valid = ", ".join(t.value for t in ArtifactType)
+            err_console.print(f"[red]Invalid artifact type:[/red] {type_filter}")
+            err_console.print(f"Valid types: {valid}")
+            raise typer.Exit(code=1) from None
+        entries = [e for e in entries if e.artifact_type == artifact_type]
+
+    if not entries:
+        console.print(f"[dim]No artifacts match filters for run {run_id}.[/dim]")
+        return
+
+    if json_output:
+        typer.echo(json.dumps([asdict(e) for e in entries], indent=2))
+        return
+
+    table = Table(title=f"Artifacts — {run_id}", show_lines=False)
+    table.add_column("Step", style="cyan", min_width=12)
+    table.add_column("Type", style="yellow", min_width=12)
+    table.add_column("Key", style="bold", min_width=10)
+    table.add_column("Value", min_width=20)
+    table.add_column("Attempt", justify="right", width=7)
+    table.add_column("Timestamp", style="dim", min_width=20)
+
+    max_val_len = 0 if verbose else 80
+
+    for entry in entries:
+        val = _format_artifact_value(entry.value, max_val_len)
+        table.add_row(
+            entry.step_name,
+            entry.artifact_type.value,
+            entry.key,
+            val,
+            str(entry.attempt_number),
+            entry.timestamp,
+        )
+
+    console.print(table)
+    console.print(f"[dim]{len(entries)} artifact(s)[/dim]")
+
+
+def _format_artifact_value(value: Any, max_len: int) -> str:
+    """Format an artifact value for table display, optionally truncating."""
+    import json as _json
+
+    if isinstance(value, str):
+        text = value
+    else:
+        try:
+            text = _json.dumps(value, ensure_ascii=False)
+        except (TypeError, ValueError):
+            text = str(value)
+
+    if max_len and len(text) > max_len:
+        return text[: max_len - 3] + "..."
+    return text
 
 
 async def _run_guided(

@@ -2,7 +2,17 @@
 
 ## Current Status
 **Last Updated:** 2026-03-01
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1, ica-476.7.2, ica-476.7.3, ica-476.7.4, ica-476.8.1, ica-476.8.2, ica-476.8.3
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1, ica-476.7.2, ica-476.7.3, ica-476.7.4, ica-476.8.1, ica-476.8.2, ica-476.8.3, ica-476.8.4
+
+### 2026-03-01 — ica-476.8.4: Add CLI subcommand to query artifact ledger by run_id
+- Added `ica guided artifacts <run_id>` subcommand to display artifact ledger as Rich table
+- Converted `guided` command from standalone to Typer group (callback + subcommands), matching the `config` pattern
+- Table columns: Step, Type, Key, Value (truncated to 80 chars), Attempt, Timestamp
+- Filters: `--step` (by pipeline step), `--type` (by artifact type with validation)
+- `--verbose` disables code-level value truncation, `--json` outputs raw JSON via `typer.echo()`
+- Added `_format_artifact_value()` helper for JSON-serializing and truncating any artifact value
+- 26 new tests covering help, empty states, table output, filters, JSON mode, and format helper
+- All 130 CLI tests pass (0 regressions), ruff clean, no new mypy errors
 
 ### 2026-03-01 — ica-476.8.3: Emit rich artifact entries from each guided runner step
 - Replaced `_extract_artifacts()` lightweight dict with structured `ArtifactEntry` emission to the append-only artifact ledger
