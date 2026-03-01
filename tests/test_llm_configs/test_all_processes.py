@@ -1,4 +1,4 @@
-"""Comprehensive regression tests for all 19 LLM process JSON configs.
+"""Comprehensive regression tests for all 20 LLM process JSON configs.
 
 Covers four dimensions per process:
 1. JSON config loads and validates against Pydantic schema
@@ -51,6 +51,7 @@ ALL_PROCESS_NAMES = [
     "social-media-regeneration",
     "linkedin-carousel",
     "linkedin-regeneration",
+    "relevance-assessment",
 ]
 
 # Expected models per process (non-Claude exceptions)
@@ -66,6 +67,7 @@ EXPECTED_MODELS = {
     "email-subject-regeneration": "anthropic/claude-haiku-4.5",
     "social-media-regeneration": "openai/gpt-4.1",
     "learning-data-extraction": "google/gemini-2.5-flash",
+    "relevance-assessment": "google/gemini-2.5-flash",
 }
 _DEFAULT_MODEL = "anthropic/claude-sonnet-4.5"
 
@@ -83,7 +85,7 @@ def _clear_caches() -> None:
 
 
 # ===================================================================
-# 1. JSON config loading & schema validation for all 19 processes
+# 1. JSON config loading & schema validation for all 20 processes
 # ===================================================================
 
 
@@ -126,7 +128,7 @@ class TestAllConfigsLoadAndValidate:
 
 
 # ===================================================================
-# 2. get_process_prompts() returns correct strings for all 19 processes
+# 2. get_process_prompts() returns correct strings for all 20 processes
 # ===================================================================
 
 
@@ -326,6 +328,15 @@ class TestBuildFunctionsMatchJsonConfigs:
         assert system == json_system
         assert "theme body text" in user
 
+    def test_build_relevance_prompt(self) -> None:
+        from ica.prompts.relevance_assessment import build_relevance_prompt
+
+        system, user = build_relevance_prompt(title="AI for SMBs", excerpt="snippet text")
+        json_system, _ = get_process_prompts("relevance-assessment")
+        assert system == json_system
+        assert "AI for SMBs" in user
+        assert "snippet text" in user
+
     def test_build_learning_data_extraction_prompt(self) -> None:
         from ica.prompts.learning_data_extraction import (
             build_learning_data_extraction_prompt,
@@ -494,7 +505,7 @@ class TestGetModelJsonTier:
 
 
 class TestGetProcessModelAllProcesses:
-    """get_process_model() resolves correctly for all 19 JSON processes."""
+    """get_process_model() resolves correctly for all 20 JSON processes."""
 
     @pytest.mark.parametrize("process_name", ALL_PROCESS_NAMES)
     def test_returns_expected_model(self, process_name: str) -> None:
@@ -648,7 +659,7 @@ class TestEdgeCases:
 
 
 class TestLLMPurposeCompleteness:
-    """LLMPurpose enum has exactly 21 members covering all pipeline uses."""
+    """LLMPurpose enum has exactly 22 members covering all pipeline uses."""
 
     EXPECTED_PURPOSES: ClassVar[set[str]] = {
         "SUMMARY",

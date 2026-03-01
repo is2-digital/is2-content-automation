@@ -2,7 +2,15 @@
 
 ## Current Status
 **Last Updated:** 2026-03-01
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9
+
+### 2026-03-01 — ica-zs9: Write tests for Brave search, relevance assessment, and updated curation
+- Created `tests/test_services/test_brave_search.py` (39 tests): BraveSearchFlags, _parse_results, search with pagination/auth/freshness/origin, search_keywords aggregation
+- Created `tests/test_pipeline/test_relevance_assessment.py` (25 tests): RelevanceResult dataclass, _parse_response (JSON, markdown fences, fail-open, unknown decisions), assess_article with mocked LLM, assess_articles batch processing
+- Created `tests/test_prompts/test_relevance_assessment.py` (23 tests): prompt constant content, build_relevance_prompt return type/placeholder substitution/edge cases
+- Created `tests/test_pipeline/test_article_collection.py` (22 tests): ArticleRecord/CollectionResult dataclasses, dedup with excerpts, parse_articles with excerpts, collect_articles with BraveSearchClient + mocked relevance assessment
+- Updated `tests/test_llm_configs/test_all_processes.py`: added "relevance-assessment" to ALL_PROCESS_NAMES and EXPECTED_MODELS, added build_relevance_prompt test to build-functions suite
+- All 3862 tests pass, ruff clean
 
 ### 2026-03-01 — ica-zqm: Update Google Sheets curation for excerpt, reason, and rejected tab
 - Updated `SHEET_COLUMNS` to include `excerpt` and `relevance_reason` in main tab
