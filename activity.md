@@ -2,7 +2,16 @@
 
 ## Current Status
 **Last Updated:** 2026-03-01
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1
+
+### 2026-03-01 — ica-476.7.1: Design template storage model with version metadata and file-based persistence
+- New module `ica/guided/templates.py` with `TemplateRecord` dataclass and `TemplateStore` persistence class
+- `TemplateRecord`: name, version, template_html, description, created_at (auto), content_hash (SHA-256 auto)
+- `TemplateStore`: file-based JSON under configurable dir (default `.guided-templates/`), layout `<dir>/<name>/<version>.json`
+- CRUD: save (with dedup guard), load, load_latest, list_templates, list_versions, delete, exists
+- `DuplicateTemplateError` prevents storing identical HTML under different version strings
+- 26 tests in `tests/test_guided/test_templates.py` — all passing, ruff + mypy clean
+- Also closed parent ica-476.5 (all 4 children complete)
 
 ### 2026-03-01 — ica-476.5.4: Add integration tests for Google Docs write and Sheets update in guided mode
 - New test file `tests/test_guided/test_google_docs_sheets_integration.py` with 15 integration tests
