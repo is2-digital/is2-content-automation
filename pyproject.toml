@@ -67,6 +67,12 @@ dev = [
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+filterwarnings = [
+    # litellm's LoggingWorker creates an async_success_handler coroutine during
+    # cleanup (logging_worker.py) that cannot be awaited outside its event loop.
+    # This is a third-party library bug; suppress to keep test output clean.
+    "ignore:coroutine 'Logging.async_success_handler' was never awaited:RuntimeWarning",
+]
 
 [tool.ruff]
 target-version = "py312"

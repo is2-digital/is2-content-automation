@@ -2,7 +2,12 @@
 
 ## Current Status
 **Last Updated:** 2026-03-01
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri
+
+### 2026-03-01 — ica-qri: Eliminate unawaited coroutine warnings in pytest runs
+- Fixed scheduler tests: added `_close_coro` helper to properly consume coroutines when `asyncio.create_task` is mocked — prevents GC-triggered RuntimeWarnings
+- Suppressed litellm `Logging.async_success_handler` warning via `filterwarnings` in `pyproject.toml` — third-party library bug in LoggingWorker cleanup
+- Full suite: 3862 passed, 0 warnings (previously 7 warnings)
 
 ### 2026-03-01 — ica-zs9: Write tests for Brave search, relevance assessment, and updated curation
 - Created `tests/test_services/test_brave_search.py` (39 tests): BraveSearchFlags, _parse_results, search with pagination/auth/freshness/origin, search_keywords aggregation

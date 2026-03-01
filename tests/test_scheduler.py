@@ -13,6 +13,16 @@ from ica.scheduler import (
     run_pipeline_trigger,
 )
 
+
+def _close_coro(coro):
+    """Close a coroutine passed to a mocked ``asyncio.create_task``.
+
+    Prevents 'coroutine was never awaited' warnings when the real
+    ``asyncio.create_task`` is replaced by a ``MagicMock``.
+    """
+    coro.close()
+    return MagicMock()
+
 # ---------------------------------------------------------------------------
 # create_scheduler — factory
 # ---------------------------------------------------------------------------
@@ -320,7 +330,7 @@ class TestRunPipelineTrigger:
         with (
             patch("ica.app.get_runs", return_value=mock_runs),
             patch("ica.app._run_pipeline", mock_run_pipeline),
-            patch("asyncio.create_task"),
+            patch("asyncio.create_task", side_effect=_close_coro),
         ):
             result = await run_pipeline_trigger()
 
@@ -336,7 +346,7 @@ class TestRunPipelineTrigger:
         with (
             patch("ica.app.get_runs", return_value=mock_runs),
             patch("ica.app._run_pipeline", mock_run_pipeline),
-            patch("asyncio.create_task"),
+            patch("asyncio.create_task", side_effect=_close_coro),
         ):
             result = await run_pipeline_trigger()
 
@@ -350,7 +360,7 @@ class TestRunPipelineTrigger:
         with (
             patch("ica.app.get_runs", return_value=mock_runs),
             patch("ica.app._run_pipeline", AsyncMock()),
-            patch("asyncio.create_task"),
+            patch("asyncio.create_task", side_effect=_close_coro),
         ):
             result = await run_pipeline_trigger()
 
@@ -375,7 +385,7 @@ class TestRunPipelineTrigger:
         with (
             patch("ica.app.get_runs", return_value=mock_runs),
             patch("ica.app._run_pipeline", mock_run_pipeline),
-            patch("asyncio.create_task") as mock_task,
+            patch("asyncio.create_task", side_effect=_close_coro) as mock_task,
         ):
             await run_pipeline_trigger()
 
