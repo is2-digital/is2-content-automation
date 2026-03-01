@@ -241,6 +241,8 @@ async def run_guided(
     store_dir: Path = DEFAULT_STORE_DIR,
     console: Console | None = None,
     prompt_fn: Any = None,
+    seed: int | None = None,
+    start_step: str | None = None,
 ) -> TestRunState:
     """Execute the guided pipeline flow.
 
@@ -252,6 +254,12 @@ async def run_guided(
         store_dir: Directory for persisted run state files.
         console: Rich console for output (default: new Console).
         prompt_fn: Optional callable for operator input (for testing).
+        seed: If provided, auto-provision fixture data for the run using
+            :class:`~ica.guided.fixtures.FixtureProvider`.  When combined
+            with *start_step*, provisions prerequisite data so the step
+            can run without prior steps having executed.
+        start_step: Step name to begin from (e.g. ``"theme_generation"``).
+            Requires *seed* to provision prerequisite data.
 
     Returns:
         The final :class:`TestRunState` after the run completes or is stopped.
@@ -278,9 +286,7 @@ async def run_guided(
         elif state.phase == RunPhase.CHECKPOINT:
             console.print(f"[yellow]Resuming run {run_id} at checkpoint[/yellow]")
         elif state.phase in (RunPhase.COMPLETED, RunPhase.ABORTED):
-            console.print(
-                f"[dim]Run {run_id} is already {state.phase.value}.[/dim]"
-            )
+            console.print(f"[dim]Run {run_id} is already {state.phase.value}.[/dim]")
             return state
         elif state.phase == RunPhase.NOT_STARTED:
             pass  # Will start below
@@ -293,7 +299,22 @@ async def run_guided(
         run_id = str(uuid.uuid4())[:8]
         state = TestRunState(run_id=run_id)
         sm = TestRunStateMachine(state, store)
-        ctx = PipelineContext()
+
+        # --- Fixture provisioning ---
+        if seed is not None:
+            from ica.guided.fixtures import FixtureProvider
+
+            provider = FixtureProvider(seed=seed)
+            if start_step:
+                ctx = provider.for_step(start_step)
+                console.print(
+                    f"[cyan]Provisioned fixture data for step '{start_step}' (seed={seed})[/cyan]"
+                )
+            else:
+                ctx = provider.for_full_run()
+                console.print(f"[cyan]Using fixture seed={seed}[/cyan]")
+        else:
+            ctx = PipelineContext()
 
     ctx.run_id = run_id
     console.print(f"[bold]Run ID:[/bold] {run_id}")

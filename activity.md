@@ -2,7 +2,17 @@
 
 ## Current Status
 **Last Updated:** 2026-02-28
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4
+
+### 2026-03-01 — ica-476.4: Create automated per-step test data provisioning
+- New `ica/guided/fixtures.py`: `FixtureProvider` class generates deterministic test data for every pipeline step
+- Builds articles, summaries, formatted themes (with %XX_ markers), and mock doc IDs — all schema-valid
+- `for_step(step_name)`: auto-provisions all prerequisite data for any step (single-step mode)
+- `for_full_run()`: minimal context for full pipeline runs; `snapshot()`: JSON-safe dict for state persistence
+- `cleanup()`: removes fixture-prefixed state files; `cleanup_all()`: removes entire store directory
+- Integrated into `run_guided()` via `seed` and `start_step` params; CLI: `--seed`, `--step`, `--cleanup` options
+- 58 tests covering builders, determinism, schema validity, cleanup, and snapshot round-trips
+- All 173 guided/CLI tests pass; ruff clean
 
 ### 2026-03-01 — ica-476.1: Implement pipeline test-run state machine and checkpoints
 - New `ica/guided/` package with `state.py` — test-run state machine for guided pipeline test flow

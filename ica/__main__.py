@@ -175,18 +175,39 @@ def guided(
         ".guided-runs", "--store-dir", help="Directory for persisted run state."
     ),
     list_runs: bool = typer.Option(False, "--list", "-l", help="List existing guided runs."),
+    seed: int | None = typer.Option(
+        None, "--seed", "-s", help="Auto-provision deterministic fixture data with this seed."
+    ),
+    step: str | None = typer.Option(
+        None,
+        "--step",
+        help="Start from this step (e.g. 'theme_generation'). Requires --seed.",
+    ),
+    cleanup: bool = typer.Option(
+        False, "--cleanup", help="Remove fixture-generated test-run state files and exit."
+    ),
 ) -> None:
     """Run the pipeline in guided mode — step-by-step with operator checkpoints.
 
     Each step pauses for approval before proceeding. You can continue, redo the
     current step, or stop. State is persisted to disk so you can resume after
     interruptions.
+
+    Use --seed to auto-provision test data. Combine with --step to start from
+    a specific step with all prerequisite data pre-populated.
     """
     from pathlib import Path
 
     from ica.guided.state import TestRunStore
 
     store_path = Path(store_dir)
+
+    if cleanup:
+        from ica.guided.fixtures import FixtureProvider
+
+        removed = FixtureProvider.cleanup(store_path)
+        console.print(f"Removed {removed} fixture-generated test-run file(s).")
+        return
 
     if list_runs:
         store = TestRunStore(store_path)
@@ -201,10 +222,20 @@ def guided(
                 console.print(f"  {rid}  {phase_str:<12}  {step_info}")
         return
 
-    asyncio.run(_run_guided(run_id, store_path))
+    if step and seed is None:
+        err_console.print("[red]--step requires --seed[/red] to provision fixture data.")
+        raise typer.Exit(code=1)
+
+    asyncio.run(_run_guided(run_id, store_path, seed=seed, start_step=step))
 
 
-async def _run_guided(run_id: str | None, store_dir: Any) -> None:
+async def _run_guided(
+    run_id: str | None,
+    store_dir: Any,
+    *,
+    seed: int | None = None,
+    start_step: str | None = None,
+) -> None:
     """Execute the guided pipeline flow."""
     from ica.guided.runner import run_guided
 
@@ -213,6 +244,8 @@ async def _run_guided(run_id: str | None, store_dir: Any) -> None:
             run_id=run_id,
             store_dir=store_dir,
             console=console,
+            seed=seed,
+            start_step=start_step,
         )
         if state.phase.value == "completed":
             console.print("[green]Guided run completed successfully.[/green]")
@@ -291,9 +324,7 @@ async def _collect_articles(schedule: str) -> None:
             table.add_column("Date")
             table.add_column("Status")
             for a in result.articles[:20]:
-                table.add_row(
-                    a.title, a.origin, str(a.publish_date), a.relevance_status or ""
-                )
+                table.add_row(a.title, a.origin, str(a.publish_date), a.relevance_status or "")
             if len(result.articles) > 20:
                 console.print(f"  [dim]... and {len(result.articles) - 20} more[/dim]")
             console.print(table)
@@ -410,9 +441,7 @@ async def _config_editor() -> None:
     console.print(f"\n[bold]Edit in Google Docs:[/bold] {url}")
 
     # (5) Wait for user to finish editing.
-    response = typer.prompt(
-        "\nPress Enter to sync or q to cancel", default="", show_default=False
-    )
+    response = typer.prompt("\nPress Enter to sync or q to cancel", default="", show_default=False)
     if response.strip().lower() == "q":
         console.print("[dim]Sync cancelled.[/dim]")
         return
@@ -482,9 +511,7 @@ async def _config_system_editor() -> None:
     console.print(f"\n[bold]Edit in Google Docs:[/bold] {url}")
 
     # Wait for user to finish editing.
-    response = typer.prompt(
-        "\nPress Enter to sync or q to cancel", default="", show_default=False
-    )
+    response = typer.prompt("\nPress Enter to sync or q to cancel", default="", show_default=False)
     if response.strip().lower() == "q":
         console.print("[dim]Sync cancelled.[/dim]")
         return
