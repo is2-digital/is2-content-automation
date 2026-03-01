@@ -141,7 +141,6 @@ def _capture_handlers(bolt_app: MagicMock) -> dict[str, Any]:
 def _clear_caches() -> None:
     """Clear loader caches between tests."""
     _cache.clear()
-    loader._PROCESS_TO_FIELD = None
 
 
 @pytest.fixture

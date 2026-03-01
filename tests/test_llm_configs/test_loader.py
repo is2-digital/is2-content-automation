@@ -56,7 +56,6 @@ def _clear_caches() -> None:
     """Clear loader caches between tests."""
     _cache.clear()
     loader._system_prompt_cache = None
-    loader._PROCESS_TO_FIELD = None
 
 
 # ---------------------------------------------------------------------------
@@ -265,7 +264,7 @@ class TestGetProcessPrompts:
 
 
 class TestGetProcessModel:
-    def test_returns_json_model_when_no_env_override(self, tmp_path: Path) -> None:
+    def test_returns_json_model(self, tmp_path: Path) -> None:
         data = _valid_config_dict(
             processName="summarization",
             model="anthropic/claude-sonnet-4.5",
@@ -273,44 +272,12 @@ class TestGetProcessModel:
         config_file = tmp_path / "summarization-llm.json"
         config_file.write_text(json.dumps(data))
 
-        from ica.config.llm_config import get_llm_config
-
-        get_llm_config.cache_clear()
-
-        with (
-            patch.object(loader, "_CONFIGS_DIR", tmp_path),
-            patch.dict("os.environ", {}, clear=False),
-        ):
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
             model = get_process_model("summarization")
 
         assert model == "anthropic/claude-sonnet-4.5"
 
-    def test_env_var_overrides_json_model(self, tmp_path: Path) -> None:
-        data = _valid_config_dict(
-            processName="summarization",
-            model="anthropic/claude-sonnet-4.5",
-        )
-        config_file = tmp_path / "summarization-llm.json"
-        config_file.write_text(json.dumps(data))
-
-        from ica.config.llm_config import get_llm_config
-
-        get_llm_config.cache_clear()
-
-        with (
-            patch.object(loader, "_CONFIGS_DIR", tmp_path),
-            patch.dict(
-                "os.environ",
-                {"LLM_SUMMARY_MODEL": "custom/override-model"},
-                clear=False,
-            ),
-        ):
-            model = get_process_model("summarization")
-
-        assert model == "custom/override-model"
-
-    def test_json_model_used_for_unknown_process(self, tmp_path: Path) -> None:
-        """Processes not in the mapping still return their JSON model."""
+    def test_returns_custom_model(self, tmp_path: Path) -> None:
         data = _valid_config_dict(
             processName="custom-process",
             model="custom/my-model",
@@ -318,43 +285,17 @@ class TestGetProcessModel:
         config_file = tmp_path / "custom-process-llm.json"
         config_file.write_text(json.dumps(data))
 
-        from ica.config.llm_config import get_llm_config
-
-        get_llm_config.cache_clear()
-
-        with (
-            patch.object(loader, "_CONFIGS_DIR", tmp_path),
-            patch.dict("os.environ", {}, clear=False),
-        ):
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
             model = get_process_model("custom-process")
 
         assert model == "custom/my-model"
 
-
-# ---------------------------------------------------------------------------
-# _build_process_field_mapping()
-# ---------------------------------------------------------------------------
-
-
-class TestProcessFieldMapping:
-    def test_mapping_covers_all_19_processes(self) -> None:
-        from ica.llm_configs.loader import _build_process_field_mapping
-
-        mapping = _build_process_field_mapping()
-        # The scope doc defines 19 JSON files + learning-data-extraction
-        # that maps to an existing field. All should be covered.
-        assert len(mapping) >= 19
-
-    def test_all_mapped_fields_exist_on_llm_config(self) -> None:
-        from ica.config.llm_config import LLMConfig
-        from ica.llm_configs.loader import _build_process_field_mapping
-
-        mapping = _build_process_field_mapping()
-        for process_name, field_name in mapping.items():
-            assert field_name in LLMConfig.model_fields, (
-                f"Process '{process_name}' maps to '{field_name}' "
-                f"which is not a field on LLMConfig"
-            )
+    def test_missing_json_raises(self, tmp_path: Path) -> None:
+        with (
+            patch.object(loader, "_CONFIGS_DIR", tmp_path),
+            pytest.raises(FileNotFoundError),
+        ):
+            get_process_model("nonexistent")
 
 
 # ---------------------------------------------------------------------------

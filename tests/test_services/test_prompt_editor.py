@@ -65,7 +65,6 @@ def _read_saved_config(tmp_path: Path, process_name: str = "test-process") -> di
 def _clear_caches() -> None:
     """Clear loader caches between tests."""
     _cache.clear()
-    loader._PROCESS_TO_FIELD = None
 
 
 @pytest.fixture

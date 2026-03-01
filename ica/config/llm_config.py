@@ -1,26 +1,20 @@
 """LLM model configuration for ica.
 
-Centralized model mapping ported from the n8n llm_global_config_utility.json
-workflow. Each pipeline step reads this config to get model names dynamically,
-allowing model changes in one place.
-
-Every field can be overridden via an environment variable of the same name
-(e.g. ``LLM_SUMMARY_MODEL=openai/gpt-4.1``).
+Centralized model mapping for pipeline steps. Each step uses :func:`get_model`
+with an :class:`LLMPurpose` to resolve the model identifier from the
+corresponding JSON config file in ``ica/llm_configs/``.
 """
 
 from __future__ import annotations
 
 from enum import StrEnum
-from functools import lru_cache
-
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class LLMPurpose(StrEnum):
     """Purpose keys for LLM model selection.
 
-    Each value corresponds to the field name on :class:`LLMConfig`.
-    Use with :func:`get_model` for typed lookups.
+    Each value maps to a JSON config process name via
+    :data:`_PURPOSE_TO_PROCESS`.  Use with :func:`get_model` for typed lookups.
     """
 
     # Summarization
@@ -63,15 +57,8 @@ class LLMPurpose(StrEnum):
     RELEVANCE_ASSESSMENT = "llm_relevance_assessment_model"
 
 
-# Default model identifiers (OpenRouter format)
-_CLAUDE_SONNET = "anthropic/claude-sonnet-4.5"
-_GPT_4_1 = "openai/gpt-4.1"
-_GEMINI_FLASH = "google/gemini-2.5-flash"
-
-
 # Mapping from LLMPurpose field name to JSON config process name.
-# Used by get_model() for 3-tier resolution: env var > JSON config > hardcoded default.
-# Purposes without an entry fall back to env var / hardcoded default only.
+# Used by get_model() to resolve the model from the corresponding JSON file.
 _PURPOSE_TO_PROCESS: dict[str, str] = {
     "llm_summary_model": "summarization",
     "llm_summary_regeneration_model": "summarization-regeneration",
@@ -99,105 +86,27 @@ _PURPOSE_TO_PROCESS: dict[str, str] = {
 }
 
 
-class LLMConfig(BaseSettings):
-    """LLM model mappings loaded from environment variables.
-
-    Defaults match the n8n ``llm_global_config_utility.json`` source workflow.
-    Override any field via its corresponding environment variable.
-    """
-
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
-
-    # --- Summarization ---
-    llm_summary_model: str = _CLAUDE_SONNET
-    llm_summary_regeneration_model: str = _CLAUDE_SONNET
-    llm_summary_learning_data_model: str = _CLAUDE_SONNET
-
-    # --- Markdown generation ---
-    llm_markdown_model: str = _CLAUDE_SONNET
-    llm_markdown_validator_model: str = _GPT_4_1
-    llm_markdown_voice_validator_model: str = _GPT_4_1
-    llm_markdown_regeneration_model: str = _CLAUDE_SONNET
-    llm_markdown_learning_data_model: str = _CLAUDE_SONNET
-
-    # --- HTML generation ---
-    llm_html_model: str = _CLAUDE_SONNET
-    llm_html_regeneration_model: str = _CLAUDE_SONNET
-    llm_html_learning_data_model: str = _CLAUDE_SONNET
-
-    # --- Theme generation ---
-    llm_theme_model: str = _CLAUDE_SONNET
-    llm_theme_learning_data_model: str = _CLAUDE_SONNET
-    llm_theme_freshness_check_model: str = _GEMINI_FLASH
-
-    # --- Social media ---
-    llm_social_media_model: str = _CLAUDE_SONNET
-    llm_social_post_caption_model: str = _CLAUDE_SONNET
-    llm_social_media_regeneration_model: str = _CLAUDE_SONNET
-
-    # --- LinkedIn ---
-    llm_linkedin_model: str = _CLAUDE_SONNET
-    llm_linkedin_regeneration_model: str = _CLAUDE_SONNET
-
-    # --- Email ---
-    llm_email_subject_model: str = _CLAUDE_SONNET
-    llm_email_subject_regeneration_model: str = _CLAUDE_SONNET
-    llm_email_preview_model: str = _CLAUDE_SONNET
-
-    # --- Article collection ---
-    llm_relevance_assessment_model: str = _GEMINI_FLASH
-
-
-@lru_cache(maxsize=1)
-def get_llm_config() -> LLMConfig:
-    """Return a cached LLMConfig instance.
-
-    Use this as a FastAPI dependency or call directly. The instance
-    is created once and reused for the lifetime of the process.
-    """
-    return LLMConfig()
-
-
 def get_model(purpose: LLMPurpose) -> str:
     """Return the model identifier for a given pipeline purpose.
 
-    Resolution priority (highest to lowest):
-
-    1. **Environment variable** — e.g. ``LLM_SUMMARY_MODEL`` overrides everything.
-    2. **JSON config file** — the ``model`` field in the corresponding
-       ``ica/llm_configs/{process}-llm.json`` file.
-    3. **Hardcoded default** — the class-level default on :class:`LLMConfig`.
+    Resolves the model from the corresponding JSON config file in
+    ``ica/llm_configs/{process}-llm.json``.
 
     Args:
         purpose: The LLM purpose key.
 
     Returns:
         Model identifier string (e.g. ``"anthropic/claude-sonnet-4.5"``).
+
+    Raises:
+        ValueError: If the purpose has no JSON config mapping.
+        FileNotFoundError: If the JSON config file does not exist.
     """
-    config = get_llm_config()
-    field_name = purpose.value
+    process_name = _PURPOSE_TO_PROCESS.get(purpose.value)
+    if process_name is None:
+        msg = f"No JSON config mapping for LLMPurpose.{purpose.name}"
+        raise ValueError(msg)
 
-    # Check whether an env-var override is active for this purpose.
-    env_value: str = getattr(config, field_name)
-    class_default = LLMConfig.model_fields[field_name].default
-    if env_value != class_default:
-        # Env var override is active — highest priority.
-        return env_value
+    from ica.llm_configs.loader import load_process_config
 
-    # Try JSON config (tier 2) if a mapping exists.
-    process_name = _PURPOSE_TO_PROCESS.get(field_name)
-    if process_name is not None:
-        try:
-            from ica.llm_configs.loader import load_process_config
-
-            json_config = load_process_config(process_name)
-            return json_config.model
-        except FileNotFoundError:
-            pass  # Fall through to hardcoded default.
-
-    # Hardcoded default (tier 3).
-    return env_value
+    return load_process_config(process_name).model

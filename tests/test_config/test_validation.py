@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from ica.config.validation import ValidationResult, validate_config
+from ica.llm_configs import loader
+from ica.llm_configs.loader import _cache
 
 # Minimal valid env vars required by Settings
 _VALID_ENV = {
@@ -18,13 +22,18 @@ _VALID_ENV = {
 }
 
 
+@pytest.fixture(autouse=True)
+def _clear_caches() -> None:
+    """Clear loader caches between tests."""
+    _cache.clear()
+    loader._system_prompt_cache = None
+
+
 def _validate_with_env(**overrides: str) -> ValidationResult:
     """Run validate_config with a controlled environment."""
-    from ica.config.llm_config import get_llm_config
     from ica.config.settings import get_settings
 
     get_settings.cache_clear()
-    get_llm_config.cache_clear()
 
     env = {**_VALID_ENV, **overrides}
     with patch.dict("os.environ", env, clear=True):
@@ -91,11 +100,9 @@ class TestMissingSettings:
 
     @pytest.mark.parametrize("field", list(_VALID_ENV.keys()))
     def test_missing_required_field(self, field: str) -> None:
-        from ica.config.llm_config import get_llm_config
         from ica.config.settings import get_settings
 
         get_settings.cache_clear()
-        get_llm_config.cache_clear()
 
         env = {k: v for k, v in _VALID_ENV.items() if k != field}
         with patch.dict("os.environ", env, clear=True):
@@ -130,39 +137,73 @@ class TestTimezoneValidation:
 
 
 # ---------------------------------------------------------------------------
-# LLM model format validation
+# LLM JSON config validation
 # ---------------------------------------------------------------------------
 
 
-class TestLLMModelValidation:
-    """validate_config should catch malformed LLM model identifiers."""
+class TestLLMConfigValidation:
+    """validate_config should catch malformed LLM JSON configs."""
 
-    def test_model_without_slash_fails(self) -> None:
-        result = _validate_with_env(LLM_SUMMARY_MODEL="just-a-model-name")
+    def test_missing_json_config_fails(self, tmp_path: Path) -> None:
+        """Missing JSON config file is reported as error."""
+        from ica.config.settings import get_settings
+
+        get_settings.cache_clear()
+
+        with (
+            patch.object(loader, "_CONFIGS_DIR", tmp_path),
+            patch.dict("os.environ", _VALID_ENV, clear=True),
+        ):
+            result = validate_config()
+
         assert result.ok is False
-        assert any("/" in e and "llm_summary_model" in e for e in result.errors)
+        assert any("not found" in e for e in result.errors)
 
-    def test_empty_model_fails(self) -> None:
-        result = _validate_with_env(LLM_THEME_MODEL="")
+    def test_model_without_slash_fails(self, tmp_path: Path) -> None:
+        """Model without provider/model separator is caught."""
+        # Write all configs with valid models except one
+        from ica.config.llm_config import _PURPOSE_TO_PROCESS
+
+        seen: set[str] = set()
+        for process_name in _PURPOSE_TO_PROCESS.values():
+            if process_name in seen:
+                continue
+            seen.add(process_name)
+            model = "bad-model-no-slash" if process_name == "summarization" else "ok/model"
+            data = {
+                "$schema": "ica-llm-config/v1",
+                "processName": process_name,
+                "model": model,
+                "prompts": {"instruction": "test"},
+            }
+            (tmp_path / f"{process_name}-llm.json").write_text(json.dumps(data))
+
+        # Also need system-prompt.json
+        sp = {
+            "$schema": "ica-system-prompt/v1",
+            "description": "test",
+            "prompt": "test system prompt",
+            "metadata": {"version": 1},
+        }
+        (tmp_path / "system-prompt.json").write_text(json.dumps(sp))
+
+        from ica.config.settings import get_settings
+
+        get_settings.cache_clear()
+
+        with (
+            patch.object(loader, "_CONFIGS_DIR", tmp_path),
+            patch.dict("os.environ", _VALID_ENV, clear=True),
+        ):
+            result = validate_config()
+
         assert result.ok is False
-        assert any("llm_theme_model" in e for e in result.errors)
+        assert any("summarization" in e and "/" in e for e in result.errors)
 
-    def test_whitespace_only_model_fails(self) -> None:
-        result = _validate_with_env(LLM_EMAIL_PREVIEW_MODEL="   ")
-        assert result.ok is False
-        assert any("llm_email_preview_model" in e for e in result.errors)
-
-    def test_valid_override_passes(self) -> None:
-        result = _validate_with_env(LLM_SUMMARY_MODEL="meta/llama-3.1-70b")
+    def test_all_valid_json_configs_pass(self) -> None:
+        """Real JSON configs all pass validation."""
+        result = _validate_with_env()
         assert result.ok is True
-
-    def test_multiple_model_errors_collected(self) -> None:
-        result = _validate_with_env(
-            LLM_SUMMARY_MODEL="bad",
-            LLM_HTML_MODEL="also-bad",
-        )
-        assert result.ok is False
-        assert len(result.errors) >= 2
 
 
 # ---------------------------------------------------------------------------

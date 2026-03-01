@@ -23,12 +23,13 @@ class ValidationResult:
 def validate_config() -> ValidationResult:
     """Validate all application configuration at startup.
 
-    Creates both :class:`~ica.config.settings.Settings` and
-    :class:`~ica.config.llm_config.LLMConfig` instances and checks:
+    Validates :class:`~ica.config.settings.Settings` and all LLM JSON
+    config files:
 
     1. All required environment variables are present (Pydantic validation).
     2. ``TIMEZONE`` is a valid IANA timezone identifier.
-    3. All LLM model identifiers are non-empty and contain a ``/`` separator
+    3. All LLM JSON config files exist and validate against schema.
+    4. All model identifiers are non-empty and contain a ``/`` separator
        (OpenRouter ``provider/model`` format).
 
     Returns:
@@ -54,24 +55,32 @@ def validate_config() -> ValidationResult:
     except (KeyError, ValueError, zoneinfo.ZoneInfoNotFoundError):
         errors.append(f"TIMEZONE: '{settings.timezone}' is not a valid IANA timezone")
 
-    # --- Validate LLM config ---
-    try:
-        from ica.config.llm_config import LLMConfig, LLMPurpose
+    # --- Validate LLM JSON configs ---
+    from ica.config.llm_config import _PURPOSE_TO_PROCESS
 
-        llm_config = LLMConfig(_env_file=None)
-    except ValidationError as exc:
-        for err in exc.errors():
-            loc = ".".join(str(p) for p in err["loc"])
-            errors.append(f"LLMConfig: {loc} — {err['msg']}")
-        return ValidationResult(ok=False, errors=tuple(errors))
+    validated_processes: set[str] = set()
+    for field_name, process_name in _PURPOSE_TO_PROCESS.items():
+        if process_name in validated_processes:
+            continue
+        validated_processes.add(process_name)
+        try:
+            from ica.llm_configs.loader import load_process_config
 
-    # --- Validate LLM model format (provider/model) ---
-    for purpose in LLMPurpose:
-        model_id: str = getattr(llm_config, purpose.value)
+            config = load_process_config(process_name)
+        except FileNotFoundError:
+            errors.append(f"{process_name}: JSON config file not found")
+            continue
+        except ValueError as exc:
+            errors.append(f"{process_name}: {exc}")
+            continue
+
+        model_id = config.model
         if not model_id or not model_id.strip():
-            errors.append(f"{purpose.value}: model identifier is empty")
+            errors.append(f"{process_name}: model identifier is empty")
         elif "/" not in model_id:
-            errors.append(f"{purpose.value}: '{model_id}' missing provider/model separator '/'")
+            errors.append(
+                f"{process_name}: '{model_id}' missing provider/model separator '/'"
+            )
 
     # --- Validate email notification config (opt-in) ---
     if settings.email_smtp_user:

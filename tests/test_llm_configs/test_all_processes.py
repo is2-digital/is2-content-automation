@@ -18,7 +18,7 @@ from unittest.mock import patch
 
 import pytest
 
-from ica.config.llm_config import LLMConfig, LLMPurpose, get_llm_config, get_model
+from ica.config.llm_config import LLMPurpose, _PURPOSE_TO_PROCESS, get_model
 from ica.llm_configs import loader
 from ica.llm_configs.loader import (
     _cache,
@@ -54,34 +54,15 @@ ALL_PROCESS_NAMES = [
     "relevance-assessment",
 ]
 
-# Expected models per process (non-Claude exceptions)
-EXPECTED_MODELS = {
-    "summarization": "google/gemini-2.5-flash",
-    "summarization-regeneration": "anthropic/claude-haiku-4.5",
-    "freshness-check": "google/gemini-2.5-flash",
-    "markdown-structural-validation": "openai/gpt-4.1",
-    "markdown-voice-validation": "openai/gpt-4.1",
-    "html-generation": "openai/gpt-4.1",
-    "html-regeneration": "openai/gpt-4.1",
-    "email-subject": "anthropic/claude-haiku-4.5",
-    "email-subject-regeneration": "anthropic/claude-haiku-4.5",
-    "social-media-regeneration": "openai/gpt-4.1",
-    "learning-data-extraction": "google/gemini-2.5-flash",
-    "relevance-assessment": "google/gemini-2.5-flash",
-}
-_DEFAULT_MODEL = "anthropic/claude-sonnet-4.5"
-
 # Minimum prompt length to catch accidental truncation (characters)
 MIN_PROMPT_LENGTH = 300
 
 
 @pytest.fixture(autouse=True)
 def _clear_caches() -> None:
-    """Clear loader caches and LLMConfig cache between tests."""
+    """Clear loader caches between tests."""
     _cache.clear()
     loader._system_prompt_cache = None
-    loader._PROCESS_TO_FIELD = None
-    get_llm_config.cache_clear()
 
 
 # ===================================================================
@@ -118,12 +99,11 @@ class TestAllConfigsLoadAndValidate:
         assert config.metadata.version >= 1
 
     @pytest.mark.parametrize("process_name", ALL_PROCESS_NAMES)
-    def test_expected_model(self, process_name: str) -> None:
-        """Each process uses the expected model provider."""
+    def test_model_has_provider_format(self, process_name: str) -> None:
+        """Each process model follows the provider/model format."""
         config = load_process_config(process_name)
-        expected = EXPECTED_MODELS.get(process_name, _DEFAULT_MODEL)
-        assert config.model == expected, (
-            f"{process_name}: expected model '{expected}', got '{config.model}'"
+        assert "/" in config.model, (
+            f"{process_name}: model '{config.model}' missing provider/model separator '/'"
         )
 
 
@@ -369,88 +349,32 @@ class TestBuildFunctionsMatchJsonConfigs:
 
 
 # ===================================================================
-# 4. Model resolution: get_model() 3-tier priority for all LLMPurpose
+# 4. Model resolution: get_model() reads from JSON for all LLMPurpose
 # ===================================================================
 
 
 class TestGetModelAllPurposes:
-    """get_model() returns correct model for every LLMPurpose value."""
-
-    # Map each LLMPurpose to its expected default model
-    PURPOSE_DEFAULT_MODELS: ClassVar[dict[LLMPurpose, str]] = {
-        LLMPurpose.SUMMARY: "google/gemini-2.5-flash",
-        LLMPurpose.SUMMARY_REGENERATION: "anthropic/claude-haiku-4.5",
-        LLMPurpose.SUMMARY_LEARNING_DATA: "google/gemini-2.5-flash",
-        LLMPurpose.MARKDOWN: _DEFAULT_MODEL,
-        LLMPurpose.MARKDOWN_VALIDATOR: "openai/gpt-4.1",
-        LLMPurpose.MARKDOWN_VOICE_VALIDATOR: "openai/gpt-4.1",
-        LLMPurpose.MARKDOWN_REGENERATION: _DEFAULT_MODEL,
-        LLMPurpose.MARKDOWN_LEARNING_DATA: "google/gemini-2.5-flash",
-        LLMPurpose.HTML: "openai/gpt-4.1",
-        LLMPurpose.HTML_REGENERATION: "openai/gpt-4.1",
-        LLMPurpose.HTML_LEARNING_DATA: "google/gemini-2.5-flash",
-        LLMPurpose.THEME: _DEFAULT_MODEL,
-        LLMPurpose.THEME_LEARNING_DATA: "google/gemini-2.5-flash",
-        LLMPurpose.THEME_FRESHNESS_CHECK: "google/gemini-2.5-flash",
-        LLMPurpose.SOCIAL_MEDIA: _DEFAULT_MODEL,
-        LLMPurpose.SOCIAL_POST_CAPTION: _DEFAULT_MODEL,
-        LLMPurpose.SOCIAL_MEDIA_REGENERATION: "openai/gpt-4.1",
-        LLMPurpose.LINKEDIN: _DEFAULT_MODEL,
-        LLMPurpose.LINKEDIN_REGENERATION: _DEFAULT_MODEL,
-        LLMPurpose.EMAIL_SUBJECT: "anthropic/claude-haiku-4.5",
-        LLMPurpose.EMAIL_SUBJECT_REGENERATION: "anthropic/claude-haiku-4.5",
-        LLMPurpose.EMAIL_PREVIEW: _DEFAULT_MODEL,
-        LLMPurpose.RELEVANCE_ASSESSMENT: "google/gemini-2.5-flash",
-    }
+    """get_model() returns the JSON config model for every LLMPurpose."""
 
     @pytest.mark.parametrize("purpose", list(LLMPurpose))
-    def test_all_purposes_have_expected_defaults(self, purpose: LLMPurpose) -> None:
-        """Verify every LLMPurpose is in our expected-defaults map."""
-        assert purpose in self.PURPOSE_DEFAULT_MODELS, (
-            f"LLMPurpose.{purpose.name} missing from PURPOSE_DEFAULT_MODELS"
-        )
+    def test_matches_json_config(self, purpose: LLMPurpose) -> None:
+        """get_model() returns the same model as the JSON config file."""
+        process_name = _PURPOSE_TO_PROCESS[purpose.value]
+        expected = load_process_config(process_name).model
+        assert get_model(purpose) == expected
 
     @pytest.mark.parametrize("purpose", list(LLMPurpose))
-    def test_default_model_without_env_override(self, purpose: LLMPurpose) -> None:
-        """Without env overrides, get_model returns the expected default."""
+    def test_model_has_provider_format(self, purpose: LLMPurpose) -> None:
+        """Every model follows the provider/model format."""
         model = get_model(purpose)
-        expected = self.PURPOSE_DEFAULT_MODELS[purpose]
-        assert model == expected, (
-            f"LLMPurpose.{purpose.name}: expected '{expected}', got '{model}'"
-        )
+        assert "/" in model, f"LLMPurpose.{purpose.name}: '{model}' missing '/'"
 
 
-class TestGetModelEnvOverride:
-    """Environment variable overrides take priority over JSON and defaults."""
+class TestGetModelJsonResolution:
+    """get_model() reads from JSON config files."""
 
-    # Representative sample of purposes with their env var names
-    ENV_OVERRIDE_CASES: ClassVar[list[tuple[LLMPurpose, str]]] = [
-        (LLMPurpose.SUMMARY, "LLM_SUMMARY_MODEL"),
-        (LLMPurpose.MARKDOWN, "LLM_MARKDOWN_MODEL"),
-        (LLMPurpose.MARKDOWN_VALIDATOR, "LLM_MARKDOWN_VALIDATOR_MODEL"),
-        (LLMPurpose.HTML, "LLM_HTML_MODEL"),
-        (LLMPurpose.THEME, "LLM_THEME_MODEL"),
-        (LLMPurpose.THEME_FRESHNESS_CHECK, "LLM_THEME_FRESHNESS_CHECK_MODEL"),
-        (LLMPurpose.SOCIAL_MEDIA, "LLM_SOCIAL_MEDIA_MODEL"),
-        (LLMPurpose.LINKEDIN, "LLM_LINKEDIN_MODEL"),
-        (LLMPurpose.EMAIL_SUBJECT, "LLM_EMAIL_SUBJECT_MODEL"),
-        (LLMPurpose.EMAIL_PREVIEW, "LLM_EMAIL_PREVIEW_MODEL"),
-    ]
-
-    @pytest.mark.parametrize("purpose,env_var", ENV_OVERRIDE_CASES)
-    def test_env_var_overrides_default(self, purpose: LLMPurpose, env_var: str) -> None:
-        override_model = "custom/env-override-model"
-        with patch.dict("os.environ", {env_var: override_model}, clear=False):
-            get_llm_config.cache_clear()
-            model = get_model(purpose)
-        assert model == override_model
-
-
-class TestGetModelJsonTier:
-    """JSON config (tier 2) is used when no env override is active."""
-
-    def test_json_model_used_for_summarization(self, tmp_path: Path) -> None:
-        """Verify get_model reads from JSON when no env override."""
+    def test_reads_custom_json_config(self, tmp_path: Path) -> None:
+        """Verify get_model reads from JSON."""
         data = {
             "$schema": "ica-llm-config/v1",
             "processName": "summarization",
@@ -459,45 +383,18 @@ class TestGetModelJsonTier:
         }
         (tmp_path / "summarization-llm.json").write_text(json.dumps(data))
 
-        with (
-            patch.object(loader, "_CONFIGS_DIR", tmp_path),
-            patch.dict("os.environ", {}, clear=False),
-        ):
-            get_llm_config.cache_clear()
+        with patch.object(loader, "_CONFIGS_DIR", tmp_path):
             model = get_model(LLMPurpose.SUMMARY)
 
         assert model == "test/json-tier-model"
 
-    def test_env_override_beats_json(self, tmp_path: Path) -> None:
-        """Env var (tier 1) beats JSON config (tier 2)."""
-        data = {
-            "$schema": "ica-llm-config/v1",
-            "processName": "summarization",
-            "model": "test/json-model",
-            "prompts": {"instruction": "inst"},
-        }
-        (tmp_path / "summarization-llm.json").write_text(json.dumps(data))
-
+    def test_missing_json_raises_error(self, tmp_path: Path) -> None:
+        """Missing JSON config file raises FileNotFoundError."""
         with (
             patch.object(loader, "_CONFIGS_DIR", tmp_path),
-            patch.dict("os.environ", {"LLM_SUMMARY_MODEL": "env/override"}, clear=False),
+            pytest.raises(FileNotFoundError),
         ):
-            get_llm_config.cache_clear()
-            model = get_model(LLMPurpose.SUMMARY)
-
-        assert model == "env/override"
-
-    def test_hardcoded_default_when_json_missing(self, tmp_path: Path) -> None:
-        """Hardcoded default (tier 3) used when JSON file is missing."""
-        with (
-            patch.object(loader, "_CONFIGS_DIR", tmp_path),
-            patch.dict("os.environ", {}, clear=False),
-        ):
-            get_llm_config.cache_clear()
-            model = get_model(LLMPurpose.SUMMARY)
-
-        # Falls back to hardcoded default
-        assert model == _DEFAULT_MODEL
+            get_model(LLMPurpose.SUMMARY)
 
 
 # ===================================================================
@@ -506,11 +403,12 @@ class TestGetModelJsonTier:
 
 
 class TestGetProcessModelAllProcesses:
-    """get_process_model() resolves correctly for all 20 JSON processes."""
+    """get_process_model() resolves correctly for all JSON processes."""
 
     @pytest.mark.parametrize("process_name", ALL_PROCESS_NAMES)
-    def test_returns_expected_model(self, process_name: str) -> None:
-        expected = EXPECTED_MODELS.get(process_name, _DEFAULT_MODEL)
+    def test_matches_json_config(self, process_name: str) -> None:
+        """get_process_model() returns the same model as load_process_config()."""
+        expected = load_process_config(process_name).model
         model = get_process_model(process_name)
         assert model == expected
 
@@ -698,11 +596,12 @@ class TestLLMPurposeCompleteness:
         extra = actual - self.EXPECTED_PURPOSES
         assert not extra, f"Unexpected LLMPurpose values: {extra}"
 
-    def test_purpose_values_match_llm_config_fields(self) -> None:
-        """Every LLMPurpose value is a valid field on LLMConfig."""
+    def test_purpose_values_match_mapping_keys(self) -> None:
+        """Every LLMPurpose value is a key in _PURPOSE_TO_PROCESS."""
         for purpose in LLMPurpose:
-            assert purpose.value in LLMConfig.model_fields, (
-                f"LLMPurpose.{purpose.name} = '{purpose.value}' is not a field on LLMConfig"
+            assert purpose.value in _PURPOSE_TO_PROCESS, (
+                f"LLMPurpose.{purpose.name} = '{purpose.value}' "
+                f"is not a key in _PURPOSE_TO_PROCESS"
             )
 
 
@@ -734,13 +633,12 @@ class TestPurposeToProcessMapping:
                 f"but JSON has processName='{config.process_name}'"
             )
 
-    def test_all_mapping_keys_are_valid_llm_config_fields(self) -> None:
-        """Every field name in the mapping exists on LLMConfig."""
-        from ica.config.llm_config import _PURPOSE_TO_PROCESS
-
+    def test_all_mapping_keys_are_valid_purpose_values(self) -> None:
+        """Every field name in the mapping is a valid LLMPurpose value."""
+        purpose_values = {p.value for p in LLMPurpose}
         for field_name in _PURPOSE_TO_PROCESS:
-            assert field_name in LLMConfig.model_fields, (
-                f"_PURPOSE_TO_PROCESS key '{field_name}' is not on LLMConfig"
+            assert field_name in purpose_values, (
+                f"_PURPOSE_TO_PROCESS key '{field_name}' is not an LLMPurpose value"
             )
 
 
@@ -752,8 +650,8 @@ class TestPurposeToProcessMapping:
 class TestProcessCategoryCoverage:
     """Verify all process categories have their expected JSON configs."""
 
-    def test_primary_generation_processes(self) -> None:
-        """7 primary generation processes exist with expected models."""
+    def test_primary_generation_processes_load(self) -> None:
+        """7 primary generation processes exist and load."""
         primary = [
             "summarization",
             "theme-generation",
@@ -765,11 +663,10 @@ class TestProcessCategoryCoverage:
         ]
         for name in primary:
             config = load_process_config(name)
-            expected = EXPECTED_MODELS.get(name, _DEFAULT_MODEL)
-            assert config.model == expected
+            assert "/" in config.model
 
-    def test_regeneration_processes(self) -> None:
-        """7 regeneration processes exist with expected models."""
+    def test_regeneration_processes_load(self) -> None:
+        """6 regeneration processes exist and load."""
         regen = [
             "summarization-regeneration",
             "markdown-regeneration",
@@ -780,11 +677,10 @@ class TestProcessCategoryCoverage:
         ]
         for name in regen:
             config = load_process_config(name)
-            expected = EXPECTED_MODELS.get(name, _DEFAULT_MODEL)
-            assert config.model == expected
+            assert "/" in config.model
 
-    def test_validation_utility_processes(self) -> None:
-        """5 validation/utility processes exist with correct models."""
+    def test_validation_utility_processes_load(self) -> None:
+        """5 validation/utility processes exist and load."""
         validation = [
             "freshness-check",
             "markdown-structural-validation",
@@ -794,8 +690,7 @@ class TestProcessCategoryCoverage:
         ]
         for name in validation:
             config = load_process_config(name)
-            expected = EXPECTED_MODELS.get(name, _DEFAULT_MODEL)
-            assert config.model == expected
+            assert "/" in config.model
 
     def test_social_media_has_three_stages(self) -> None:
         """Social media pipeline: post -> caption -> regeneration."""
@@ -811,9 +706,8 @@ class TestProcessCategoryCoverage:
             load_process_config("markdown-structural-validation"),
             load_process_config("markdown-voice-validation"),
         ]
-        assert configs[0].model == _DEFAULT_MODEL
-        assert configs[1].model == "openai/gpt-4.1"
-        assert configs[2].model == "openai/gpt-4.1"
+        for config in configs:
+            assert "/" in config.model
 
 
 # ===================================================================

@@ -160,98 +160,19 @@ def load_process_config(process_name: str) -> ProcessConfig:
 
 
 def get_process_model(process_name: str) -> str:
-    """Resolve the model identifier for a process.
-
-    Priority (highest to lowest):
-
-    1. Environment variable via existing ``LLMConfig`` (e.g. ``LLM_SUMMARY_MODEL``)
-    2. ``model`` field in the JSON config file
-    3. Hardcoded default in ``LLMConfig``
-
-    This function checks whether the env-var-loaded value differs from the
-    hardcoded default. If it does, the env var takes precedence. Otherwise
-    the JSON config value is used.
+    """Return the model identifier for a process from its JSON config.
 
     Args:
         process_name: The process identifier (e.g. ``"summarization"``).
 
     Returns:
         Model identifier string in OpenRouter ``provider/model`` format.
+
+    Raises:
+        FileNotFoundError: If the JSON config file does not exist.
+        ValueError: If the JSON content fails schema validation.
     """
-    from ica.config.llm_config import LLMConfig, get_llm_config
-
-    config = load_process_config(process_name)
-
-    # Find the matching LLMConfig field name for this process.
-    # Convention: processName "summarization" -> field "llm_summary_model", etc.
-    # We match by checking if the JSON model differs from the LLMConfig value.
-    # If the env-loaded LLMConfig value differs from the class default,
-    # an env var override is active and takes priority.
-    llm_cfg = get_llm_config()
-
-    # Try to find the LLMConfig field that corresponds to this process.
-    # The JSON "model" field holds the default for this process.
-    # We need to check if any env var overrides it.
-    field_name = _resolve_llm_config_field(process_name)
-    if field_name is not None:
-        env_value: str = getattr(llm_cfg, field_name)
-        class_default = LLMConfig.model_fields[field_name].default
-        if env_value != class_default:
-            # Env var override is active — it takes priority.
-            return env_value
-
-    return config.model
-
-
-# Mapping from process name to LLMConfig field name.
-# Populated lazily to avoid import-time coupling issues.
-_PROCESS_TO_FIELD: dict[str, str] | None = None
-
-
-def _resolve_llm_config_field(process_name: str) -> str | None:
-    """Map a process name to its corresponding LLMConfig field name.
-
-    Returns ``None`` if no mapping exists (e.g. the process has no
-    matching ``LLMPurpose`` entry).
-    """
-    global _PROCESS_TO_FIELD
-    if _PROCESS_TO_FIELD is None:
-        _PROCESS_TO_FIELD = _build_process_field_mapping()
-    return _PROCESS_TO_FIELD.get(process_name)
-
-
-def _build_process_field_mapping() -> dict[str, str]:
-    """Build mapping from JSON process names to LLMConfig field names.
-
-    The JSON ``processName`` values use kebab-case (e.g. ``"email-subject"``)
-    while ``LLMConfig`` fields use snake_case with ``llm_`` prefix and
-    ``_model`` suffix (e.g. ``"llm_email_subject_model"``).
-    """
-    return {
-        "summarization": "llm_summary_model",
-        "summarization-regeneration": "llm_summary_regeneration_model",
-        "summarization-learning-data": "llm_summary_learning_data_model",
-        "theme-generation": "llm_theme_model",
-        "theme-learning-data": "llm_theme_learning_data_model",
-        "freshness-check": "llm_theme_freshness_check_model",
-        "markdown-generation": "llm_markdown_model",
-        "markdown-regeneration": "llm_markdown_regeneration_model",
-        "markdown-learning-data": "llm_markdown_learning_data_model",
-        "markdown-structural-validation": "llm_markdown_validator_model",
-        "markdown-voice-validation": "llm_markdown_voice_validator_model",
-        "html-generation": "llm_html_model",
-        "html-regeneration": "llm_html_regeneration_model",
-        "html-learning-data": "llm_html_learning_data_model",
-        "email-subject": "llm_email_subject_model",
-        "email-subject-regeneration": "llm_email_subject_regeneration_model",
-        "email-preview": "llm_email_preview_model",
-        "social-media-post": "llm_social_media_model",
-        "social-media-caption": "llm_social_post_caption_model",
-        "social-media-regeneration": "llm_social_media_regeneration_model",
-        "linkedin-carousel": "llm_linkedin_model",
-        "linkedin-regeneration": "llm_linkedin_regeneration_model",
-        "learning-data-extraction": "llm_summary_learning_data_model",
-    }
+    return load_process_config(process_name).model
 
 
 def save_process_config(process_name: str, config: ProcessConfig) -> None:

@@ -109,7 +109,6 @@ def _make_state_values(
 def _clear_caches() -> None:
     """Clear loader caches between tests."""
     _cache.clear()
-    loader._PROCESS_TO_FIELD = None
 
 
 @pytest.fixture
