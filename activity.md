@@ -2,7 +2,16 @@
 
 ## Current Status
 **Last Updated:** 2026-03-01
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1, ica-476.7.2, ica-476.7.3, ica-476.7.4, ica-476.8.1, ica-476.8.2, ica-476.8.3, ica-476.8.4
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1, ica-476.7.2, ica-476.7.3, ica-476.7.4, ica-476.8.1, ica-476.8.2, ica-476.8.3, ica-476.8.4, ica-476.8.5
+
+### 2026-03-01 — ica-476.8.5: Add tests verifying artifact completeness across full guided flow
+- New test file `tests/test_guided/test_artifact_completeness.py` with 24 tests across 5 test classes
+- `TestFullFlowArtifactCompleteness` (6 tests): runs all 9 steps with data-populating mocks, verifies every step emits artifacts, correct types per step, run_id propagation, timestamps, attempt numbers, total count
+- `TestRedoPreservesArtifacts` (3 tests): redo first step adds entries, redo doesn't erase other steps, attempt numbers increment across triple redo
+- `TestLedgerQueryability` (6 tests): by_step/by_type filtering, cross-step type coverage, by_attempt filtering, ArtifactStore.get_artifacts_for_step convenience
+- `TestPersistenceRoundTrip` (3 tests): ledger file valid JSON, all fields survive round-trip, raw JSON matches loaded ledger
+- `TestCLIWithFullFlowData` (6 tests): table output shows all steps, JSON output parseable with required fields, step/type filters work
+- All 416 guided tests pass, all 130 CLI tests pass, ruff clean
 
 ### 2026-03-01 — ica-476.8.4: Add CLI subcommand to query artifact ledger by run_id
 - Added `ica guided artifacts <run_id>` subcommand to display artifact ledger as Rich table
