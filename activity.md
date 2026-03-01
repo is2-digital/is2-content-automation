@@ -2,7 +2,21 @@
 
 ## Current Status
 **Last Updated:** 2026-03-01
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm
+
+### 2026-03-01 — ica-zqm: Update Google Sheets curation for excerpt, reason, and rejected tab
+- Updated `SHEET_COLUMNS` to include `excerpt` and `relevance_reason` in main tab
+- Added `REJECTED_SHEET_COLUMNS`, `REJECTED_TAB_NAME`, and `RejectedSheetArticle` dataclass for the rejected tab
+- Updated `SheetArticle` dataclass with `excerpt` and `relevance_reason` fields
+- Updated `format_article_for_sheet()` to map new fields; added `format_rejected_for_sheet()`
+- Updated `articles_to_row_dicts()`; added `rejected_to_row_dicts()` for rejected tab
+- Updated `fetch_unapproved_articles()` to filter for `relevance_status='accepted'` or `NULL` (backward compat)
+- Added `fetch_rejected_articles()` for `relevance_status='rejected'`
+- Added `ensure_tab` to `SheetWriter` protocol
+- Updated `prepare_curation_data()` to ensure Rejected tab, clear it, and populate with rejected articles
+- Updated `CurationDataResult` with `rejected_written` and `rejected_articles` fields
+- Updated all 157 tests; added new test classes for rejected tab functionality
+- All 3738 tests pass, ruff and mypy clean
 
 ### 2026-03-01 — ica-epf: Make Google Sheets setup resilient
 - Added Drive API scope and `_build_drive_service()` to `ica/services/google_sheets.py`

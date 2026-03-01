@@ -26,21 +26,27 @@ from ica.pipeline.article_curation import (
     APPROVAL_MESSAGE_TEMPLATE,
     APPROVE_LABEL,
     INITIAL_NOTIFICATION,
+    REJECTED_SHEET_COLUMNS,
+    REJECTED_TAB_NAME,
     REVALIDATION_MESSAGE_TEMPLATE,
     SHEET_COLUMNS,
     STATUS_MESSAGE,
     ApprovalResult,
     ApprovedArticle,
     CurationDataResult,
+    RejectedSheetArticle,
     SheetArticle,
     _is_approved,
     articles_to_row_dicts,
     build_approval_message,
     build_revalidation_message,
+    fetch_rejected_articles,
     fetch_unapproved_articles,
     format_article_for_sheet,
+    format_rejected_for_sheet,
     parse_approved_articles,
     prepare_curation_data,
+    rejected_to_row_dicts,
     run_approval_flow,
     validate_sheet_data,
 )
@@ -58,6 +64,9 @@ class FakeArticle:
     title: str | None = "Test Article"
     origin: str | None = "google_news"
     publish_date: date | None = date(2026, 2, 15)
+    excerpt: str | None = None
+    relevance_status: str | None = None
+    relevance_reason: str | None = None
     approved: bool | None = False
     industry_news: bool | None = False
     newsletter_id: str | None = None
@@ -80,6 +89,7 @@ class FakeSheets:
     def __init__(self, *, append_return: int = 0) -> None:
         self.cleared: list[tuple[str, str]] = []
         self.appended: list[tuple[str, str, list[dict[str, Any]]]] = []
+        self.ensured_tabs: list[tuple[str, str]] = []
         self._append_return = append_return
 
     async def clear_sheet(self, spreadsheet_id: str, sheet_name: str) -> None:
@@ -94,6 +104,9 @@ class FakeSheets:
         self.appended.append((spreadsheet_id, sheet_name, rows))
         self._append_return = len(rows)
         return self._append_return
+
+    async def ensure_tab(self, spreadsheet_id: str, tab_name: str) -> None:
+        self.ensured_tabs.append((spreadsheet_id, tab_name))
 
 
 # ---------------------------------------------------------------------------
@@ -199,6 +212,8 @@ class TestFormatArticleForSheet:
             title="Full Article",
             origin="default",
             publish_date=date(2026, 3, 10),
+            excerpt="An excerpt",
+            relevance_reason="Covers AI for SMBs",
             approved=True,
             newsletter_id="NL-001",
             industry_news=True,
@@ -206,8 +221,10 @@ class TestFormatArticleForSheet:
         result = format_article_for_sheet(article)
         assert result.url == "https://example.com/full"
         assert result.title == "Full Article"
+        assert result.excerpt == "An excerpt"
         assert result.origin == "default"
         assert result.publish_date == "03/10/2026"
+        assert result.relevance_reason == "Covers AI for SMBs"
         assert result.approved == "yes"
         assert result.newsletter_id == "NL-001"
         assert result.industry_news == "yes"
@@ -217,14 +234,18 @@ class TestFormatArticleForSheet:
             title=None,
             origin=None,
             publish_date=None,
+            excerpt=None,
+            relevance_reason=None,
             approved=None,
             industry_news=None,
             newsletter_id=None,
         )
         result = format_article_for_sheet(article)
         assert result.title == ""
+        assert result.excerpt == ""
         assert result.origin == ""
         assert result.publish_date == ""
+        assert result.relevance_reason == ""
         assert result.approved == ""
         assert result.industry_news == ""
         assert result.newsletter_id == ""
@@ -251,8 +272,10 @@ class TestArticlesToRowDicts:
         article = SheetArticle(
             url="https://example.com",
             title="Test",
+            excerpt="A snippet",
             publish_date="02/15/2026",
             origin="google_news",
+            relevance_reason="Relevant to AI",
             approved="",
             newsletter_id="",
             industry_news="",
@@ -261,16 +284,18 @@ class TestArticlesToRowDicts:
         assert len(result) == 1
         assert result[0]["url"] == "https://example.com"
         assert result[0]["title"] == "Test"
+        assert result[0]["excerpt"] == "A snippet"
         assert result[0]["publish_date"] == "02/15/2026"
         assert result[0]["origin"] == "google_news"
+        assert result[0]["relevance_reason"] == "Relevant to AI"
         assert result[0]["approved"] == ""
         assert result[0]["newsletter_id"] == ""
         assert result[0]["industry_news"] == ""
 
     def test_multiple_articles(self) -> None:
         articles = [
-            SheetArticle("url1", "t1", "01/01/2026", "o1", "", "", ""),
-            SheetArticle("url2", "t2", "02/02/2026", "o2", "yes", "NL-1", "yes"),
+            SheetArticle("url1", "t1", "", "01/01/2026", "o1", "", "", "", ""),
+            SheetArticle("url2", "t2", "", "02/02/2026", "o2", "", "yes", "NL-1", "yes"),
         ]
         result = articles_to_row_dicts(articles)
         assert len(result) == 2
@@ -278,18 +303,18 @@ class TestArticlesToRowDicts:
         assert result[1]["url"] == "url2"
 
     def test_all_sheet_columns_present(self) -> None:
-        article = SheetArticle("u", "t", "d", "o", "a", "n", "i")
+        article = SheetArticle("u", "t", "e", "d", "o", "r", "a", "n", "i")
         result = articles_to_row_dicts([article])
         for col in SHEET_COLUMNS:
             assert col in result[0], f"Missing column: {col}"
 
     def test_no_extra_columns(self) -> None:
-        article = SheetArticle("u", "t", "d", "o", "a", "n", "i")
+        article = SheetArticle("u", "t", "e", "d", "o", "r", "a", "n", "i")
         result = articles_to_row_dicts([article])
         assert set(result[0].keys()) == set(SHEET_COLUMNS)
 
     def test_preserves_order(self) -> None:
-        articles = [SheetArticle(f"url{i}", f"t{i}", "", "", "", "", "") for i in range(5)]
+        articles = [SheetArticle(f"url{i}", f"t{i}", "", "", "", "", "", "", "") for i in range(5)]
         result = articles_to_row_dicts(articles)
         for i, row in enumerate(result):
             assert row["url"] == f"url{i}"
@@ -313,6 +338,27 @@ def _make_mock_session(articles: list[Any]) -> AsyncMock:
 
     session = AsyncMock()
     session.execute.return_value = result_mock
+    return session
+
+
+def _make_mock_session_two_queries(
+    accepted: list[Any],
+    rejected: list[Any],
+) -> AsyncMock:
+    """Create a mock session returning different results for successive execute() calls.
+
+    First call returns ``accepted`` articles, second returns ``rejected``.
+    """
+
+    def _make_result(articles: list[Any]) -> MagicMock:
+        scalars_mock = MagicMock()
+        scalars_mock.all.return_value = articles
+        result_mock = MagicMock()
+        result_mock.scalars.return_value = scalars_mock
+        return result_mock
+
+    session = AsyncMock()
+    session.execute.side_effect = [_make_result(accepted), _make_result(rejected)]
     return session
 
 
@@ -357,9 +403,16 @@ class TestFetchUnapprovedArticles:
 # ---------------------------------------------------------------------------
 
 
-def _make_session_with_articles(articles: list[Any]) -> AsyncMock:
-    """Create a mock session that returns the given articles."""
-    return _make_mock_session(articles)
+def _make_session_with_articles(
+    articles: list[Any],
+    rejected: list[Any] | None = None,
+) -> AsyncMock:
+    """Create a mock session for prepare_curation_data.
+
+    Returns ``articles`` for the first execute (accepted) and ``rejected``
+    (default empty) for the second execute (rejected query).
+    """
+    return _make_mock_session_two_queries(articles, rejected or [])
 
 
 class TestPrepareCurationData:
@@ -397,8 +450,9 @@ class TestPrepareCurationData:
             channel="#test",
         )
 
-        assert len(sheets.cleared) == 1
+        # Main tab + Rejected tab both cleared
         assert sheets.cleared[0] == ("abc123", "Articles")
+        assert sheets.cleared[1] == ("abc123", REJECTED_TAB_NAME)
 
     @pytest.mark.asyncio
     async def test_default_sheet_name(self) -> None:
@@ -434,7 +488,7 @@ class TestPrepareCurationData:
             channel="#test",
         )
 
-        assert len(sheets.appended) == 1
+        # First append is main tab
         sid, sname, rows = sheets.appended[0]
         assert sid == "abc123"
         assert sname == "Sheet1"
@@ -456,6 +510,7 @@ class TestPrepareCurationData:
             channel="#test",
         )
 
+        # No appends for either tab when both are empty
         assert len(sheets.appended) == 0
 
     @pytest.mark.asyncio
@@ -494,7 +549,9 @@ class TestPrepareCurationData:
 
         assert result.articles_fetched == 0
         assert result.articles_written == 0
+        assert result.rejected_written == 0
         assert result.sheet_articles == []
+        assert result.rejected_articles == []
 
     @pytest.mark.asyncio
     async def test_articles_formatted_correctly(self) -> None:
@@ -551,7 +608,7 @@ class TestPrepareCurationData:
 
     @pytest.mark.asyncio
     async def test_execution_order(self) -> None:
-        """Verify operations happen in the correct sequence: notify → clear → fetch → append."""
+        """Verify operations happen in the correct sequence."""
         call_order: list[str] = []
 
         class OrderTrackingSlack:
@@ -560,11 +617,14 @@ class TestPrepareCurationData:
 
         class OrderTrackingSheets:
             async def clear_sheet(self, sid: str, sname: str) -> None:
-                call_order.append("sheet_clear")
+                call_order.append(f"sheet_clear:{sname}")
 
             async def append_rows(self, sid: str, sname: str, rows: list[dict[str, Any]]) -> int:
-                call_order.append("sheet_append")
+                call_order.append(f"sheet_append:{sname}")
                 return len(rows)
+
+            async def ensure_tab(self, sid: str, tab_name: str) -> None:
+                call_order.append(f"ensure_tab:{tab_name}")
 
         articles = [FakeArticle()]
         session = _make_session_with_articles(articles)
@@ -577,7 +637,13 @@ class TestPrepareCurationData:
             channel="#test",
         )
 
-        assert call_order == ["slack_notify", "sheet_clear", "sheet_append"]
+        assert call_order == [
+            "slack_notify",
+            "sheet_clear:Sheet1",
+            "sheet_append:Sheet1",
+            "ensure_tab:Rejected",
+            "sheet_clear:Rejected",
+        ]
 
     @pytest.mark.asyncio
     async def test_multiple_articles_all_written(self) -> None:
@@ -616,9 +682,11 @@ class TestPrepareCurationData:
             channel="#test",
         )
 
+        # Main tab uses custom name, rejected tab uses fixed name
         assert sheets.cleared[0] == ("abc123", "CustomSheet")
         _, sname, _ = sheets.appended[0]
         assert sname == "CustomSheet"
+        assert sheets.cleared[1] == ("abc123", REJECTED_TAB_NAME)
 
     @pytest.mark.asyncio
     async def test_spreadsheet_id_passed_correctly(self) -> None:
@@ -637,6 +705,8 @@ class TestPrepareCurationData:
 
         assert sheets.cleared[0][0] == "my-sheet-id"
         assert sheets.appended[0][0] == "my-sheet-id"
+        # Rejected tab also uses the same spreadsheet ID
+        assert sheets.cleared[1][0] == "my-sheet-id"
 
 
 # ---------------------------------------------------------------------------
@@ -648,34 +718,38 @@ class TestSheetArticle:
     """Tests for SheetArticle dataclass properties."""
 
     def test_is_frozen(self) -> None:
-        article = SheetArticle("u", "t", "d", "o", "a", "n", "i")
+        article = SheetArticle("u", "t", "e", "d", "o", "r", "a", "n", "i")
         with pytest.raises(AttributeError):
             article.url = "changed"  # type: ignore[misc]
 
     def test_equality(self) -> None:
-        a = SheetArticle("u", "t", "d", "o", "a", "n", "i")
-        b = SheetArticle("u", "t", "d", "o", "a", "n", "i")
+        a = SheetArticle("u", "t", "e", "d", "o", "r", "a", "n", "i")
+        b = SheetArticle("u", "t", "e", "d", "o", "r", "a", "n", "i")
         assert a == b
 
     def test_inequality(self) -> None:
-        a = SheetArticle("u1", "t", "d", "o", "a", "n", "i")
-        b = SheetArticle("u2", "t", "d", "o", "a", "n", "i")
+        a = SheetArticle("u1", "t", "e", "d", "o", "r", "a", "n", "i")
+        b = SheetArticle("u2", "t", "e", "d", "o", "r", "a", "n", "i")
         assert a != b
 
     def test_field_access(self) -> None:
         article = SheetArticle(
             url="https://example.com",
             title="Test",
+            excerpt="A snippet",
             publish_date="02/15/2026",
             origin="google_news",
+            relevance_reason="Relevant to AI",
             approved="yes",
             newsletter_id="NL-1",
             industry_news="yes",
         )
         assert article.url == "https://example.com"
         assert article.title == "Test"
+        assert article.excerpt == "A snippet"
         assert article.publish_date == "02/15/2026"
         assert article.origin == "google_news"
+        assert article.relevance_reason == "Relevant to AI"
         assert article.approved == "yes"
         assert article.newsletter_id == "NL-1"
         assert article.industry_news == "yes"
@@ -693,21 +767,28 @@ class TestCurationDataResult:
         result = CurationDataResult(
             articles_fetched=0,
             articles_written=0,
+            rejected_written=0,
             sheet_articles=[],
+            rejected_articles=[],
         )
         with pytest.raises(AttributeError):
             result.articles_fetched = 5  # type: ignore[misc]
 
     def test_field_access(self) -> None:
-        articles = [SheetArticle("u", "t", "d", "o", "", "", "")]
+        articles = [SheetArticle("u", "t", "e", "d", "o", "r", "", "", "")]
+        rejected = [RejectedSheetArticle("u2", "t2", "e2", "d2", "o2", "r2")]
         result = CurationDataResult(
             articles_fetched=1,
             articles_written=1,
+            rejected_written=1,
             sheet_articles=articles,
+            rejected_articles=rejected,
         )
         assert result.articles_fetched == 1
         assert result.articles_written == 1
+        assert result.rejected_written == 1
         assert result.sheet_articles == articles
+        assert result.rejected_articles == rejected
 
 
 # ---------------------------------------------------------------------------
@@ -726,13 +807,29 @@ class TestConstants:
         expected = {
             "url",
             "title",
+            "excerpt",
             "publish_date",
             "origin",
+            "relevance_reason",
             "approved",
             "newsletter_id",
             "industry_news",
         }
         assert set(SHEET_COLUMNS) == expected
+
+    def test_rejected_sheet_columns_has_all_fields(self) -> None:
+        expected = {
+            "url",
+            "title",
+            "excerpt",
+            "publish_date",
+            "origin",
+            "relevance_reason",
+        }
+        assert set(REJECTED_SHEET_COLUMNS) == expected
+
+    def test_rejected_tab_name(self) -> None:
+        assert REJECTED_TAB_NAME == "Rejected"
 
     def test_sheet_columns_is_tuple(self) -> None:
         assert isinstance(SHEET_COLUMNS, tuple)
@@ -797,8 +894,10 @@ class TestEdgeCases:
         article = SheetArticle(
             url="https://example.com",
             title="Test",
+            excerpt="A snippet",
             publish_date="02/15/2026",
             origin="google_news",
+            relevance_reason="Relevant",
             approved="yes",
             newsletter_id="NL-1",
             industry_news="yes",
@@ -808,11 +907,244 @@ class TestEdgeCases:
             assert isinstance(value, str)
 
     def test_row_dict_empty_values_are_empty_strings(self) -> None:
-        article = SheetArticle("u", "", "", "", "", "", "")
+        article = SheetArticle("u", "", "", "", "", "", "", "", "")
         rows = articles_to_row_dicts([article])
         for key, value in rows[0].items():
             if key != "url":
                 assert value == ""
+
+
+# ---------------------------------------------------------------------------
+# format_rejected_for_sheet
+# ---------------------------------------------------------------------------
+
+
+class TestFormatRejectedForSheet:
+    """Tests for converting a rejected DB article to sheet-ready format."""
+
+    def test_basic_conversion(self) -> None:
+        article = FakeArticle(
+            url="https://example.com/rejected",
+            title="Rejected Article",
+            excerpt="Not relevant",
+            relevance_reason="Off-topic for AI",
+            origin="brave_search",
+            publish_date=date(2026, 2, 20),
+        )
+        result = format_rejected_for_sheet(article)
+        assert isinstance(result, RejectedSheetArticle)
+        assert result.url == "https://example.com/rejected"
+        assert result.title == "Rejected Article"
+        assert result.excerpt == "Not relevant"
+        assert result.relevance_reason == "Off-topic for AI"
+        assert result.origin == "brave_search"
+        assert result.publish_date == "02/20/2026"
+
+    def test_nullable_fields_become_empty(self) -> None:
+        article = FakeArticle(
+            title=None,
+            excerpt=None,
+            relevance_reason=None,
+            origin=None,
+            publish_date=None,
+        )
+        result = format_rejected_for_sheet(article)
+        assert result.title == ""
+        assert result.excerpt == ""
+        assert result.relevance_reason == ""
+        assert result.origin == ""
+        assert result.publish_date == ""
+
+    def test_result_is_frozen(self) -> None:
+        article = FakeArticle()
+        result = format_rejected_for_sheet(article)
+        with pytest.raises(AttributeError):
+            result.url = "changed"  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# rejected_to_row_dicts
+# ---------------------------------------------------------------------------
+
+
+class TestRejectedToRowDicts:
+    """Tests for converting RejectedSheetArticle list to dict list."""
+
+    def test_empty_list(self) -> None:
+        assert rejected_to_row_dicts([]) == []
+
+    def test_single_article(self) -> None:
+        article = RejectedSheetArticle(
+            url="https://example.com",
+            title="Test",
+            excerpt="A snippet",
+            publish_date="02/15/2026",
+            origin="brave_search",
+            relevance_reason="Off-topic",
+        )
+        result = rejected_to_row_dicts([article])
+        assert len(result) == 1
+        assert result[0]["url"] == "https://example.com"
+        assert result[0]["relevance_reason"] == "Off-topic"
+
+    def test_all_rejected_columns_present(self) -> None:
+        article = RejectedSheetArticle("u", "t", "e", "d", "o", "r")
+        result = rejected_to_row_dicts([article])
+        for col in REJECTED_SHEET_COLUMNS:
+            assert col in result[0], f"Missing column: {col}"
+
+    def test_no_approval_columns(self) -> None:
+        article = RejectedSheetArticle("u", "t", "e", "d", "o", "r")
+        result = rejected_to_row_dicts([article])
+        assert "approved" not in result[0]
+        assert "newsletter_id" not in result[0]
+        assert "industry_news" not in result[0]
+
+
+# ---------------------------------------------------------------------------
+# RejectedSheetArticle dataclass
+# ---------------------------------------------------------------------------
+
+
+class TestRejectedSheetArticle:
+    """Tests for RejectedSheetArticle dataclass properties."""
+
+    def test_is_frozen(self) -> None:
+        article = RejectedSheetArticle("u", "t", "e", "d", "o", "r")
+        with pytest.raises(AttributeError):
+            article.url = "changed"  # type: ignore[misc]
+
+    def test_equality(self) -> None:
+        a = RejectedSheetArticle("u", "t", "e", "d", "o", "r")
+        b = RejectedSheetArticle("u", "t", "e", "d", "o", "r")
+        assert a == b
+
+
+# ---------------------------------------------------------------------------
+# fetch_rejected_articles
+# ---------------------------------------------------------------------------
+
+
+class TestFetchRejectedArticles:
+    """Tests for the DB query that fetches rejected articles."""
+
+    @pytest.mark.asyncio
+    async def test_returns_list(self) -> None:
+        fake = [FakeArticle(url="https://a.com"), FakeArticle(url="https://b.com")]
+        session = _make_mock_session(fake)
+
+        result = await fetch_rejected_articles(session)
+        assert len(result) == 2
+
+    @pytest.mark.asyncio
+    async def test_empty_result(self) -> None:
+        session = _make_mock_session([])
+
+        result = await fetch_rejected_articles(session)
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_executes_query(self) -> None:
+        session = _make_mock_session([])
+
+        await fetch_rejected_articles(session)
+        session.execute.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# prepare_curation_data — rejected tab
+# ---------------------------------------------------------------------------
+
+
+class TestPrepareCurationDataRejectedTab:
+    """Tests for rejected-tab handling in prepare_curation_data."""
+
+    @pytest.mark.asyncio
+    async def test_ensures_rejected_tab(self) -> None:
+        session = _make_session_with_articles([])
+        slack = FakeSlack()
+        sheets = FakeSheets()
+
+        await prepare_curation_data(
+            session, slack, sheets, spreadsheet_id="abc123", channel="#test"
+        )
+
+        assert ("abc123", REJECTED_TAB_NAME) in sheets.ensured_tabs
+
+    @pytest.mark.asyncio
+    async def test_rejected_articles_written(self) -> None:
+        rejected = [
+            FakeArticle(
+                url="https://rej.com",
+                title="Rejected",
+                relevance_reason="Off-topic",
+            )
+        ]
+        session = _make_session_with_articles([], rejected=rejected)
+        slack = FakeSlack()
+        sheets = FakeSheets()
+
+        result = await prepare_curation_data(
+            session, slack, sheets, spreadsheet_id="abc123", channel="#test"
+        )
+
+        assert result.rejected_written == 1
+        assert len(result.rejected_articles) == 1
+        assert result.rejected_articles[0].url == "https://rej.com"
+        assert result.rejected_articles[0].relevance_reason == "Off-topic"
+
+    @pytest.mark.asyncio
+    async def test_rejected_tab_appended(self) -> None:
+        rejected = [FakeArticle(url="https://rej.com")]
+        session = _make_session_with_articles([], rejected=rejected)
+        slack = FakeSlack()
+        sheets = FakeSheets()
+
+        await prepare_curation_data(
+            session, slack, sheets, spreadsheet_id="abc123", channel="#test"
+        )
+
+        # Only rejected tab should be appended (main tab has no articles)
+        assert len(sheets.appended) == 1
+        sid, sname, rows = sheets.appended[0]
+        assert sid == "abc123"
+        assert sname == REJECTED_TAB_NAME
+        assert len(rows) == 1
+
+    @pytest.mark.asyncio
+    async def test_both_tabs_populated(self) -> None:
+        accepted = [FakeArticle(url="https://ok.com")]
+        rejected = [FakeArticle(url="https://rej.com")]
+        session = _make_session_with_articles(accepted, rejected=rejected)
+        slack = FakeSlack()
+        sheets = FakeSheets()
+
+        result = await prepare_curation_data(
+            session, slack, sheets, spreadsheet_id="abc123", channel="#test"
+        )
+
+        assert result.articles_written == 1
+        assert result.rejected_written == 1
+        assert len(sheets.appended) == 2
+        # First append = main tab, second = rejected
+        assert sheets.appended[0][1] == "Sheet1"
+        assert sheets.appended[1][1] == REJECTED_TAB_NAME
+
+    @pytest.mark.asyncio
+    async def test_no_rejected_append_when_empty(self) -> None:
+        accepted = [FakeArticle(url="https://ok.com")]
+        session = _make_session_with_articles(accepted, rejected=[])
+        slack = FakeSlack()
+        sheets = FakeSheets()
+
+        result = await prepare_curation_data(
+            session, slack, sheets, spreadsheet_id="abc123", channel="#test"
+        )
+
+        assert result.rejected_written == 0
+        # Only one append (main tab)
+        assert len(sheets.appended) == 1
+        assert sheets.appended[0][1] == "Sheet1"
 
 
 # ===========================================================================

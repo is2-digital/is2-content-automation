@@ -57,7 +57,7 @@ class SlackApprovalSender(Protocol):
 
 
 class SheetWriter(Protocol):
-    """Clear and append operations on a Google Sheets spreadsheet."""
+    """Clear, append, and tab management operations on a Google Sheets spreadsheet."""
 
     async def clear_sheet(self, spreadsheet_id: str, sheet_name: str) -> None: ...
 
@@ -67,6 +67,8 @@ class SheetWriter(Protocol):
         sheet_name: str,
         rows: list[dict[str, Any]],
     ) -> int: ...
+
+    async def ensure_tab(self, spreadsheet_id: str, tab_name: str) -> None: ...
 
 
 class SheetReader(Protocol):
@@ -86,13 +88,28 @@ class SheetReader(Protocol):
 SHEET_COLUMNS = (
     "url",
     "title",
+    "excerpt",
     "publish_date",
     "origin",
+    "relevance_reason",
     "approved",
     "newsletter_id",
     "industry_news",
 )
-"""Column order for the curated-articles Google Sheet."""
+"""Column order for the curated-articles Google Sheet (accepted articles)."""
+
+REJECTED_SHEET_COLUMNS = (
+    "url",
+    "title",
+    "excerpt",
+    "publish_date",
+    "origin",
+    "relevance_reason",
+)
+"""Column order for the rejected-articles tab."""
+
+REJECTED_TAB_NAME = "Rejected"
+"""Name of the Google Sheet tab for rejected articles."""
 
 
 @dataclass(frozen=True)
@@ -104,11 +121,28 @@ class SheetArticle:
 
     url: str
     title: str
+    excerpt: str  # Brave search snippet
     publish_date: str  # MM/DD/YYYY
     origin: str
+    relevance_reason: str  # LLM's accept/reject reason
     approved: str  # empty string when not approved
     newsletter_id: str  # empty string when unassigned
     industry_news: str  # empty string when false/None
+
+
+@dataclass(frozen=True)
+class RejectedSheetArticle:
+    """Rejected article data formatted for the Rejected tab.
+
+    No approval columns — these are FYI only for curator review.
+    """
+
+    url: str
+    title: str
+    excerpt: str
+    publish_date: str  # MM/DD/YYYY
+    origin: str
+    relevance_reason: str
 
 
 @dataclass(frozen=True)
@@ -117,7 +151,9 @@ class CurationDataResult:
 
     articles_fetched: int
     articles_written: int
+    rejected_written: int
     sheet_articles: list[SheetArticle]
+    rejected_articles: list[RejectedSheetArticle]
 
 
 @dataclass(frozen=True)
@@ -190,17 +226,34 @@ def format_article_for_sheet(article: Article) -> SheetArticle:
       so the user sees a blank cell to fill in.
     - ``industry_news`` is converted to ``"yes"`` / ``""`` for display.
     - ``newsletter_id`` defaults to empty string when ``None``.
+    - ``excerpt`` and ``relevance_reason`` default to empty string when ``None``.
     """
     publish_date = format_date_mmddyyyy(article.publish_date) if article.publish_date else ""
 
     return SheetArticle(
         url=article.url,
         title=article.title or "",
+        excerpt=article.excerpt or "",
         publish_date=publish_date,
         origin=article.origin or "",
+        relevance_reason=article.relevance_reason or "",
         approved="yes" if article.approved else "",
         newsletter_id=article.newsletter_id or "",
         industry_news="yes" if article.industry_news else "",
+    )
+
+
+def format_rejected_for_sheet(article: Article) -> RejectedSheetArticle:
+    """Convert a rejected DB article to sheet-ready format for the Rejected tab."""
+    publish_date = format_date_mmddyyyy(article.publish_date) if article.publish_date else ""
+
+    return RejectedSheetArticle(
+        url=article.url,
+        title=article.title or "",
+        excerpt=article.excerpt or "",
+        publish_date=publish_date,
+        origin=article.origin or "",
+        relevance_reason=article.relevance_reason or "",
     )
 
 
@@ -210,11 +263,30 @@ def articles_to_row_dicts(articles: list[SheetArticle]) -> list[dict[str, str]]:
         {
             "url": a.url,
             "title": a.title,
+            "excerpt": a.excerpt,
             "publish_date": a.publish_date,
             "origin": a.origin,
+            "relevance_reason": a.relevance_reason,
             "approved": a.approved,
             "newsletter_id": a.newsletter_id,
             "industry_news": a.industry_news,
+        }
+        for a in articles
+    ]
+
+
+def rejected_to_row_dicts(
+    articles: list[RejectedSheetArticle],
+) -> list[dict[str, str]]:
+    """Convert :class:`RejectedSheetArticle` list to dicts for the Google Sheets API."""
+    return [
+        {
+            "url": a.url,
+            "title": a.title,
+            "excerpt": a.excerpt,
+            "publish_date": a.publish_date,
+            "origin": a.origin,
+            "relevance_reason": a.relevance_reason,
         }
         for a in articles
     ]
@@ -225,11 +297,12 @@ async def fetch_unapproved_articles(
     *,
     limit: int = DEFAULT_FETCH_LIMIT,
 ) -> list[Article]:
-    """Fetch articles that have not been approved.
+    """Fetch accepted articles that have not been approved.
 
-    Matches the n8n query ``WHERE approved != TRUE`` which catches both
-    ``false`` and ``NULL`` values.  Results are ordered by
-    ``publish_date DESC`` with a default limit of 30.
+    Only returns articles with ``relevance_status='accepted'`` or ``NULL``
+    (backward compat for articles ingested before relevance screening).
+    Also requires ``approved != TRUE`` (catches both ``false`` and ``NULL``).
+    Results are ordered by ``publish_date DESC`` with a default limit of 30.
     """
     stmt = (
         select(Article)
@@ -237,8 +310,32 @@ async def fetch_unapproved_articles(
             or_(
                 Article.approved == False,  # noqa: E712
                 Article.approved.is_(None),
-            )
+            ),
+            or_(
+                Article.relevance_status == "accepted",
+                Article.relevance_status.is_(None),
+            ),
         )
+        .order_by(Article.publish_date.desc())
+        .limit(limit)
+    )
+    result = await session.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def fetch_rejected_articles(
+    session: AsyncSession,
+    *,
+    limit: int = DEFAULT_FETCH_LIMIT,
+) -> list[Article]:
+    """Fetch articles rejected by the LLM relevance filter.
+
+    Returns articles with ``relevance_status='rejected'``, ordered by
+    ``publish_date DESC`` for the Rejected tab in Google Sheets.
+    """
+    stmt = (
+        select(Article)
+        .where(Article.relevance_status == "rejected")
         .order_by(Article.publish_date.desc())
         .limit(limit)
     )
@@ -328,46 +425,62 @@ async def prepare_curation_data(
 ) -> CurationDataResult:
     """Prepare unapproved articles for human review in Google Sheets.
 
-    Orchestrates PRD Section 3.1 steps 1–5:
+    Orchestrates PRD Section 3.1 steps 1–5, plus rejected-tab output:
 
     1. Send Slack notification ("Looking into articles now...")
-    2. Clear Google Sheet
-    3. Fetch unapproved articles from PostgreSQL
+    2. Clear Google Sheet (main tab)
+    3. Fetch accepted unapproved articles from PostgreSQL
     4. Format articles for sheet display (dates, booleans)
-    5. Append formatted rows to Google Sheet
+    5. Append formatted rows to main tab
+    6. Ensure 'Rejected' tab exists, clear it, write rejected articles
 
     Args:
         session: Async database session.
         slack: Slack message sender.
-        sheets: Google Sheets writer.
+        sheets: Google Sheets writer with tab management.
         spreadsheet_id: Google Sheets document ID.
         sheet_name: Sheet/tab name within the spreadsheet.
         channel: Slack channel for notifications.
 
     Returns:
         :class:`CurationDataResult` with fetch/write counts and
-        formatted articles.
+        formatted articles for both tabs.
     """
     # 1. Notify Slack
     await slack.send_message(channel, INITIAL_NOTIFICATION)
 
-    # 2. Clear the sheet
+    # 2. Clear the main sheet
     await sheets.clear_sheet(spreadsheet_id, sheet_name)
 
-    # 3. Fetch unapproved articles
+    # 3. Fetch accepted unapproved articles
     articles = await fetch_unapproved_articles(session)
 
     # 4. Format for display
     sheet_articles = [format_article_for_sheet(a) for a in articles]
 
-    # 5. Append to sheet
+    # 5. Append to main sheet
     rows = articles_to_row_dicts(sheet_articles)
     written = await sheets.append_rows(spreadsheet_id, sheet_name, rows) if rows else 0
+
+    # 6. Rejected tab — ensure it exists, clear, and populate
+    await sheets.ensure_tab(spreadsheet_id, REJECTED_TAB_NAME)
+    await sheets.clear_sheet(spreadsheet_id, REJECTED_TAB_NAME)
+
+    rejected_db = await fetch_rejected_articles(session)
+    rejected_articles = [format_rejected_for_sheet(a) for a in rejected_db]
+    rejected_rows = rejected_to_row_dicts(rejected_articles)
+    rejected_written = (
+        await sheets.append_rows(spreadsheet_id, REJECTED_TAB_NAME, rejected_rows)
+        if rejected_rows
+        else 0
+    )
 
     return CurationDataResult(
         articles_fetched=len(articles),
         articles_written=written,
+        rejected_written=rejected_written,
         sheet_articles=sheet_articles,
+        rejected_articles=rejected_articles,
     )
 
 
