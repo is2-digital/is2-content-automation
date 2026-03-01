@@ -23,6 +23,7 @@ from rich.table import Table
 from ica.guided.state import (
     InvalidTransitionError,
     OperatorAction,
+    OperatorDecision,
     RunPhase,
     StepStatus,
     TestRunNotFoundError,
@@ -243,6 +244,7 @@ async def run_guided(
     prompt_fn: Any = None,
     seed: int | None = None,
     start_step: str | None = None,
+    slack_override: Any = None,
 ) -> TestRunState:
     """Execute the guided pipeline flow.
 
@@ -260,6 +262,10 @@ async def run_guided(
             can run without prior steps having executed.
         start_step: Step name to begin from (e.g. ``"theme_generation"``).
             Requires *seed* to provision prerequisite data.
+        slack_override: Optional :class:`~ica.guided.slack_adapter.GuidedSlackAdapter`
+            (or any object implementing the ``SlackService`` interface).  When
+            provided, it is installed as the shared Slack service so all
+            pipeline steps use it instead of creating a new ``SlackService``.
 
     Returns:
         The final :class:`TestRunState` after the run completes or is stopped.
@@ -320,6 +326,15 @@ async def run_guided(
     console.print(f"[bold]Run ID:[/bold] {run_id}")
     console.print(f"[bold]State dir:[/bold] {store_dir.resolve()}")
 
+    # --- Install Slack override ---
+    _prev_shared: Any = None
+    if slack_override is not None:
+        from ica.services.slack import get_shared_service, set_shared_service
+
+        _prev_shared = get_shared_service()
+        set_shared_service(slack_override)  # type: ignore[arg-type]
+        console.print("[cyan]Using Slack override adapter[/cyan]")
+
     # --- Main loop ---
     while True:
         render_run_header(state, console)
@@ -335,6 +350,10 @@ async def run_guided(
             step_fn = get_step_fn(step_name)
             console.print(f"\n[cyan]Running step: {step_name.value}[/cyan]")
 
+            # Tell the Slack adapter which step is about to run
+            if slack_override is not None and hasattr(slack_override, "set_step"):
+                slack_override.set_step(step_name.value)
+
             try:
                 ctx = await run_step(step_name.value, step_fn, ctx)
                 # Extract artifacts from context for this step
@@ -343,6 +362,7 @@ async def run_guided(
             except KeyboardInterrupt:
                 console.print("\n[yellow]Interrupted.[/yellow] State saved.")
                 sm.save_context(snapshot_context(ctx))
+                _restore_shared_service(_prev_shared, slack_override)
                 return state
             except Exception as exc:
                 error_msg = f"{type(exc).__name__}: {exc}"
@@ -351,6 +371,11 @@ async def run_guided(
                     sm.fail_step(error_msg)
             finally:
                 sm.save_context(snapshot_context(ctx))
+                # Merge Slack interactions into step artifacts and decisions
+                if slack_override is not None and hasattr(
+                    slack_override, "drain_step_interactions"
+                ):
+                    _merge_slack_interactions(slack_override, step_name, state)
 
         # Checkpoint — show results and prompt
         if state.phase == RunPhase.CHECKPOINT:
@@ -361,10 +386,12 @@ async def run_guided(
             if state.phase == RunPhase.COMPLETED:
                 console.print("\n[green bold]All steps completed![/green bold]")
                 render_step_table(state, console)
+                _restore_shared_service(_prev_shared, slack_override)
                 return state
 
             if state.phase == RunPhase.ABORTED:
                 console.print("\n[yellow]Run stopped by operator.[/yellow]")
+                _restore_shared_service(_prev_shared, slack_override)
                 return state
 
             if state.phase == RunPhase.NOT_STARTED:
@@ -377,7 +404,43 @@ async def run_guided(
 
         # Completed or aborted (shouldn't reach here normally)
         if state.phase in (RunPhase.COMPLETED, RunPhase.ABORTED):
+            _restore_shared_service(_prev_shared, slack_override)
             return state
+
+
+def _restore_shared_service(prev: Any, slack_override: Any) -> None:
+    """Restore the previous shared Slack service after a guided run."""
+    if slack_override is not None:
+        from ica.services.slack import set_shared_service
+
+        set_shared_service(prev)  # type: ignore[arg-type]
+
+
+def _merge_slack_interactions(
+    adapter: Any,
+    step_name: StepName,
+    state: TestRunState,
+) -> None:
+    """Merge adapter interaction records into step artifacts and decision history."""
+    interactions = adapter.drain_step_interactions(step_name.value)
+    if not interactions:
+        return
+
+    step_record = state.current_step
+    step_record.artifacts["slack_interactions"] = interactions
+
+    for interaction in interactions:
+        method = interaction.get("method", "")
+        if method in ("send_and_wait", "send_and_wait_form", "send_and_wait_freetext"):
+            response = interaction.get("response")
+            state.decisions.append(
+                OperatorDecision(
+                    step=step_name.value,
+                    action=f"slack:{method}",
+                    timestamp=interaction.get("timestamp", ""),
+                    note=str(response) if response else None,
+                )
+            )
 
 
 def _extract_artifacts(step_name: StepName, ctx: PipelineContext) -> dict[str, Any]:

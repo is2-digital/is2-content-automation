@@ -2,7 +2,7 @@
 
 ## Current Status
 **Last Updated:** 2026-02-28
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1
 
 ### 2026-03-01 — ica-476.4: Create automated per-step test data provisioning
 - New `ica/guided/fixtures.py`: `FixtureProvider` class generates deterministic test data for every pipeline step
@@ -2068,6 +2068,20 @@ After completing each task, add an entry below in this format:
 - Created `tests/test_guided/test_runner.py` (49 tests) covering input parsing, prompting, context snapshots, artifact extraction, render helpers, and full integration flows (complete all steps, stop, redo, failure+retry, resume, persistence)
 - Created `tests/test_cli/test_guided.py` (9 tests) covering help, listing, delegation to run_guided, custom options, error handling
 - All 201 guided+CLI tests pass, ruff clean
+
+**Blockers:** None
+
+### 2026-02-28 — ica-476.3.1: Create GuidedSlackAdapter with run/step correlation and decision history
+
+**What was done:**
+- Created `ica/guided/slack_adapter.py` with `GuidedSlackAdapter` class and `SlackInteraction` dataclass
+- Adapter wraps a real `SlackService`, tags all outgoing messages with `[run_id/step_name]` metadata
+- Records every Slack interaction (method, message, response, timestamp) correlated by step name
+- Added `slack_override` parameter to `run_guided()` in `runner.py` — installs adapter via `set_shared_service()`, calls `set_step()` before each pipeline step, merges interactions into `StepRecord.artifacts` and `OperatorDecision` history after each step
+- Added `_restore_shared_service()` helper to cleanly restore previous shared service on all exit paths
+- Added `_merge_slack_interactions()` helper that extracts serialised interaction dicts into step artifacts and records interactive methods (send_and_wait*) as `OperatorDecision` entries with `slack:` prefix
+- Created `tests/test_guided/test_slack_adapter.py` (23 tests) covering init/property delegation, message tagging for all 6 methods, interaction recording, step correlation, drain serialisation, handler delegation, merge helper, and runner integration
+- All 187 guided tests pass, ruff clean
 
 **Blockers:** None
 
