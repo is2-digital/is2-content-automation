@@ -833,6 +833,81 @@ class TestRunFreshnessCheck:
         user_prompt = mock_completion.call_args.kwargs["user_prompt"]
         assert "My unique theme body" in user_prompt
 
+    @pytest.mark.asyncio
+    async def test_skip_sentinel_logs_warning(self):
+        """When model returns isFresh: null, a warning is logged."""
+        skip_json = json.dumps({
+            "isFresh": None,
+            "confidenceScore": 0.0,
+            "assessment": "SKIPPED: Model does not have web access.",
+            "suggestedChanges": None,
+        })
+        with (
+            patch("ica.pipeline.theme_selection.completion") as mock_completion,
+            patch("ica.pipeline.theme_selection.logger") as mock_logger,
+        ):
+            mock_completion.return_value = LLMResponse(
+                text=skip_json, model="test-model"
+            )
+            result = await run_freshness_check("body")
+
+        assert result == skip_json
+        mock_logger.warning.assert_called_once()
+        assert "web access" in mock_logger.warning.call_args[0][0]
+
+    @pytest.mark.asyncio
+    async def test_skip_sentinel_returns_text(self):
+        """Skip sentinel response is returned as-is for Slack display."""
+        skip_json = json.dumps({
+            "isFresh": None,
+            "confidenceScore": 0.0,
+            "assessment": "SKIPPED: Model does not have web access.",
+            "suggestedChanges": None,
+        })
+        with patch("ica.pipeline.theme_selection.completion") as mock_completion:
+            mock_completion.return_value = LLMResponse(
+                text=skip_json, model="test-model"
+            )
+            result = await run_freshness_check("body")
+
+        assert "SKIPPED" in result
+
+    @pytest.mark.asyncio
+    async def test_normal_json_does_not_trigger_skip(self):
+        """Normal freshness JSON (isFresh: true/false) does not log warning."""
+        normal_json = json.dumps({
+            "isFresh": True,
+            "confidenceScore": 0.9,
+            "assessment": "Theme is fresh.",
+            "suggestedChanges": "",
+        })
+        with (
+            patch("ica.pipeline.theme_selection.completion") as mock_completion,
+            patch("ica.pipeline.theme_selection.logger") as mock_logger,
+        ):
+            mock_completion.return_value = LLMResponse(
+                text=normal_json, model="test-model"
+            )
+            result = await run_freshness_check("body")
+
+        assert result == normal_json
+        mock_logger.warning.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_non_json_response_does_not_trigger_skip(self):
+        """Non-JSON text response is returned without skip detection."""
+        with (
+            patch("ica.pipeline.theme_selection.completion") as mock_completion,
+            patch("ica.pipeline.theme_selection.logger") as mock_logger,
+        ):
+            mock_completion.return_value = LLMResponse(
+                text="Theme is fresh and unique.", model="test-model"
+            )
+            result = await run_freshness_check("body")
+
+        assert result == "Theme is fresh and unique."
+        mock_logger.warning.assert_not_called()
+
 
 # =========================================================================
 # extract_learning_data

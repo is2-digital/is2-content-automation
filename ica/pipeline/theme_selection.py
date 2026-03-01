@@ -32,6 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ica.config.llm_config import LLMPurpose
 from ica.db.crud import add_note, upsert_theme
+from ica.logging import get_logger
 from ica.pipeline.theme_generation import GeneratedTheme, ThemeGenerationResult
 from ica.prompts.freshness_check import build_freshness_check_prompt
 from ica.prompts.learning_data_extraction import (
@@ -39,6 +40,8 @@ from ica.prompts.learning_data_extraction import (
 )
 from ica.services.llm import completion
 from ica.utils.marker_parser import FormattedTheme
+
+logger = get_logger(__name__)
 
 # ---------------------------------------------------------------------------
 # Constants — Slack form field labels and option values
@@ -539,7 +542,11 @@ async def run_freshness_check(
     """Call the LLM to check editorial freshness of a theme.
 
     Compares the theme against recent newsletters at
-    is2digital.com/newsletters.
+    is2digital.com/newsletters.  The prompt instructs the model to
+    self-report if it lacks web access, returning a sentinel JSON
+    with ``"isFresh": null``.  When detected, a warning is logged
+    and the sentinel response is returned as-is so the pipeline
+    continues without blocking.
 
     Args:
         theme_body: The raw body text of the selected theme.
@@ -550,7 +557,7 @@ async def run_freshness_check(
         The LLM's freshness analysis text.
 
     Raises:
-        RuntimeError: If the LLM returns an empty response.
+        LLMError: If the LLM call fails or returns an empty response.
     """
     system_prompt, user_prompt = build_freshness_check_prompt(theme_body)
 
@@ -561,6 +568,17 @@ async def run_freshness_check(
         user_prompt=user_prompt,
         step="theme_freshness",
     )
+
+    # Detect web-access skip sentinel from the prompt's self-check.
+    try:
+        parsed = json.loads(result.text)
+        if isinstance(parsed, dict) and parsed.get("isFresh") is None:
+            logger.warning(
+                "Freshness check skipped: model lacks web access (model=%s)",
+                result.model,
+            )
+    except (json.JSONDecodeError, TypeError):
+        pass  # Not JSON or unparseable — normal text response, proceed.
 
     return result.text
 

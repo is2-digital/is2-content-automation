@@ -73,6 +73,13 @@ class TestFreshnessCheckPromptConstant:
         assert "suggestedChanges" in _COMBINED
         assert "assessment" in _COMBINED
 
+    def test_contains_web_access_check(self) -> None:
+        assert "Web_Access_Check" in _COMBINED
+
+    def test_contains_skip_sentinel(self) -> None:
+        """Prompt instructs model to return isFresh: null when no web access."""
+        assert '"isFresh": null' in _COMBINED
+
     def test_no_n8n_expression_syntax(self) -> None:
         assert "$json" not in _COMBINED
         assert "$(" not in _COMBINED
