@@ -189,7 +189,7 @@ class TestUserPromptTemplate:
     def test_main_article_rules(self):
         assert "max 750 chars" in _GENERATION_INSTRUCTION
         assert "180-250 chars" in _GENERATION_INSTRUCTION
-        assert "Strategic Take-away" in _GENERATION_INSTRUCTION
+        assert "Strategic Takeaway" in _GENERATION_INSTRUCTION
 
     def test_quick_hits_rules(self):
         assert "# *QUICK HITS*" in _GENERATION_INSTRUCTION
