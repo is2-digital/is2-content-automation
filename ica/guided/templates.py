@@ -67,6 +67,10 @@ class DuplicateTemplateError(Exception):
     """Raised when storing a template whose content hash already exists."""
 
 
+class DuplicateVersionError(Exception):
+    """Raised when storing a template version that already exists."""
+
+
 # ---------------------------------------------------------------------------
 # Persistence
 # ---------------------------------------------------------------------------
@@ -87,64 +91,67 @@ class TemplateStore:
     def base_dir(self) -> Path:
         return self._base_dir
 
-    def save(self, record: TemplateRecord) -> Path:
-        """Persist a template record to disk.
+    # --- CRUD operations ---
+
+    def save(
+        self,
+        name: str,
+        html: str,
+        version: str,
+        description: str = "",
+    ) -> TemplateRecord:
+        """Create and persist a new template version.
 
         Args:
-            record: The template record to store.
+            name: Template name (used as subdirectory key).
+            html: The raw HTML content.
+            version: Semantic version string.
+            description: Optional description for this version.
 
         Returns:
-            The path to the written JSON file.
+            The created :class:`TemplateRecord`.
 
         Raises:
-            DuplicateTemplateError: If another version of the same template
-                has identical HTML content (matching content hash).
+            DuplicateVersionError: If *version* already exists for *name*.
+            DuplicateTemplateError: If another version of *name* has
+                identical HTML content (matching content hash).
         """
-        template_dir = self._template_dir(record.name)
-        template_dir.mkdir(parents=True, exist_ok=True)
+        if self.exists(name, version):
+            raise DuplicateVersionError(
+                f"Template '{name}' version '{version}' already exists. "
+                f"Use delete() first to replace it."
+            )
+
+        record = TemplateRecord(
+            name=name,
+            version=version,
+            template_html=html,
+            description=description,
+        )
 
         # Check for duplicate content across versions of this template
-        for existing in self._iter_records(record.name):
-            if (
-                existing.content_hash == record.content_hash
-                and existing.version != record.version
-            ):
+        for existing in self._iter_records(name):
+            if existing.content_hash == record.content_hash:
                 raise DuplicateTemplateError(
-                    f"Template '{record.name}' version '{existing.version}' "
+                    f"Template '{name}' version '{existing.version}' "
                     f"already has identical content (hash: {record.content_hash[:12]}...)"
                 )
 
-        path = self._version_path(record.name, record.version)
-        path.write_text(json.dumps(_serialize(record), indent=2))
-        return path
+        self._persist(record)
+        return record
 
-    def load(self, name: str, version: str) -> TemplateRecord:
-        """Load a specific template version.
+    def get(self, name: str, version: str | None = None) -> TemplateRecord:
+        """Retrieve a template, optionally by version.
+
+        When *version* is ``None``, returns the most recently created version.
 
         Raises:
             TemplateNotFoundError: If the template or version does not exist.
+                The error message includes available alternatives.
         """
-        path = self._version_path(name, version)
-        if not path.exists():
-            raise TemplateNotFoundError(
-                f"Template '{name}' version '{version}' not found"
-            )
-        return _deserialize(json.loads(path.read_text()))
-
-    def load_latest(self, name: str) -> TemplateRecord:
-        """Load the most recently created version of a named template.
-
-        Raises:
-            TemplateNotFoundError: If no versions exist for *name*.
-        """
-        records = sorted(
-            self._iter_records(name),
-            key=lambda r: r.created_at,
-            reverse=True,
-        )
-        if not records:
-            raise TemplateNotFoundError(f"No versions found for template '{name}'")
-        return records[0]
+        if version is not None:
+            return self._load(name, version)
+        return self._load_latest(name)
 
     def list_templates(self) -> list[str]:
         """Return sorted names of all stored templates."""
@@ -154,16 +161,18 @@ class TemplateStore:
             d.name for d in self._base_dir.iterdir() if d.is_dir()
         )
 
-    def list_versions(self, name: str) -> list[str]:
-        """Return sorted version strings for a named template.
+    def list_versions(self, name: str) -> list[TemplateRecord]:
+        """Return all version records for a named template, sorted by version.
 
         Raises:
             TemplateNotFoundError: If no template directory exists for *name*.
         """
         template_dir = self._template_dir(name)
         if not template_dir.exists():
-            raise TemplateNotFoundError(f"Template '{name}' not found")
-        return sorted(p.stem for p in template_dir.glob("*.json"))
+            available = self.list_templates()
+            alt = f" Available templates: {', '.join(available)}" if available else ""
+            raise TemplateNotFoundError(f"Template '{name}' not found.{alt}")
+        return sorted(self._iter_records(name), key=lambda r: r.version)
 
     def delete(self, name: str, version: str) -> None:
         """Delete a specific template version. No-op if it doesn't exist."""
@@ -183,6 +192,46 @@ class TemplateStore:
         return template_dir.exists() and any(template_dir.glob("*.json"))
 
     # --- Internal helpers ---
+
+    def _persist(self, record: TemplateRecord) -> Path:
+        """Write a TemplateRecord to disk as JSON."""
+        template_dir = self._template_dir(record.name)
+        template_dir.mkdir(parents=True, exist_ok=True)
+        path = self._version_path(record.name, record.version)
+        path.write_text(json.dumps(_serialize(record), indent=2))
+        return path
+
+    def _load(self, name: str, version: str) -> TemplateRecord:
+        """Load a specific template version with alternative suggestions."""
+        path = self._version_path(name, version)
+        if not path.exists():
+            template_dir = self._template_dir(name)
+            if template_dir.exists():
+                versions = sorted(p.stem for p in template_dir.glob("*.json"))
+                if versions:
+                    raise TemplateNotFoundError(
+                        f"Template '{name}' version '{version}' not found."
+                        f" Available versions: {', '.join(versions)}"
+                    )
+            available = self.list_templates()
+            alt = f" Available templates: {', '.join(available)}" if available else ""
+            raise TemplateNotFoundError(f"Template '{name}' not found.{alt}")
+        return _deserialize(json.loads(path.read_text()))
+
+    def _load_latest(self, name: str) -> TemplateRecord:
+        """Load the most recently created version of a named template."""
+        records = sorted(
+            self._iter_records(name),
+            key=lambda r: r.created_at,
+            reverse=True,
+        )
+        if not records:
+            available = self.list_templates()
+            alt = f" Available templates: {', '.join(available)}" if available else ""
+            raise TemplateNotFoundError(
+                f"No versions found for template '{name}'.{alt}"
+            )
+        return records[0]
 
     def _template_dir(self, name: str) -> Path:
         return self._base_dir / name

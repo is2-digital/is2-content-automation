@@ -2,7 +2,7 @@
 
 ## Current Status
 **Last Updated:** 2026-03-01
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1, ica-476.7.2
 
 ### 2026-03-01 — ica-476.7.1: Design template storage model with version metadata and file-based persistence
 - New module `ica/guided/templates.py` with `TemplateRecord` dataclass and `TemplateStore` persistence class
@@ -2175,5 +2175,20 @@ After completing each task, add an entry below in this format:
 - Added helper functions: `_google_doc_url()`, `_google_sheet_url()`, `_get_sheets_refs()`
 - Added `TestGoogleUrlHelpers` test class (5 tests) and updated all `TestExtractArtifacts` tests (now 12 tests)
 - All 56 guided runner tests pass; ruff clean; no new mypy errors
+
+**Blockers:** None
+
+---
+
+### 2026-02-28 — ica-476.7.2: Implement template CRUD operations
+
+**What was done:**
+- Evolved `TemplateStore` public API with higher-level CRUD methods
+- `save(name, html, version, description)` creates `TemplateRecord` internally, returns it; raises `DuplicateVersionError` on existing version
+- `get(name, version=None)` combines load/load_latest; includes available alternatives in error messages
+- `list_versions(name)` now returns `list[TemplateRecord]` (was `list[str]`)
+- Added `DuplicateVersionError` exception; improved `TemplateNotFoundError` messages with available templates/versions
+- Internal methods renamed: `save(record)` → `_persist(record)`, `load`/`load_latest` → `_load`/`_load_latest`
+- All 33 tests pass; ruff clean
 
 **Blockers:** None
