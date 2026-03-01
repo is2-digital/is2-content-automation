@@ -2,7 +2,16 @@
 
 ## Current Status
 **Last Updated:** 2026-03-01
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4
+
+### 2026-03-01 — ica-476.5.4: Add integration tests for Google Docs write and Sheets update in guided mode
+- New test file `tests/test_guided/test_google_docs_sheets_integration.py` with 15 integration tests
+- TestDocsStepCreatesDocument (3 tests): markdown, HTML, and email_subject doc_id stored in artifacts
+- TestSheetsStepWritesRows (2 tests): curation and summarization spreadsheet_id in artifacts
+- TestDocsRedoCreatesSecondDocument (3 tests): redo creates new doc, preserves old in artifact_history, clears stale ID
+- TestSheetsRedoAppendsVersionedRows (3 tests): redo injects guided_attempt tag, rows tagged with attempt, history preserved
+- TestMissingTargetIdValidation (4 tests): missing IDs abort run, error mentions setting names, configured IDs proceed
+- All mocking at service boundary (_make_docs, _make_sheets) not HTTP level
 
 ### 2026-03-01 — ica-476.3.4: Add integration test for full Slack send-and-wait decision loop
 - New test file `tests/test_guided/test_slack_decision_loop.py` with 11 integration tests
