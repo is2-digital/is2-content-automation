@@ -37,6 +37,7 @@ from ica.pipeline.summarization import (
     summarize_articles,
     summarize_single_article,
 )
+from ica.services.llm import LLMResponse
 from ica.services.web_fetcher import CAPTCHA_MARKER, YOUTUBE_DOMAIN
 
 # ---------------------------------------------------------------------------
@@ -599,121 +600,96 @@ class TestCallSummaryLlm:
     """Tests for the LLM summarization call."""
 
     @pytest.mark.asyncio
-    async def test_calls_litellm(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+    async def test_calls_completion(self) -> None:
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
-        with (
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
-            patch(
-                "ica.pipeline.summarization.get_model",
-                return_value="test/model",
-            ),
-        ):
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ) as mock_completion:
             result = await call_summary_llm("article input")
 
         assert result == _SAMPLE_LLM_OUTPUT
-        mock_litellm.acompletion.assert_called_once()
+        mock_completion.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_uses_specified_model(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "output"
+        mock_response = LLMResponse(text="output", model="custom/model")
 
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ) as mock_completion:
             await call_summary_llm("input", model="custom/model")
 
-        call_kwargs = mock_litellm.acompletion.call_args
+        call_kwargs = mock_completion.call_args
         assert call_kwargs.kwargs["model"] == "custom/model"
 
     @pytest.mark.asyncio
     async def test_includes_feedback_in_prompt(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "output"
+        mock_response = LLMResponse(text="output", model="test/model")
 
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ) as mock_completion:
             await call_summary_llm(
                 "input",
                 aggregated_feedback="\u2022 Be more concise",
                 model="test/model",
             )
 
-        call_kwargs = mock_litellm.acompletion.call_args
-        messages = call_kwargs.kwargs["messages"]
-        user_msg = messages[1]["content"]
+        call_kwargs = mock_completion.call_args
+        user_msg = call_kwargs.kwargs["user_prompt"]
         assert "Be more concise" in user_msg
 
     @pytest.mark.asyncio
     async def test_no_feedback(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "output"
+        mock_response = LLMResponse(text="output", model="test/model")
 
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ) as mock_completion:
             await call_summary_llm("input", model="test/model")
 
-        call_kwargs = mock_litellm.acompletion.call_args
-        messages = call_kwargs.kwargs["messages"]
-        user_msg = messages[1]["content"]
+        call_kwargs = mock_completion.call_args
+        user_msg = call_kwargs.kwargs["user_prompt"]
         assert "Editorial Improvement Context" not in user_msg
 
     @pytest.mark.asyncio
-    async def test_empty_response_raises(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = ""
-
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
-            with pytest.raises(RuntimeError, match="empty response"):
-                await call_summary_llm("input", model="test/model")
-
-    @pytest.mark.asyncio
-    async def test_whitespace_only_response_raises(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "   \n  "
-
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
-            with pytest.raises(RuntimeError, match="empty response"):
-                await call_summary_llm("input", model="test/model")
-
-    @pytest.mark.asyncio
     async def test_strips_response(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "  trimmed output  "
+        """completion() returns already-stripped text in LLMResponse."""
+        mock_response = LLMResponse(text="trimmed output", model="test/model")
 
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ):
             result = await call_summary_llm("input", model="test/model")
 
         assert result == "trimmed output"
 
     @pytest.mark.asyncio
-    async def test_system_and_user_messages(self) -> None:
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "output"
+    async def test_passes_system_and_user_prompts(self) -> None:
+        mock_response = LLMResponse(text="output", model="test/model")
 
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ) as mock_completion:
             await call_summary_llm("article content", model="test/model")
 
-        call_kwargs = mock_litellm.acompletion.call_args
-        messages = call_kwargs.kwargs["messages"]
-        assert len(messages) == 2
-        assert messages[0]["role"] == "system"
-        assert messages[1]["role"] == "user"
-        assert "article content" in messages[1]["content"]
+        call_kwargs = mock_completion.call_args
+        assert "system_prompt" in call_kwargs.kwargs
+        assert "user_prompt" in call_kwargs.kwargs
+        assert "article content" in call_kwargs.kwargs["user_prompt"]
 
 
 # ===================================================================
@@ -730,12 +706,13 @@ class TestSummarizeSingleArticle:
         article = _make_article(url="https://example.com/ai-news", title="AI News")
         http = FakeHttpFetcher(_make_fetch_result(content="<p>Article body</p>"))
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ):
             result = await summarize_single_article(
                 article,
                 order=1,
@@ -755,12 +732,13 @@ class TestSummarizeSingleArticle:
         article = _make_article()
         http = FakeHttpFetcher()
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ):
             await summarize_single_article(article, order=1, http=http, model="test/model")
 
         assert len(http.calls) == 1
@@ -774,12 +752,13 @@ class TestSummarizeSingleArticle:
         http = FakeHttpFetcher(_make_fetch_result(content=None, error="403 Forbidden"))
         slack = FakeSlackFallback("Manual article content here")
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ):
             result = await summarize_single_article(
                 article,
                 order=1,
@@ -810,12 +789,13 @@ class TestSummarizeSingleArticle:
         http = FakeHttpFetcher(_make_fetch_result(content="<html>OK</html>"))
         slack = FakeSlackFallback("YouTube transcript text")
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ):
             await summarize_single_article(
                 article, order=1, http=http, slack=slack, model="test/model"
             )
@@ -829,12 +809,13 @@ class TestSummarizeSingleArticle:
         http = FakeHttpFetcher(_make_fetch_result(content="<html>sgcaptcha challenge</html>"))
         slack = FakeSlackFallback("Clean article text")
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ):
             await summarize_single_article(
                 article, order=1, http=http, slack=slack, model="test/model"
             )
@@ -849,19 +830,20 @@ class TestSummarizeSingleArticle:
         manual_text = "This is <b>already</b> readable text from user"
         slack = FakeSlackFallback(manual_text)
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ) as mock_completion:
             await summarize_single_article(
                 article, order=1, http=http, slack=slack, model="test/model"
             )
 
         # Verify the LLM input contains the manual text as-is
-        call_kwargs = mock_litellm.acompletion.call_args
-        user_msg = call_kwargs.kwargs["messages"][1]["content"]
+        call_kwargs = mock_completion.call_args
+        user_msg = call_kwargs.kwargs["user_prompt"]
         assert manual_text in user_msg
 
     @pytest.mark.asyncio
@@ -872,16 +854,17 @@ class TestSummarizeSingleArticle:
             _make_fetch_result(content="<html><body><p>Clean text</p></body></html>")
         )
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ) as mock_completion:
             await summarize_single_article(article, order=1, http=http, model="test/model")
 
-        call_kwargs = mock_litellm.acompletion.call_args
-        user_msg = call_kwargs.kwargs["messages"][1]["content"]
+        call_kwargs = mock_completion.call_args
+        user_msg = call_kwargs.kwargs["user_prompt"]
         assert "<html>" not in user_msg
         assert "<body>" not in user_msg
         assert "Clean text" in user_msg
@@ -891,12 +874,13 @@ class TestSummarizeSingleArticle:
         article = _make_article(newsletter_id="NL-042")
         http = FakeHttpFetcher()
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ):
             result = await summarize_single_article(
                 article, order=1, http=http, model="test/model"
             )
@@ -908,12 +892,13 @@ class TestSummarizeSingleArticle:
         article = _make_article(industry_news=True)
         http = FakeHttpFetcher()
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ):
             result = await summarize_single_article(
                 article, order=1, http=http, model="test/model"
             )
@@ -925,12 +910,13 @@ class TestSummarizeSingleArticle:
         article = _make_article()
         http = FakeHttpFetcher()
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ) as mock_completion:
             await summarize_single_article(
                 article,
                 order=1,
@@ -939,8 +925,8 @@ class TestSummarizeSingleArticle:
                 model="test/model",
             )
 
-        call_kwargs = mock_litellm.acompletion.call_args
-        user_msg = call_kwargs.kwargs["messages"][1]["content"]
+        call_kwargs = mock_completion.call_args
+        user_msg = call_kwargs.kwargs["user_prompt"]
         assert "Be more concise" in user_msg
 
     @pytest.mark.asyncio
@@ -948,12 +934,13 @@ class TestSummarizeSingleArticle:
         article = _make_article()
         http = FakeHttpFetcher()
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ):
             result = await summarize_single_article(
                 article, order=5, http=http, model="test/model"
             )
@@ -987,18 +974,19 @@ class TestSummarizeArticles:
         articles = [_make_article()]
         http = FakeHttpFetcher()
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
         with (
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
+            patch(
+                "ica.pipeline.summarization.completion",
+                new_callable=AsyncMock,
+                return_value=mock_response,
+            ),
             patch(
                 "ica.pipeline.summarization.get_model",
                 return_value="test/model",
             ),
         ):
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
             result = await summarize_articles(articles, http=http)
 
         assert len(result.summaries) == 1
@@ -1011,22 +999,23 @@ class TestSummarizeArticles:
         articles = [_make_article(url=f"https://example.com/{i}") for i in range(3)]
         http = FakeHttpFetcher()
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
         with (
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
+            patch(
+                "ica.pipeline.summarization.completion",
+                new_callable=AsyncMock,
+                return_value=mock_response,
+            ) as mock_completion,
             patch(
                 "ica.pipeline.summarization.get_model",
                 return_value="test/model",
             ),
         ):
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
             result = await summarize_articles(articles, http=http)
 
         assert len(result.summaries) == 3
-        assert mock_litellm.acompletion.call_count == 3
+        assert mock_completion.call_count == 3
 
     @pytest.mark.asyncio
     async def test_orders_are_sequential(self) -> None:
@@ -1034,18 +1023,19 @@ class TestSummarizeArticles:
         articles = [_make_article(url=f"https://example.com/{i}") for i in range(3)]
         http = FakeHttpFetcher()
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
         with (
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
+            patch(
+                "ica.pipeline.summarization.completion",
+                new_callable=AsyncMock,
+                return_value=mock_response,
+            ),
             patch(
                 "ica.pipeline.summarization.get_model",
                 return_value="test/model",
             ),
         ):
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
             result = await summarize_articles(articles, http=http)
 
         orders = [s.order for s in result.summaries]
@@ -1059,12 +1049,14 @@ class TestSummarizeArticles:
         session = AsyncMock()
 
         mock_notes = [_make_note("Be concise"), _make_note("Add numbers")]
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
         with (
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
+            patch(
+                "ica.pipeline.summarization.completion",
+                new_callable=AsyncMock,
+                return_value=mock_response,
+            ) as mock_completion,
             patch(
                 "ica.pipeline.summarization.get_model",
                 return_value="test/model",
@@ -1075,14 +1067,13 @@ class TestSummarizeArticles:
                 return_value=mock_notes,
             ) as mock_get_notes,
         ):
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
             await summarize_articles(articles, http=http, session=session)
 
         mock_get_notes.assert_called_once_with(session, "user_summarization")
 
         # Check feedback was injected into the prompt
-        call_kwargs = mock_litellm.acompletion.call_args
-        user_msg = call_kwargs.kwargs["messages"][1]["content"]
+        call_kwargs = mock_completion.call_args
+        user_msg = call_kwargs.kwargs["user_prompt"]
         assert "Be concise" in user_msg
 
     @pytest.mark.asyncio
@@ -1091,22 +1082,23 @@ class TestSummarizeArticles:
         articles = [_make_article()]
         http = FakeHttpFetcher()
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
         with (
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
+            patch(
+                "ica.pipeline.summarization.completion",
+                new_callable=AsyncMock,
+                return_value=mock_response,
+            ) as mock_completion,
             patch(
                 "ica.pipeline.summarization.get_model",
                 return_value="test/model",
             ),
         ):
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
             await summarize_articles(articles, http=http, session=None)
 
-        call_kwargs = mock_litellm.acompletion.call_args
-        user_msg = call_kwargs.kwargs["messages"][1]["content"]
+        call_kwargs = mock_completion.call_args
+        user_msg = call_kwargs.kwargs["user_prompt"]
         assert "Editorial Improvement Context" not in user_msg
 
     @pytest.mark.asyncio
@@ -1114,16 +1106,17 @@ class TestSummarizeArticles:
         articles = [_make_article()]
         http = FakeHttpFetcher()
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="custom/model")
 
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=mock_response,
+        ) as mock_completion:
             result = await summarize_articles(articles, http=http, model="custom/model")
 
         assert result.model == "custom/model"
-        call_kwargs = mock_litellm.acompletion.call_args
+        call_kwargs = mock_completion.call_args
         assert call_kwargs.kwargs["model"] == "custom/model"
 
     @pytest.mark.asyncio
@@ -1146,18 +1139,19 @@ class TestSummarizeArticles:
         http.get = fake_get
         slack = FakeSlackFallback("Manual YouTube content")
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
         with (
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
+            patch(
+                "ica.pipeline.summarization.completion",
+                new_callable=AsyncMock,
+                return_value=mock_response,
+            ),
             patch(
                 "ica.pipeline.summarization.get_model",
                 return_value="test/model",
             ),
         ):
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
             result = await summarize_articles(articles, http=http, slack=slack)
 
         assert len(result.summaries) == 3
@@ -1173,18 +1167,19 @@ class TestSummarizeArticles:
         ]
         http = FakeHttpFetcher()
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
         with (
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
+            patch(
+                "ica.pipeline.summarization.completion",
+                new_callable=AsyncMock,
+                return_value=mock_response,
+            ),
             patch(
                 "ica.pipeline.summarization.get_model",
                 return_value="test/model",
             ),
         ):
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
             result = await summarize_articles(articles, http=http)
 
         assert result.summaries[0].newsletter_id == "NL-001"
@@ -1199,18 +1194,19 @@ class TestSummarizeArticles:
         ]
         http = FakeHttpFetcher()
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
         with (
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
+            patch(
+                "ica.pipeline.summarization.completion",
+                new_callable=AsyncMock,
+                return_value=mock_response,
+            ),
             patch(
                 "ica.pipeline.summarization.get_model",
                 return_value="test/model",
             ),
         ):
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
             result = await summarize_articles(articles, http=http)
 
         assert result.summaries[0].industry_news is False
@@ -1227,12 +1223,14 @@ class TestSummarizeArticles:
         session = AsyncMock()
 
         mock_notes = [_make_note("Shared feedback")]
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
         with (
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
+            patch(
+                "ica.pipeline.summarization.completion",
+                new_callable=AsyncMock,
+                return_value=mock_response,
+            ) as mock_completion,
             patch(
                 "ica.pipeline.summarization.get_model",
                 return_value="test/model",
@@ -1243,14 +1241,13 @@ class TestSummarizeArticles:
                 return_value=mock_notes,
             ) as mock_get_notes,
         ):
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
             await summarize_articles(articles, http=http, session=session)
 
         # Learning data fetched only once
         mock_get_notes.assert_called_once()
         # Both LLM calls include the feedback
-        for call in mock_litellm.acompletion.call_args_list:
-            user_msg = call.kwargs["messages"][1]["content"]
+        for call in mock_completion.call_args_list:
+            user_msg = call.kwargs["user_prompt"]
             assert "Shared feedback" in user_msg
 
     @pytest.mark.asyncio
@@ -1263,18 +1260,19 @@ class TestSummarizeArticles:
         ]
         http = FakeHttpFetcher()
 
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = _SAMPLE_LLM_OUTPUT
+        mock_response = LLMResponse(text=_SAMPLE_LLM_OUTPUT, model="test/model")
 
         with (
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
+            patch(
+                "ica.pipeline.summarization.completion",
+                new_callable=AsyncMock,
+                return_value=mock_response,
+            ),
             patch(
                 "ica.pipeline.summarization.get_model",
                 return_value="test/model",
             ),
         ):
-            mock_litellm.acompletion = AsyncMock(return_value=mock_response)
             await summarize_articles(articles, http=http)
 
         fetched_urls = [url for url, _ in http.calls]

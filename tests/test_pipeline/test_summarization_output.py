@@ -22,6 +22,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from ica.config.llm_config import LLMPurpose
 from ica.pipeline.summarization import (
     FEEDBACK_BUTTON_LABEL,
     FEEDBACK_FORM_DESCRIPTION,
@@ -47,6 +48,7 @@ from ica.pipeline.summarization import (
     store_summarization_feedback,
     summaries_to_output_articles,
 )
+from ica.services.llm import LLMResponse
 from ica.utils.output_router import UserChoice
 
 # ---------------------------------------------------------------------------
@@ -89,12 +91,9 @@ def _make_summaries(n: int = 3) -> list[ArticleSummary]:
     ]
 
 
-def _mock_llm_response(content: str) -> MagicMock:
-    """Create a mock litellm.acompletion response."""
-    response = MagicMock()
-    response.choices = [MagicMock()]
-    response.choices[0].message.content = content
-    return response
+def _mock_llm_response(content: str) -> LLMResponse:
+    """Create a mock completion() response."""
+    return LLMResponse(text=content, model="test/model")
 
 
 # ---------------------------------------------------------------------------
@@ -448,72 +447,67 @@ class TestCallRegenerationLlm:
     @pytest.mark.asyncio
     async def test_returns_content(self):
         response = _mock_llm_response("Regenerated summaries")
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=response,
+        ) as mock_completion:
             result = await call_regeneration_llm(
                 "original text",
                 "make shorter",
                 model="test-model",
             )
         assert result == "Regenerated summaries"
+        assert mock_completion.call_count == 1
 
     @pytest.mark.asyncio
     async def test_strips_whitespace(self):
-        response = _mock_llm_response("  result  \n")
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=response)
+        response = _mock_llm_response("result")
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=response,
+        ):
             result = await call_regeneration_llm("original", "feedback", model="m")
         assert result == "result"
 
     @pytest.mark.asyncio
-    async def test_empty_response_raises(self):
-        response = _mock_llm_response("")
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=response)
-            with pytest.raises(RuntimeError, match="empty response"):
-                await call_regeneration_llm("original", "feedback", model="m")
-
-    @pytest.mark.asyncio
-    async def test_none_response_raises(self):
-        response = _mock_llm_response(None)  # type: ignore[arg-type]
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=response)
-            with pytest.raises(RuntimeError, match="empty response"):
-                await call_regeneration_llm("original", "feedback", model="m")
-
-    @pytest.mark.asyncio
     async def test_uses_regeneration_prompt(self):
         response = _mock_llm_response("result")
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=response,
+        ) as mock_completion:
             await call_regeneration_llm("original content", "user feedback", model="m")
-            call_args = mock_litellm.acompletion.call_args
-            messages = call_args.kwargs["messages"]
+            call_args = mock_completion.call_args
             # The user prompt should include original content and feedback
-            assert "original content" in messages[1]["content"]
-            assert "user feedback" in messages[1]["content"]
+            assert "original content" in call_args.kwargs["user_prompt"]
+            assert "user feedback" in call_args.kwargs["user_prompt"]
 
     @pytest.mark.asyncio
     async def test_uses_specified_model(self):
         response = _mock_llm_response("result")
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=response,
+        ) as mock_completion:
             await call_regeneration_llm("original", "feedback", model="custom/model")
-            call_args = mock_litellm.acompletion.call_args
+            call_args = mock_completion.call_args
             assert call_args.kwargs["model"] == "custom/model"
 
     @pytest.mark.asyncio
     async def test_default_model_from_config(self):
         response = _mock_llm_response("result")
-        with (
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
-            patch("ica.pipeline.summarization.get_model") as mock_get_model,
-        ):
-            mock_litellm.acompletion = AsyncMock(return_value=response)
-            mock_get_model.return_value = "default/regen"
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=response,
+        ) as mock_completion:
             await call_regeneration_llm("original", "feedback")
-            call_args = mock_litellm.acompletion.call_args
-            assert call_args.kwargs["model"] == "default/regen"
+            call_args = mock_completion.call_args
+            assert call_args.kwargs["purpose"] == LLMPurpose.SUMMARY_REGENERATION
 
 
 # ---------------------------------------------------------------------------
@@ -528,8 +522,11 @@ class TestExtractSummaryLearningData:
     async def test_extracts_json_field(self):
         json_response = json.dumps({"learning_feedback": "Use shorter summaries next time."})
         response = _mock_llm_response(json_response)
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=response,
+        ):
             result = await extract_summary_learning_data(
                 "make shorter", "input", "output", model="m"
             )
@@ -538,8 +535,11 @@ class TestExtractSummaryLearningData:
     @pytest.mark.asyncio
     async def test_returns_raw_when_not_json(self):
         response = _mock_llm_response("Just a plain text note.")
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=response,
+        ):
             result = await extract_summary_learning_data("feedback", "input", "output", model="m")
         assert result == "Just a plain text note."
 
@@ -547,52 +547,51 @@ class TestExtractSummaryLearningData:
     async def test_returns_raw_when_json_missing_key(self):
         json_response = json.dumps({"other_key": "value"})
         response = _mock_llm_response(json_response)
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=response,
+        ):
             result = await extract_summary_learning_data("feedback", "input", "output", model="m")
         assert result == json_response
 
     @pytest.mark.asyncio
     async def test_strips_whitespace(self):
-        response = _mock_llm_response("  trimmed  \n")
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=response)
+        response = _mock_llm_response("trimmed")
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=response,
+        ):
             result = await extract_summary_learning_data("fb", "in", "out", model="m")
         assert result == "trimmed"
 
     @pytest.mark.asyncio
-    async def test_empty_response_raises(self):
-        response = _mock_llm_response("")
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=response)
-            with pytest.raises(RuntimeError, match="empty response"):
-                await extract_summary_learning_data("fb", "in", "out", model="m")
-
-    @pytest.mark.asyncio
     async def test_uses_learning_data_prompt(self):
         response = _mock_llm_response("result")
-        with patch("ica.pipeline.summarization.litellm") as mock_litellm:
-            mock_litellm.acompletion = AsyncMock(return_value=response)
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=response,
+        ) as mock_completion:
             await extract_summary_learning_data("user_fb", "input_text", "model_out", model="m")
-            call_args = mock_litellm.acompletion.call_args
-            messages = call_args.kwargs["messages"]
+            call_args = mock_completion.call_args
             # User prompt should contain all three inputs
-            assert "user_fb" in messages[1]["content"]
-            assert "input_text" in messages[1]["content"]
-            assert "model_out" in messages[1]["content"]
+            assert "user_fb" in call_args.kwargs["user_prompt"]
+            assert "input_text" in call_args.kwargs["user_prompt"]
+            assert "model_out" in call_args.kwargs["user_prompt"]
 
     @pytest.mark.asyncio
     async def test_default_model_from_config(self):
         response = _mock_llm_response("result")
-        with (
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
-            patch("ica.pipeline.summarization.get_model") as mock_get_model,
-        ):
-            mock_litellm.acompletion = AsyncMock(return_value=response)
-            mock_get_model.return_value = "default/learning"
+        with patch(
+            "ica.pipeline.summarization.completion",
+            new_callable=AsyncMock,
+            return_value=response,
+        ) as mock_completion:
             await extract_summary_learning_data("fb", "in", "out")
-            call_args = mock_litellm.acompletion.call_args
-            assert call_args.kwargs["model"] == "default/learning"
+            call_args = mock_completion.call_args
+            assert call_args.kwargs["purpose"] == LLMPurpose.SUMMARY_LEARNING_DATA
 
 
 # ---------------------------------------------------------------------------
@@ -772,9 +771,12 @@ class TestRunSummarizationOutputFeedback:
 
         with (
             patch("ica.pipeline.summarization.get_model", return_value="m"),
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
+            patch(
+                "ica.pipeline.summarization.completion",
+                new_callable=AsyncMock,
+                side_effect=[regen_response, learning_response],
+            ),
         ):
-            mock_litellm.acompletion = AsyncMock(side_effect=[regen_response, learning_response])
             result = await run_summarization_output(_make_summaries(1), slack=slack)
 
         assert isinstance(result, SummarizationOutput)
@@ -795,9 +797,12 @@ class TestRunSummarizationOutputFeedback:
 
         with (
             patch("ica.pipeline.summarization.get_model", return_value="m"),
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
+            patch(
+                "ica.pipeline.summarization.completion",
+                new_callable=AsyncMock,
+                side_effect=[regen_response, learning_response],
+            ),
         ):
-            mock_litellm.acompletion = AsyncMock(side_effect=[regen_response, learning_response])
             await run_summarization_output(_make_summaries(1), slack=slack)
 
         slack.send_and_wait_freetext.assert_called_once()
@@ -820,10 +825,13 @@ class TestRunSummarizationOutputFeedback:
 
         with (
             patch("ica.pipeline.summarization.get_model", return_value="m"),
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
+            patch(
+                "ica.pipeline.summarization.completion",
+                new_callable=AsyncMock,
+                side_effect=[regen_response, learning_response],
+            ),
             patch("ica.pipeline.summarization.add_note") as mock_add_note,
         ):
-            mock_litellm.acompletion = AsyncMock(side_effect=[regen_response, learning_response])
             mock_add_note.return_value = MagicMock()
             await run_summarization_output(_make_summaries(1), slack=slack, session=session)
 
@@ -850,10 +858,13 @@ class TestRunSummarizationOutputFeedback:
 
         with (
             patch("ica.pipeline.summarization.get_model", return_value="m"),
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
+            patch(
+                "ica.pipeline.summarization.completion",
+                new_callable=AsyncMock,
+                side_effect=[regen_response, learning_response],
+            ),
             patch("ica.pipeline.summarization.add_note") as mock_add_note,
         ):
-            mock_litellm.acompletion = AsyncMock(side_effect=[regen_response, learning_response])
             mock_add_note.return_value = MagicMock()
             await run_summarization_output(
                 _make_summaries(1),
@@ -884,10 +895,13 @@ class TestRunSummarizationOutputFeedback:
 
         with (
             patch("ica.pipeline.summarization.get_model", return_value="m"),
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
+            patch(
+                "ica.pipeline.summarization.completion",
+                new_callable=AsyncMock,
+                side_effect=[regen_response, learning_response],
+            ),
             patch("ica.pipeline.summarization.add_note") as mock_add_note,
         ):
-            mock_litellm.acompletion = AsyncMock(side_effect=[regen_response, learning_response])
             await run_summarization_output(_make_summaries(1), slack=slack, session=None)
 
         mock_add_note.assert_not_called()
@@ -908,9 +922,12 @@ class TestRunSummarizationOutputFeedback:
 
         with (
             patch("ica.pipeline.summarization.get_model", return_value="m"),
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
+            patch(
+                "ica.pipeline.summarization.completion",
+                new_callable=AsyncMock,
+                side_effect=[regen_response, learning_response],
+            ),
         ):
-            mock_litellm.acompletion = AsyncMock(side_effect=[regen_response, learning_response])
             result = await run_summarization_output(_make_summaries(1), slack=slack)
 
         # Should revert to original text which contains the header
@@ -931,9 +948,12 @@ class TestRunSummarizationOutputFeedback:
 
         with (
             patch("ica.pipeline.summarization.get_model", return_value="m"),
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
+            patch(
+                "ica.pipeline.summarization.completion",
+                new_callable=AsyncMock,
+                side_effect=[regen_response, learning_response],
+            ),
         ):
-            mock_litellm.acompletion = AsyncMock(side_effect=[regen_response, learning_response])
             await run_summarization_output(_make_summaries(1), slack=slack)
 
         assert slack.send_channel_message.call_count == 2
@@ -1005,9 +1025,12 @@ class TestRunSummarizationOutputRestart:
 
         with (
             patch("ica.pipeline.summarization.get_model", return_value="m"),
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
+            patch(
+                "ica.pipeline.summarization.completion",
+                new_callable=AsyncMock,
+                side_effect=[regen_response, learning_response],
+            ),
         ):
-            mock_litellm.acompletion = AsyncMock(side_effect=[regen_response, learning_response])
             result = await run_summarization_output(_make_summaries(1), slack=slack)
 
         # After restart, text should be original (not regenerated)
@@ -1067,9 +1090,12 @@ class TestRunSummarizationOutputMultipleFeedback:
 
         with (
             patch("ica.pipeline.summarization.get_model", return_value="m"),
-            patch("ica.pipeline.summarization.litellm") as mock_litellm,
+            patch(
+                "ica.pipeline.summarization.completion",
+                new_callable=AsyncMock,
+                side_effect=[regen1, learn1, regen2, learn2],
+            ),
         ):
-            mock_litellm.acompletion = AsyncMock(side_effect=[regen1, learn1, regen2, learn2])
             result = await run_summarization_output(_make_summaries(1), slack=slack)
 
         # Final text should be from second regeneration

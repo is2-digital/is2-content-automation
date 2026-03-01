@@ -40,7 +40,6 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Protocol
 
-import litellm
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,6 +51,7 @@ from ica.prompts.summarization import (
     build_summarization_prompt,
     build_summarization_regeneration_prompt,
 )
+from ica.services.llm import completion
 from ica.services.web_fetcher import (
     BROWSER_HEADERS,
     FetchResult,
@@ -405,34 +405,29 @@ async def call_summary_llm(
     Args:
         article_input: Combined URL + title + page content.
         aggregated_feedback: Optional aggregated learning data.
-        model: Override model identifier. Defaults to
-            ``get_model(LLMPurpose.SUMMARY)``.
+        model: Override model identifier. When ``None``, resolved
+            via ``LLMPurpose.SUMMARY``.
 
     Returns:
         The raw LLM response text.
 
     Raises:
-        RuntimeError: If the LLM returns an empty response.
+        LLMError: If the LLM call fails or returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.SUMMARY)
     system_prompt, user_prompt = build_summarization_prompt(
         article_content=article_input,
         aggregated_feedback=aggregated_feedback,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.SUMMARY,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="summarization",
     )
 
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for summarization")
-
-    return content.strip()
+    return result.text
 
 
 # ---------------------------------------------------------------------------
@@ -896,34 +891,29 @@ async def call_regeneration_llm(
     Args:
         original_text: The original formatted summary text.
         user_feedback: The user's free-text feedback from Slack.
-        model: Override model identifier.  Defaults to
-            ``get_model(LLMPurpose.SUMMARY_REGENERATION)``.
+        model: Override model identifier. When ``None``, resolved
+            via ``LLMPurpose.SUMMARY_REGENERATION``.
 
     Returns:
         The regenerated summary text.
 
     Raises:
-        RuntimeError: If the LLM returns an empty response.
+        LLMError: If the LLM call fails or returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.SUMMARY_REGENERATION)
     system_prompt, user_prompt = build_summarization_regeneration_prompt(
         original_content=original_text,
         user_feedback=user_feedback,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.SUMMARY_REGENERATION,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="summarization_regeneration",
     )
 
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for summarization regeneration")
-
-    return content.strip()
+    return result.text
 
 
 async def extract_summary_learning_data(
@@ -944,8 +934,8 @@ async def extract_summary_learning_data(
         feedback: The user's free-text feedback from the Slack form.
         input_text: The original formatted summary text.
         model_output: The regenerated summary text.
-        model: Override model identifier.  Defaults to
-            ``get_model(LLMPurpose.SUMMARY_LEARNING_DATA)``.
+        model: Override model identifier. When ``None``, resolved
+            via ``LLMPurpose.SUMMARY_LEARNING_DATA``.
 
     Returns:
         Extracted ``learning_feedback`` text.  If the LLM returns valid
@@ -953,38 +943,31 @@ async def extract_summary_learning_data(
         otherwise the raw response is returned.
 
     Raises:
-        RuntimeError: If the LLM returns an empty response.
+        LLMError: If the LLM call fails or returns an empty response.
     """
-    model_id = model or get_model(LLMPurpose.SUMMARY_LEARNING_DATA)
     system_prompt, user_prompt = build_learning_data_extraction_prompt(
         feedback=feedback,
         input_text=input_text,
         model_output=model_output,
     )
 
-    response = await litellm.acompletion(
-        model=model_id,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+    result = await completion(
+        purpose=LLMPurpose.SUMMARY_LEARNING_DATA,
+        model=model,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        step="learning_data_extraction",
     )
-
-    content: str | None = response.choices[0].message.content
-    if not content or not content.strip():
-        raise RuntimeError("LLM returned an empty response for learning data extraction")
-
-    text = content.strip()
 
     # Try to parse JSON and extract the learning_feedback field.
     try:
-        data = json.loads(text)
+        data = json.loads(result.text)
         if isinstance(data, dict) and "learning_feedback" in data:
             return str(data["learning_feedback"])
     except (json.JSONDecodeError, TypeError):
         pass
 
-    return text
+    return result.text
 
 
 # ---------------------------------------------------------------------------
