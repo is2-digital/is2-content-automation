@@ -58,6 +58,9 @@ class LLMPurpose(StrEnum):
     EMAIL_SUBJECT_REGENERATION = "llm_email_subject_regeneration_model"
     EMAIL_PREVIEW = "llm_email_preview_model"
 
+    # Article collection
+    RELEVANCE_ASSESSMENT = "llm_relevance_assessment_model"
+
 
 # Default model identifiers (OpenRouter format)
 _CLAUDE_SONNET = "anthropic/claude-sonnet-4.5"
@@ -87,6 +90,7 @@ _PURPOSE_TO_PROCESS: dict[str, str] = {
     "llm_email_subject_model": "email-subject",
     "llm_email_subject_regeneration_model": "email-subject-regeneration",
     "llm_email_preview_model": "email-preview",
+    "llm_relevance_assessment_model": "relevance-assessment",
 }
 
 
@@ -137,6 +141,9 @@ class LLMConfig(BaseSettings):
     llm_email_subject_model: str = _CLAUDE_SONNET
     llm_email_subject_regeneration_model: str = _CLAUDE_SONNET
     llm_email_preview_model: str = _CLAUDE_SONNET
+
+    # --- Article collection ---
+    llm_relevance_assessment_model: str = _GEMINI_FLASH
 
 
 @lru_cache(maxsize=1)

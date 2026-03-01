@@ -1,8 +1,16 @@
 # ims-tt - Activity Log
 
 ## Current Status
-**Last Updated:** 2026-02-28
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf
+**Last Updated:** 2026-03-01
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5
+
+### 2026-03-01 — ica-vk5: Create LLM relevance assessment config and module
+- Created `ica/llm_configs/relevance-assessment-llm.json` — Gemini Flash config with structured JSON output (accept/reject + reason)
+- Added `RELEVANCE_ASSESSMENT` to `LLMPurpose` enum and `LLMConfig` in `ica/config/llm_config.py`
+- Created `ica/prompts/relevance_assessment.py` — prompt builder loading from JSON config
+- Created `ica/pipeline/relevance_assessment.py` — `assess_article()` and `assess_articles()` with fail-open JSON parsing
+- Updated existing tests in `test_llm_config.py` and `test_all_processes.py` for new 22-purpose/19-mapping counts
+- All 3704 tests pass
 
 ### 2026-02-28 — ica-brf: Create BraveSearchClient service
 - Created `ica/services/brave_search.py` with `BraveSearchClient` class following the same protocol pattern as `GoogleSearchClient`

@@ -388,6 +388,7 @@ class TestGetModelAllPurposes:
         LLMPurpose.EMAIL_SUBJECT: "anthropic/claude-haiku-4.5",
         LLMPurpose.EMAIL_SUBJECT_REGENERATION: "anthropic/claude-haiku-4.5",
         LLMPurpose.EMAIL_PREVIEW: _DEFAULT_MODEL,
+        LLMPurpose.RELEVANCE_ASSESSMENT: "google/gemini-2.5-flash",
     }
 
     @pytest.mark.parametrize("purpose", list(LLMPurpose))
@@ -671,6 +672,7 @@ class TestLLMPurposeCompleteness:
         "EMAIL_SUBJECT",
         "EMAIL_SUBJECT_REGENERATION",
         "EMAIL_PREVIEW",
+        "RELEVANCE_ASSESSMENT",
     }
 
     def test_all_expected_purposes_exist(self) -> None:

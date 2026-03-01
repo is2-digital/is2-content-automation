@@ -59,16 +59,17 @@ class TestDefaults:
             ("llm_email_subject_model", _CLAUDE_SONNET),
             ("llm_email_subject_regeneration_model", _CLAUDE_SONNET),
             ("llm_email_preview_model", _CLAUDE_SONNET),
+            ("llm_relevance_assessment_model", _GEMINI_FLASH),
         ],
     )
     def test_default_value(self, field: str, expected: str) -> None:
         cfg = _make_llm_config()
         assert getattr(cfg, field) == expected
 
-    def test_total_field_count_is_21(self) -> None:
-        """Ensure all 21 n8n model mappings are represented."""
+    def test_total_field_count_is_22(self) -> None:
+        """Ensure all 22 model mappings are represented."""
         model_fields = [f for f in LLMConfig.model_fields if f.startswith("llm_")]
-        assert len(model_fields) == 21
+        assert len(model_fields) == 22
 
 
 # ---------------------------------------------------------------------------
@@ -111,8 +112,8 @@ class TestEnvOverrides:
 class TestLLMPurpose:
     """LLMPurpose enum should map to LLMConfig field names."""
 
-    def test_all_purposes_have_21_members(self) -> None:
-        assert len(LLMPurpose) == 21
+    def test_all_purposes_have_22_members(self) -> None:
+        assert len(LLMPurpose) == 22
 
     @pytest.mark.parametrize("purpose", list(LLMPurpose))
     def test_purpose_value_is_valid_field(self, purpose: LLMPurpose) -> None:
@@ -318,9 +319,9 @@ class TestPurposeToProcess:
                 f"_PURPOSE_TO_PROCESS key {field_name!r} is not an LLMConfig field"
             )
 
-    def test_mapping_covers_18_purposes(self) -> None:
-        """18 of 21 purposes have JSON configs (3 learning-data only have defaults)."""
-        assert len(_PURPOSE_TO_PROCESS) == 18
+    def test_mapping_covers_19_purposes(self) -> None:
+        """19 of 22 purposes have JSON configs (3 learning-data only have defaults)."""
+        assert len(_PURPOSE_TO_PROCESS) == 19
 
 
 # ---------------------------------------------------------------------------
