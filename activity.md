@@ -2,7 +2,15 @@
 
 ## Current Status
 **Last Updated:** 2026-03-01
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1
+
+### 2026-03-01 — ica-476.1: Implement pipeline test-run state machine and checkpoints
+- New `ica/guided/` package with `state.py` — test-run state machine for guided pipeline test flow
+- `TestRunState` dataclass: persists run_id, phase, current step, step records, operator decisions, context snapshot, timestamps
+- `TestRunStateMachine`: validates transitions (start → complete/fail → checkpoint → continue/redo/restart/stop) with resume-after-crash support
+- `TestRunStore`: JSON-file persistence (one file per run) — save, load, list, delete
+- 57 tests covering all transitions, edge cases, persistence round-trips, and full multi-step workflows
+- All ruff, mypy clean
 
 ### 2026-03-01 — ica-qri: Eliminate unawaited coroutine warnings in pytest runs
 - Fixed scheduler tests: added `_close_coro` helper to properly consume coroutines when `asyncio.create_task` is mocked — prevents GC-triggered RuntimeWarnings
