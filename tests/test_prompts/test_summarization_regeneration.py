@@ -2,104 +2,64 @@
 
 from __future__ import annotations
 
-from ica.prompts.summarization import (
-    REGENERATION_SYSTEM_PROMPT,
-    REGENERATION_USER_PROMPT,
-    build_summarization_regeneration_prompt,
-)
+from ica.llm_configs import get_process_prompts
+from ica.prompts.summarization import build_summarization_regeneration_prompt
+
+# Load prompts from JSON config (same source the builder function uses).
+_SYSTEM_PROMPT, _INSTRUCTION = get_process_prompts("summarization-regeneration")
+
 
 # ---------------------------------------------------------------------------
-# Regeneration system prompt — constant sanity checks
+# Constant sanity checks
 # ---------------------------------------------------------------------------
 
 
 class TestRegenerationSystemPrompt:
-    """Verify the regeneration system prompt contains all required sections."""
+    """Verify the system prompt is the shared system prompt."""
 
-    def test_contains_editor_role(self):
-        assert "professional content editor AI" in REGENERATION_SYSTEM_PROMPT
+    def test_is_shared_system_prompt(self):
+        from ica.llm_configs.loader import get_system_prompt
 
-    def test_contains_revise_instruction(self):
-        assert "revise the content to incorporate the feedback" in REGENERATION_SYSTEM_PROMPT
+        assert get_system_prompt() == _SYSTEM_PROMPT
 
-    def test_contains_maintain_formatting(self):
-        assert "Maintain the formatting of the original content" in REGENERATION_SYSTEM_PROMPT
+    def test_contains_headless_api_mode(self):
+        assert "HEADLESS API" in _SYSTEM_PROMPT
 
-    # -- Accuracy Control Protocol -----------------------------------------
+    def test_contains_zero_hallucination(self):
+        assert "ZERO HALLUCINATION" in _SYSTEM_PROMPT
 
-    def test_contains_accuracy_control_protocol(self):
-        assert "Accuracy Control Protocol (MANDATORY)" in REGENERATION_SYSTEM_PROMPT
-
-    def test_contains_do_not_search(self):
-        assert "Do NOT search for alternative sources" in REGENERATION_SYSTEM_PROMPT
-
-    def test_contains_do_not_summarize_partial(self):
-        assert "Do NOT summarize partial or unavailable content" in REGENERATION_SYSTEM_PROMPT
-
-    def test_contains_do_not_infer(self):
-        assert "Do NOT generate or infer missing details" in REGENERATION_SYSTEM_PROMPT
-
-    def test_contains_feedback_only_rule(self):
-        assert "Incorporate ONLY the requested feedback" in REGENERATION_SYSTEM_PROMPT
-
-    def test_contains_do_not_rewrite(self):
-        assert "Do NOT rewrite, expand, or regenerate other sections" in REGENERATION_SYSTEM_PROMPT
-
-    # -- Article Summary Standards -----------------------------------------
-
-    def test_contains_article_summary_standards(self):
-        assert "Article Summary Standards" in REGENERATION_SYSTEM_PROMPT
-
-    def test_contains_summary_specifications(self):
-        assert "3-4 sentences per article" in REGENERATION_SYSTEM_PROMPT
-
-    def test_contains_business_relevance_specs(self):
-        assert "Business Relevance Specifications" in REGENERATION_SYSTEM_PROMPT
-
-    def test_contains_solopreneur_audience(self):
-        assert "solopreneurs and SMB professionals" in REGENERATION_SYSTEM_PROMPT
-
-    # -- Data Integrity Standards ------------------------------------------
-
-    def test_contains_data_integrity_standards(self):
-        assert "Data Integrity Standards" in REGENERATION_SYSTEM_PROMPT
-
-    def test_contains_do_not_fabricate(self):
-        assert "Do NOT fabricate, infer, or supplement" in REGENERATION_SYSTEM_PROMPT
-
-    def test_contains_flag_unverifiable(self):
-        assert "Statistic requires verification" in REGENERATION_SYSTEM_PROMPT
-
-    # -- Negative checks ---------------------------------------------------
+    def test_contains_voice_guardrails(self):
+        assert "VOICE & FORMATTING GUARDRAILS" in _SYSTEM_PROMPT
 
     def test_no_original_content_placeholder(self):
         """Original content belongs in the user prompt, not the system prompt."""
-        assert "{original_content}" not in REGENERATION_SYSTEM_PROMPT
+        assert "{original_content}" not in _SYSTEM_PROMPT
 
     def test_no_user_feedback_placeholder(self):
         """User feedback belongs in the user prompt, not the system prompt."""
-        assert "{user_feedback}" not in REGENERATION_SYSTEM_PROMPT
+        assert "{user_feedback}" not in _SYSTEM_PROMPT
 
 
-# ---------------------------------------------------------------------------
-# Regeneration user prompt template
-# ---------------------------------------------------------------------------
-
-
-class TestRegenerationUserPromptTemplate:
-    """Verify the user prompt template has required placeholders."""
+class TestRegenerationInstructionTemplate:
+    """Verify the instruction template from JSON has required placeholders."""
 
     def test_has_original_content_placeholder(self):
-        assert "{original_content}" in REGENERATION_USER_PROMPT
+        assert "{original_content}" in _INSTRUCTION
 
     def test_has_user_feedback_placeholder(self):
-        assert "{user_feedback}" in REGENERATION_USER_PROMPT
+        assert "{user_feedback}" in _INSTRUCTION
 
-    def test_contains_original_content_label(self):
-        assert "The original content is below:" in REGENERATION_USER_PROMPT
+    def test_contains_revision_task(self):
+        assert "Revision_Task" in _INSTRUCTION
 
-    def test_contains_feedback_label(self):
-        assert "The user has provided feedback as follows:" in REGENERATION_USER_PROMPT
+    def test_contains_rules(self):
+        assert "Rules" in _INSTRUCTION
+
+    def test_contains_preserve_structure(self):
+        assert "Preserve the existing structure" in _INSTRUCTION
+
+    def test_contains_do_not_expand(self):
+        assert "Do NOT expand or rewrite sections" in _INSTRUCTION
 
 
 # ---------------------------------------------------------------------------
@@ -126,11 +86,11 @@ class TestBuildSummarizationRegenerationPrompt:
         assert isinstance(result, tuple)
         assert len(result) == 2
 
-    def test_system_prompt_is_constant(self):
+    def test_system_prompt_matches_json_config(self):
         system, _ = build_summarization_regeneration_prompt(
             self.SAMPLE_CONTENT, self.SAMPLE_FEEDBACK
         )
-        assert system is REGENERATION_SYSTEM_PROMPT
+        assert system == _SYSTEM_PROMPT
 
     def test_original_content_in_user_prompt(self):
         _, user = build_summarization_regeneration_prompt(
@@ -169,7 +129,7 @@ class TestBuildSummarizationRegenerationPrompt:
     def test_empty_feedback(self):
         """Even empty feedback should produce a valid prompt."""
         system, user = build_summarization_regeneration_prompt(self.SAMPLE_CONTENT, "")
-        assert system is REGENERATION_SYSTEM_PROMPT
+        assert system == _SYSTEM_PROMPT
         assert self.SAMPLE_CONTENT in user
 
     def test_feedback_with_special_characters(self):
@@ -182,7 +142,7 @@ class TestBuildSummarizationRegenerationPrompt:
     def test_empty_content(self):
         """Empty original content should still produce valid prompts."""
         system, user = build_summarization_regeneration_prompt("", "Fix it")
-        assert system is REGENERATION_SYSTEM_PROMPT
+        assert system == _SYSTEM_PROMPT
         assert "Fix it" in user
 
     def test_content_with_curly_braces(self):

@@ -68,57 +68,16 @@ def build_summarization_prompt(
 # Regeneration prompt (feedback loop)
 # ---------------------------------------------------------------------------
 
-REGENERATION_SYSTEM_PROMPT = """\
-You are a professional content editor AI.
-
-Please revise the content to incorporate the feedback. Maintain the \
-formatting of the original content.
-
-Maintain these protocols EXACTLY:
-
-## Accuracy Control Protocol (MANDATORY)
-1. Do NOT search for alternative sources.
-2. Do NOT summarize partial or unavailable content.
-3. Do NOT generate or infer missing details.
-4. Incorporate ONLY the requested feedback. Do NOT rewrite, expand, or \
-regenerate other sections unless the feedback directly requires it.
-
-## Article Summary Standards
-Summary Specifications:
-- 3-4 sentences per article
-- Focus strictly on factual content, key findings, and main conclusions
-- Avoid editorial opinions or speculative tone
-- Include specific statistics, methodologies, or technical details when mentioned
-
-Business Relevance Specifications:
-- 2-3 sentences per article
-- Explain the broad business or strategic relevance across industries
-- Consider an audience of solopreneurs and SMB professionals (without naming them)
-- Emphasize practical implications for decision-making, operations, or strategy
-- Avoid technical or industry-specific jargon
-
-## Data Integrity Standards
-- Extract only verified information directly from the article
-- Quote or cite exact statistics or claims when possible
-- Flag unverifiable data explicitly (e.g., "Statistic requires verification")
-- Do NOT fabricate, infer, or supplement from external knowledge
-- Well-established general knowledge does NOT require verification\
-"""
-
-REGENERATION_USER_PROMPT = """\
-The original content is below:
-{original_content}
-
-The user has provided feedback as follows:
-{user_feedback}\
-"""
-
 
 def build_summarization_regeneration_prompt(
     original_content: str,
     user_feedback: str,
 ) -> tuple[str, str]:
     """Build the system and user messages for the summarization regeneration call.
+
+    Loads the system and instruction prompts from the
+    ``summarization-regeneration`` JSON config via
+    :func:`~ica.llm_configs.get_process_prompts`.
 
     Used when a human reviewer provides feedback on a generated summary and
     the LLM must revise the content accordingly.
@@ -132,9 +91,11 @@ def build_summarization_regeneration_prompt(
     Returns:
         A ``(system_prompt, user_prompt)`` tuple ready to pass to the LLM.
     """
-    user_prompt = REGENERATION_USER_PROMPT.format(
+    system_prompt, instruction = get_process_prompts("summarization-regeneration")
+
+    user_prompt = instruction.format(
         original_content=original_content,
         user_feedback=user_feedback,
     )
 
-    return REGENERATION_SYSTEM_PROMPT, user_prompt
+    return system_prompt, user_prompt
