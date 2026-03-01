@@ -1,20 +1,20 @@
 #!/bin/bash
 #
-# Ralph loop runner for Claude Code (in Docker sandbox).
+# Ralph loop runner for Claude Code or Amp (in Docker sandbox).
 # Uses --output-format stream-json for real-time token-level streaming.
 # Parses NDJSON events via jq for live display.
 #
 # Options (env vars):
 #   KEEP_JSONL=1    Save raw JSON event log (off by default)
 #   PROMPT_FILE=... Path to prompt file (default: ./prompt.md)
-#   CLAUDE_BIN=...  Path to claude binary (default: claude)
+#   CLAUDE_BIN=...  Path to tool binary (default: auto-detect)
 #
 # Requirements: jq (apt-get install jq)
 #
-# Usage: ./ralph-claude.sh <iterations> <dangerously_skip_permissions>
-#        ./ralph-claude.sh 5 on
-#        ./ralph-claude.sh 5 off
-#        KEEP_JSONL=1 ./ralph-claude.sh 5 on
+# Usage: ./ralph-claude.sh <iterations> <tool> [dangerously_skip_permissions]
+#        ./ralph-claude.sh 5 claude on
+#        ./ralph-claude.sh 5 amp
+#        KEEP_JSONL=1 ./ralph-claude.sh 5 claude on
 
 # --- Configuration ---
 TIMESTAMP=$(TZ="America/Los_Angeles" date +"%Y%m%d_%H%M%S")
@@ -33,37 +33,57 @@ fi
 
 # --- Required args ---
 #  $1 = iterations (required)
-#  $2 = whether to include --dangerously-skip-permissions (default: "on")
-if [ -z "${1:-}" ]; then
-  echo "Usage: $0 <iterations> [dangerously_skip_permissions]"
-  echo "  dangerously_skip_permissions: on | off (default: on)"
+#  $2 = tool name (required): claude | amp
+#  $3 = whether to include --dangerously-skip-permissions (default: "on", claude only)
+if [ -z "${1:-}" ] || [ -z "${2:-}" ]; then
+  echo "Usage: $0 <iterations> <tool> [dangerously_skip_permissions]"
+  echo "  tool: claude | amp"
+  echo "  dangerously_skip_permissions: on | off (default: on, claude only)"
   exit 1
 fi
 
 ITERATIONS="$1"
-SKIP_PERMS_ARG="${2:-on}"
+TOOL_NAME="$2"
 
-DANGEROUS_FLAG=""
-case "$SKIP_PERMS_ARG" in
-  on|ON|true|TRUE|1|yes|YES)
-    DANGEROUS_FLAG="--dangerously-skip-permissions"
+case "$TOOL_NAME" in
+  claude)
     ;;
-  off|OFF|false|FALSE|0|no|NO)
-    DANGEROUS_FLAG=""
+  amp)
     ;;
   *)
-    echo "ERROR: second argument must be 'on' or 'off' (or true/false, 1/0, yes/no). Got: $SKIP_PERMS_ARG"
+    echo "ERROR: tool must be 'claude' or 'amp'. Got: $TOOL_NAME"
     exit 1
     ;;
 esac
 
+SKIP_PERMS_ARG="${3:-on}"
+
+DANGEROUS_FLAG=""
+if [ "$TOOL_NAME" = "claude" ]; then
+  case "$SKIP_PERMS_ARG" in
+    on|ON|true|TRUE|1|yes|YES)
+      DANGEROUS_FLAG="--dangerously-skip-permissions"
+      ;;
+    off|OFF|false|FALSE|0|no|NO)
+      DANGEROUS_FLAG=""
+      ;;
+    *)
+      echo "ERROR: third argument must be 'on' or 'off' (or true/false, 1/0, yes/no). Got: $SKIP_PERMS_ARG"
+      exit 1
+      ;;
+  esac
+fi
+
 # --- Preflight Checks ---
 echo "Ralph Loop Runner"
+echo "  Tool: $TOOL_NAME"
 echo "  Log (text): $TEXT_LOG"
 if [ "$KEEP_JSONL" = "1" ]; then
   echo "  Log (JSON): $LOG_FILE"
 fi
-echo "  --dangerously-skip-permissions: ${DANGEROUS_FLAG:-<not set>}"
+if [ "$TOOL_NAME" = "claude" ]; then
+  echo "  --dangerously-skip-permissions: ${DANGEROUS_FLAG:-<not set>}"
+fi
 echo ""
 
 if [ ! -f "$PROMPT_FILE" ]; then
@@ -101,28 +121,31 @@ if [ ${#MISSING_CONTAINERS[@]} -gt 0 ]; then
 fi
 echo "  Docker containers: all running"
 
-# --- Preflight: find Claude CLI even if PATH differs in scripts ---
-resolve_claude_bin() {
-  # 1) If CLAUDE_BIN is already set and executable, use it
-  if [ -n "${CLAUDE_BIN:-}" ] && [ -x "$CLAUDE_BIN" ]; then
-    echo "$CLAUDE_BIN"
+# --- Preflight: find tool CLI even if PATH differs in scripts ---
+resolve_tool_bin() {
+  local tool_name="$1"
+  local env_bin_var="${2:-}"
+
+  # 1) If env var override is set and executable, use it
+  if [ -n "$env_bin_var" ] && [ -x "$env_bin_var" ]; then
+    echo "$env_bin_var"
     return 0
   fi
 
   # 2) Try PATH (works in interactive shells; may fail in scripts)
   local p
-  p="$(command -v claude 2>/dev/null || true)"
+  p="$(command -v "$tool_name" 2>/dev/null || true)"
   if [ -n "$p" ] && [ -x "$p" ]; then
     echo "$p"
     return 0
   fi
 
-  # 3) Try common Claude Code install locations
+  # 3) Try common install locations
   local candidates=(
-    "$HOME/.claude/local/claude"
-    "$HOME/.local/bin/claude"
-    "/usr/local/bin/claude"
-    "/usr/bin/claude"
+    "$HOME/.${tool_name}/local/${tool_name}"
+    "$HOME/.local/bin/${tool_name}"
+    "/usr/local/bin/${tool_name}"
+    "/usr/bin/${tool_name}"
   )
 
   local c
@@ -138,16 +161,16 @@ resolve_claude_bin() {
 
 SCRIPT_PATH="$(cd -- "$(dirname -- "$0")" && pwd)/$(basename -- "$0")"
 
-FOUND_CLAUDE_BIN="$(resolve_claude_bin || true)"
-if [ -z "$FOUND_CLAUDE_BIN" ]; then
-  echo "ERROR: Claude CLI not found from this script environment."
+FOUND_TOOL_BIN="$(resolve_tool_bin "$TOOL_NAME" "${CLAUDE_BIN:-}" || true)"
+if [ -z "$FOUND_TOOL_BIN" ]; then
+  echo "ERROR: ${TOOL_NAME} CLI not found from this script environment."
   echo "Try re-running with:"
-  echo "  CLAUDE_BIN=\"$HOME/.claude/local/claude\" \"$SCRIPT_PATH\" $ITERATIONS $SKIP_PERMS_ARG"
+  echo "  CLAUDE_BIN=\"/path/to/${TOOL_NAME}\" \"$SCRIPT_PATH\" $ITERATIONS $TOOL_NAME $SKIP_PERMS_ARG"
   exit 1
 fi
 
 # Use the discovered binary
-CLAUDE_BIN="$FOUND_CLAUDE_BIN"
+TOOL_BIN="$FOUND_TOOL_BIN"
 
 # --- Main Loop ---
 for ((i=1; i<=$ITERATIONS; i++)); do
@@ -159,17 +182,24 @@ for ((i=1; i<=$ITERATIONS; i++)); do
 
   echo "--- Iteration $i ---" >> "$TEXT_LOG"
 
-  # Run Claude in headless mode with real-time NDJSON streaming.
+  # Build tool-specific command arguments
+  if [ "$TOOL_NAME" = "claude" ]; then
+    TOOL_PROMPT_FLAG="-p"
+    TOOL_EXTRA_FLAGS="$DANGEROUS_FLAG --output-format stream-json --verbose --include-partial-messages"
+  else
+    # amp uses -x for prompt execution
+    TOOL_PROMPT_FLAG="-x"
+    TOOL_EXTRA_FLAGS="--output-format stream-json --verbose --include-partial-messages"
+  fi
+
+  # Run tool in headless mode with real-time NDJSON streaming.
   #
-  # Pipeline: claude → grep (filter noise) → [optional jsonl tee] → jq (extract text) → text log
+  # Pipeline: tool → grep (filter noise) → [optional jsonl tee] → jq (extract text) → text log
   #
   if [ "$KEEP_JSONL" = "1" ]; then
-    "$CLAUDE_BIN" \
-      -p "$(cat "$PROMPT_FILE")" \
-      $DANGEROUS_FLAG \
-      --output-format stream-json \
-      --verbose \
-      --include-partial-messages \
+    "$TOOL_BIN" \
+      $TOOL_PROMPT_FLAG "$(cat "$PROMPT_FILE")" \
+      $TOOL_EXTRA_FLAGS \
       2>&1 \
       | grep --line-buffered '^{' \
       | tee -a "$LOG_FILE" \
@@ -184,12 +214,9 @@ for ((i=1; i<=$ITERATIONS; i++)); do
         ' \
       | tee -a "$TEXT_LOG"
   else
-    "$CLAUDE_BIN" \
-      -p "$(cat "$PROMPT_FILE")" \
-      $DANGEROUS_FLAG \
-      --output-format stream-json \
-      --verbose \
-      --include-partial-messages \
+    "$TOOL_BIN" \
+      $TOOL_PROMPT_FLAG "$(cat "$PROMPT_FILE")" \
+      $TOOL_EXTRA_FLAGS \
       2>&1 \
       | grep --line-buffered '^{' \
       | jq --unbuffered -rj '
