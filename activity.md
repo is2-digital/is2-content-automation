@@ -2,7 +2,7 @@
 
 ## Current Status
 **Last Updated:** 2026-02-28
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke
 
 ### 2026-03-01 — ica-476.1: Implement pipeline test-run state machine and checkpoints
 - New `ica/guided/` package with `state.py` — test-run state machine for guided pipeline test flow
@@ -2058,5 +2058,19 @@ After completing each task, add an entry below in this format:
 - Created `tests/test_guided/test_runner.py` (49 tests) covering input parsing, prompting, context snapshots, artifact extraction, render helpers, and full integration flows (complete all steps, stop, redo, failure+retry, resume, persistence)
 - Created `tests/test_cli/test_guided.py` (9 tests) covering help, listing, delegation to run_guided, custom options, error handling
 - All 201 guided+CLI tests pass, ruff clean
+
+**Blockers:** None
+
+### 2026-02-28 — ica-5ke: Restore Ruff compliance across repository
+
+**What was done:**
+- Fixed all 73 Ruff violations across 25 files (source, tests, scripts)
+- I001 (18): Re-sorted import blocks in pipeline modules, tests, scripts
+- F541 (33): Removed f-string prefix from strings with no placeholders (scripts)
+- SIM300 (13): Flipped Yoda conditions to normal order (test assertions)
+- SIM117 (7): Combined nested `with` statements into single `with` (tests)
+- F401 (1): Removed unused import in test_prompt_editor_roundtrip.py
+- E501 (1): Manually wrapped line in test_config_editor.py (100 > 99 chars)
+- `docker exec ica-app-1 ruff check .` exits 0, all 3977 tests pass
 
 **Blockers:** None

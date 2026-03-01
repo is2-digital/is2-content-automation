@@ -98,7 +98,7 @@ class TestSystemPrompt:
     """Verify the generation system prompt is the shared system prompt."""
 
     def test_is_shared_system_prompt(self):
-        assert _GENERATION_SYSTEM == get_system_prompt()
+        assert get_system_prompt() == _GENERATION_SYSTEM
 
     def test_is_string(self):
         assert isinstance(_GENERATION_SYSTEM, str)
@@ -452,7 +452,7 @@ class TestRegenerationSystemPrompt:
     """Verify the regeneration system prompt is the shared system prompt."""
 
     def test_is_shared_system_prompt(self):
-        assert _REGEN_SYSTEM == get_system_prompt()
+        assert get_system_prompt() == _REGEN_SYSTEM
 
     def test_is_string(self):
         assert isinstance(_REGEN_SYSTEM, str)

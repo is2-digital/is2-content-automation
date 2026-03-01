@@ -26,7 +26,6 @@ from typing import Protocol
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ica.config.llm_config import LLMPurpose, get_model
-from ica.services.llm import completion
 from ica.db.crud import add_note, get_recent_notes
 from ica.db.models import Note
 from ica.prompts.html_generation import (
@@ -34,6 +33,7 @@ from ica.prompts.html_generation import (
     build_html_regeneration_prompt,
 )
 from ica.prompts.learning_data_extraction import build_learning_data_extraction_prompt
+from ica.services.llm import completion
 from ica.utils.output_router import (
     UserChoice,
     conditional_output_router,

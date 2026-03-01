@@ -29,12 +29,12 @@ from typing import Protocol
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ica.config.llm_config import LLMPurpose, get_model
-from ica.services.llm import completion
 from ica.db.crud import add_note, get_recent_notes
 from ica.db.models import Note
 from ica.prompts.email_review import build_email_review_prompt
 from ica.prompts.email_subject import build_email_subject_prompt
 from ica.prompts.learning_data_extraction import build_learning_data_extraction_prompt
+from ica.services.llm import completion
 
 # ---------------------------------------------------------------------------
 # Protocols

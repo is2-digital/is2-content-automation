@@ -31,13 +31,13 @@ from enum import StrEnum
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ica.config.llm_config import LLMPurpose
-from ica.services.llm import completion
 from ica.db.crud import add_note, upsert_theme
 from ica.pipeline.theme_generation import GeneratedTheme, ThemeGenerationResult
 from ica.prompts.freshness_check import build_freshness_check_prompt
 from ica.prompts.learning_data_extraction import (
     build_learning_data_extraction_prompt,
 )
+from ica.services.llm import completion
 from ica.utils.marker_parser import FormattedTheme
 
 # ---------------------------------------------------------------------------

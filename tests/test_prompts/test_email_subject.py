@@ -23,7 +23,7 @@ class TestEmailSubjectSystemPrompt:
     def test_is_shared_system_prompt(self):
         from ica.llm_configs.loader import get_system_prompt
 
-        assert _SYSTEM_PROMPT == get_system_prompt()
+        assert get_system_prompt() == _SYSTEM_PROMPT
 
     def test_contains_zero_hallucination(self):
         assert "ZERO HALLUCINATION" in _SYSTEM_PROMPT

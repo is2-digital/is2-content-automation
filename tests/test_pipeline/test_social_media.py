@@ -20,8 +20,6 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from ica.errors import LLMError
-from ica.services.llm import LLMResponse
-
 from ica.pipeline.social_media import (
     APPROVAL_MESSAGE,
     FINAL_SELECTION_FIELD,
@@ -47,6 +45,7 @@ from ica.pipeline.social_media import (
     parse_phase2_titles,
     run_social_media_generation,
 )
+from ica.services.llm import LLMResponse
 
 # ---------------------------------------------------------------------------
 # Fixtures

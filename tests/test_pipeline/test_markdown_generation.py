@@ -31,8 +31,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from ica.errors import LLMError
-from ica.services.llm import LLMResponse
-
 from ica.pipeline.markdown_generation import (
     FEEDBACK_BUTTON_LABEL,
     FEEDBACK_FORM_TITLE,
@@ -62,6 +60,7 @@ from ica.pipeline.markdown_generation import (
     run_voice_validation,
     store_markdown_feedback,
 )
+from ica.services.llm import LLMResponse
 from ica.utils.output_router import UserChoice
 from ica.validators.character_count import CharacterCountError
 

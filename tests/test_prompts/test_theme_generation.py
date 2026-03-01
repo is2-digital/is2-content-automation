@@ -25,7 +25,7 @@ class TestSystemPrompt:
     def test_is_shared_system_prompt(self):
         from ica.llm_configs.loader import get_system_prompt
 
-        assert _SYSTEM == get_system_prompt()
+        assert get_system_prompt() == _SYSTEM
 
     def test_contains_role_and_identity_section(self):
         assert "ROLE & IDENTITY" in _SYSTEM

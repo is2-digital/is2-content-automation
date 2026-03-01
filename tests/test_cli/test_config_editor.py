@@ -463,7 +463,9 @@ class TestApplyDocChanges:
 
     def test_changes_dict_shows_char_counts(self, tmp_path: Path) -> None:
         _write_config(tmp_path)
-        sections = {"instruction": "A much longer instruction prompt for testing character counts."}
+        sections = {
+            "instruction": "A much longer instruction prompt for testing character counts."
+        }
 
         with patch("ica.cli.config_editor._CONFIGS_DIR", tmp_path), patch.object(
             loader, "_CONFIGS_DIR", tmp_path

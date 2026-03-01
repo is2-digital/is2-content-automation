@@ -18,8 +18,6 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from ica.errors import LLMError
-from ica.services.llm import LLMResponse
-
 from ica.pipeline.linkedin_carousel import (
     APPROVAL_MESSAGE,
     FEEDBACK_BUTTON_LABEL,
@@ -48,6 +46,7 @@ from ica.pipeline.linkedin_carousel import (
     run_linkedin_carousel_generation,
     validate_slide_bodies,
 )
+from ica.services.llm import LLMResponse
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -407,12 +406,11 @@ class TestCallCarouselLlm:
             "ica.pipeline.linkedin_carousel.completion",
             new_callable=AsyncMock,
             side_effect=LLMError("linkedin_carousel", "empty response"),
-        ):
-            with pytest.raises(LLMError, match="empty response"):
-                await call_carousel_llm(
-                    formatted_theme="{}",
-                    newsletter_content="content",
-                )
+        ), pytest.raises(LLMError, match="empty response"):
+            await call_carousel_llm(
+                formatted_theme="{}",
+                newsletter_content="content",
+            )
 
     @pytest.mark.asyncio
     async def test_raises_on_whitespace_only(self) -> None:
@@ -420,12 +418,11 @@ class TestCallCarouselLlm:
             "ica.pipeline.linkedin_carousel.completion",
             new_callable=AsyncMock,
             side_effect=LLMError("linkedin_carousel", "empty response"),
-        ):
-            with pytest.raises(LLMError, match="empty response"):
-                await call_carousel_llm(
-                    formatted_theme="{}",
-                    newsletter_content="content",
-                )
+        ), pytest.raises(LLMError, match="empty response"):
+            await call_carousel_llm(
+                formatted_theme="{}",
+                newsletter_content="content",
+            )
 
     @pytest.mark.asyncio
     async def test_passes_purpose_and_step(self) -> None:
@@ -528,14 +525,13 @@ class TestCallRegenerationLlm:
             "ica.pipeline.linkedin_carousel.completion",
             new_callable=AsyncMock,
             side_effect=LLMError("linkedin_regeneration", "empty response"),
-        ):
-            with pytest.raises(LLMError, match="empty response"):
-                await call_regeneration_llm(
-                    previous_output="original",
-                    feedback_text="fix it",
-                    formatted_theme="{}",
-                    newsletter_content="html",
-                )
+        ), pytest.raises(LLMError, match="empty response"):
+            await call_regeneration_llm(
+                previous_output="original",
+                feedback_text="fix it",
+                formatted_theme="{}",
+                newsletter_content="html",
+            )
 
     @pytest.mark.asyncio
     async def test_passes_purpose_and_step(self) -> None:

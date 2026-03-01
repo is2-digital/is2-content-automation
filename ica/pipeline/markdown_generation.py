@@ -35,7 +35,6 @@ from typing import Protocol
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ica.config.llm_config import LLMPurpose, get_model
-from ica.services.llm import completion
 from ica.db.crud import add_note
 from ica.db.models import Note
 from ica.errors import ValidationLoopCounter
@@ -48,6 +47,7 @@ from ica.prompts.markdown_structural_validation import (
     build_structural_validation_prompt,
 )
 from ica.prompts.markdown_voice_validation import build_voice_validation_prompt
+from ica.services.llm import completion
 from ica.utils.output_router import (
     UserChoice,
     conditional_output_router,

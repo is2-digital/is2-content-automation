@@ -33,8 +33,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from ica.errors import LLMError
-from ica.services.llm import LLMResponse
-
 from ica.pipeline.email_subject import (
     FEEDBACK_FIELD_LABEL,
     GOOGLE_DOC_TITLE,
@@ -68,6 +66,7 @@ from ica.pipeline.email_subject import (
     store_email_feedback,
     strip_html_to_text,
 )
+from ica.services.llm import LLMResponse
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -299,9 +298,8 @@ class TestCallEmailSubjectLlm:
             "ica.pipeline.email_subject.completion",
             new_callable=AsyncMock,
             side_effect=LLMError("email_subject", "empty response"),
-        ):
-            with pytest.raises(LLMError, match="empty response"):
-                await call_email_subject_llm("text")
+        ), pytest.raises(LLMError, match="empty response"):
+            await call_email_subject_llm("text")
 
     @pytest.mark.asyncio
     async def test_none_response_raises(self) -> None:
@@ -309,9 +307,8 @@ class TestCallEmailSubjectLlm:
             "ica.pipeline.email_subject.completion",
             new_callable=AsyncMock,
             side_effect=LLMError("email_subject", "empty response"),
-        ):
-            with pytest.raises(LLMError, match="empty response"):
-                await call_email_subject_llm("text")
+        ), pytest.raises(LLMError, match="empty response"):
+            await call_email_subject_llm("text")
 
 
 # ===================================================================
@@ -587,9 +584,8 @@ class TestCallEmailReviewLlm:
             "ica.pipeline.email_subject.completion",
             new_callable=AsyncMock,
             side_effect=LLMError("email_review", "empty response"),
-        ):
-            with pytest.raises(LLMError, match="empty response"):
-                await call_email_review_llm("text")
+        ), pytest.raises(LLMError, match="empty response"):
+            await call_email_review_llm("text")
 
 
 # ===================================================================
@@ -727,9 +723,8 @@ class TestExtractEmailLearningData:
             "ica.pipeline.email_subject.completion",
             new_callable=AsyncMock,
             side_effect=LLMError("email_learning_data", "empty response"),
-        ):
-            with pytest.raises(LLMError, match="empty response"):
-                await extract_email_learning_data("feedback", "output")
+        ), pytest.raises(LLMError, match="empty response"):
+            await extract_email_learning_data("feedback", "output")
 
     @pytest.mark.asyncio
     async def test_invalid_json_fallback(self) -> None:

@@ -263,8 +263,7 @@ async def phase_db() -> dict[str, Any]:
     print("PHASE 1: Database CRUD — Notes seeding & round-trip")
     print("=" * 70)
 
-    from sqlalchemy.ext.asyncio import create_async_engine
-    from sqlalchemy.ext.asyncio import async_sessionmaker
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
     from ica.db.crud import add_note, get_recent_notes
     from ica.db.models import Base
@@ -304,7 +303,7 @@ async def phase_db() -> dict[str, Any]:
     assert total_inserted == 15, f"Expected 15 notes, inserted {total_inserted}"
 
     # Verify retrieval for each type
-    print(f"\n--- 1b. Verifying retrieval per type ---")
+    print("\n--- 1b. Verifying retrieval per type ---")
     async with session_factory() as session:
         for note_type in NOTE_TYPES:
             rows = await get_recent_notes(session, note_type)
@@ -342,8 +341,7 @@ async def phase_limit() -> dict[str, Any]:
     print("PHASE 2: Last-40 limit & type filtering")
     print("=" * 70)
 
-    from sqlalchemy.ext.asyncio import create_async_engine
-    from sqlalchemy.ext.asyncio import async_sessionmaker
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
     from ica.db.crud import add_note, get_recent_notes
     from ica.db.models import Base
@@ -368,10 +366,10 @@ async def phase_limit() -> dict[str, Any]:
                 newsletter_id=test_nid,
             )
         await session.commit()
-    print(f"  Inserted 50 notes")
+    print("  Inserted 50 notes")
 
     # Retrieve with default limit (40)
-    print(f"\n--- 2b. Retrieving with default limit=40 ---")
+    print("\n--- 2b. Retrieving with default limit=40 ---")
     async with session_factory() as session:
         rows = await get_recent_notes(session, test_type)
         print(f"  Retrieved: {len(rows)} notes")
@@ -383,14 +381,14 @@ async def phase_limit() -> dict[str, Any]:
         assert len(test_rows) <= 40, f"Expected <= 40 test rows, got {len(test_rows)}"
 
     # Retrieve with explicit limit=10
-    print(f"\n--- 2c. Retrieving with explicit limit=10 ---")
+    print("\n--- 2c. Retrieving with explicit limit=10 ---")
     async with session_factory() as session:
         rows_10 = await get_recent_notes(session, test_type, limit=10)
         print(f"  Retrieved: {len(rows_10)} notes")
         assert len(rows_10) == 10, f"Expected 10, got {len(rows_10)}"
 
     # Type isolation: different type should not see these notes
-    print(f"\n--- 2d. Type isolation check ---")
+    print("\n--- 2d. Type isolation check ---")
     other_type = "user_htmlgenerator"
     async with session_factory() as session:
         other_rows = await get_recent_notes(session, other_type)
@@ -424,22 +422,22 @@ async def phase_aggregate() -> dict[str, Any]:
     print("=" * 70)
 
     from ica.db.models import Note
-
-    # Import aggregate_feedback from each pipeline module that defines it
-    from ica.pipeline.theme_generation import (
-        aggregate_feedback as theme_agg,
-    )
-    from ica.pipeline.summarization import (
-        aggregate_feedback as summary_agg,
-    )
-    from ica.pipeline.markdown_generation import (
-        aggregate_feedback as markdown_agg,
-    )
     from ica.pipeline.email_subject import (
         aggregate_feedback as email_agg,
     )
     from ica.pipeline.html_generation import (
         aggregate_feedback as html_agg,
+    )
+    from ica.pipeline.markdown_generation import (
+        aggregate_feedback as markdown_agg,
+    )
+    from ica.pipeline.summarization import (
+        aggregate_feedback as summary_agg,
+    )
+
+    # Import aggregate_feedback from each pipeline module that defines it
+    from ica.pipeline.theme_generation import (
+        aggregate_feedback as theme_agg,
     )
 
     # Create mock Note objects with just feedback_text
@@ -491,7 +489,7 @@ async def phase_aggregate() -> dict[str, Any]:
         assert empty_result is None, (
             f"{module_name}: expected None for empty input, got {empty_result!r}"
         )
-        print(f"  Empty input returns None: PASS")
+        print("  Empty input returns None: PASS")
 
         results[module_name] = {
             "lines": len(lines),
@@ -514,11 +512,11 @@ async def phase_prompt() -> dict[str, Any]:
     print("PHASE 4: Prompt injection — feedback section in all prompts")
     print("=" * 70)
 
-    from ica.prompts.summarization import build_summarization_prompt
-    from ica.prompts.theme_generation import build_theme_generation_prompt
-    from ica.prompts.markdown_generation import build_markdown_generation_prompt
     from ica.prompts.email_subject import build_email_subject_prompt
     from ica.prompts.html_generation import build_html_generation_prompt
+    from ica.prompts.markdown_generation import build_markdown_generation_prompt
+    from ica.prompts.summarization import build_summarization_prompt
+    from ica.prompts.theme_generation import build_theme_generation_prompt
 
     # Construct a realistic aggregated feedback string
     feedback_text = "\n".join(
@@ -528,7 +526,7 @@ async def phase_prompt() -> dict[str, Any]:
     results: dict[str, Any] = {}
 
     # 4a. Summarization prompt
-    print(f"\n--- 4a. Summarization prompt ---")
+    print("\n--- 4a. Summarization prompt ---")
     sys_p, user_p = build_summarization_prompt(
         SAMPLE_ARTICLE_CONTENT,
         aggregated_feedback=feedback_text,
@@ -541,12 +539,12 @@ async def phase_prompt() -> dict[str, Any]:
     )
     print(f"  System prompt: {len(sys_p)} chars")
     print(f"  User prompt: {len(user_p)} chars")
-    print(f"  Contains 'Editorial Improvement Context': YES")
-    print(f"  Contains specific feedback text: YES")
+    print("  Contains 'Editorial Improvement Context': YES")
+    print("  Contains specific feedback text: YES")
     results["summarization"] = {"sys_len": len(sys_p), "user_len": len(user_p)}
 
     # 4b. Theme generation prompt
-    print(f"\n--- 4b. Theme generation prompt ---")
+    print("\n--- 4b. Theme generation prompt ---")
     sys_p, user_p = build_theme_generation_prompt(
         summaries_json=SAMPLE_SUMMARIES_JSON,
         aggregated_feedback=feedback_text,
@@ -559,11 +557,11 @@ async def phase_prompt() -> dict[str, Any]:
     )
     print(f"  System prompt: {len(sys_p)} chars")
     print(f"  User prompt: {len(user_p)} chars")
-    print(f"  Contains 'Editorial Improvement Context': YES")
+    print("  Contains 'Editorial Improvement Context': YES")
     results["theme_generation"] = {"sys_len": len(sys_p), "user_len": len(user_p)}
 
     # 4c. Markdown generation prompt
-    print(f"\n--- 4c. Markdown generation prompt ---")
+    print("\n--- 4c. Markdown generation prompt ---")
     sys_p, user_p = build_markdown_generation_prompt(
         SAMPLE_FORMATTED_THEME,
         aggregated_feedback=feedback_text,
@@ -576,11 +574,11 @@ async def phase_prompt() -> dict[str, Any]:
     )
     print(f"  System prompt: {len(sys_p)} chars")
     print(f"  User prompt: {len(user_p)} chars")
-    print(f"  Contains 'Editorial Improvement Context': YES")
+    print("  Contains 'Editorial Improvement Context': YES")
     results["markdown_generation"] = {"sys_len": len(sys_p), "user_len": len(user_p)}
 
     # 4d. Email subject prompt
-    print(f"\n--- 4d. Email subject prompt ---")
+    print("\n--- 4d. Email subject prompt ---")
     sys_p, user_p = build_email_subject_prompt(
         "This is sample newsletter text for subject line generation.",
         aggregated_feedback=feedback_text,
@@ -593,11 +591,11 @@ async def phase_prompt() -> dict[str, Any]:
     )
     print(f"  System prompt: {len(sys_p)} chars")
     print(f"  User prompt: {len(user_p)} chars")
-    print(f"  Contains 'Editorial Improvement Context': YES")
+    print("  Contains 'Editorial Improvement Context': YES")
     results["email_subject"] = {"sys_len": len(sys_p), "user_len": len(user_p)}
 
     # 4e. HTML generation prompt (feedback goes in system prompt)
-    print(f"\n--- 4e. HTML generation prompt ---")
+    print("\n--- 4e. HTML generation prompt ---")
     sys_p, user_p = build_html_generation_prompt(
         markdown_content="# Test Newsletter\n\nContent here.",
         html_template="<html><body>{{content}}</body></html>",
@@ -613,11 +611,11 @@ async def phase_prompt() -> dict[str, Any]:
     )
     print(f"  System prompt: {len(sys_p)} chars")
     print(f"  User prompt: {len(user_p)} chars")
-    print(f"  Contains 'Editorial Improvement Context' (in system): YES")
+    print("  Contains 'Editorial Improvement Context' (in system): YES")
     results["html_generation"] = {"sys_len": len(sys_p), "user_len": len(user_p)}
 
     # 4f. Verify prompts WITHOUT feedback do NOT contain the section
-    print(f"\n--- 4f. Negative check: prompts without feedback ---")
+    print("\n--- 4f. Negative check: prompts without feedback ---")
     sys_p, user_p = build_summarization_prompt(SAMPLE_ARTICLE_CONTENT)
     assert "Editorial Improvement Context" not in user_p, (
         "Summarization: feedback section found in prompt with no feedback"
@@ -625,19 +623,19 @@ async def phase_prompt() -> dict[str, Any]:
     assert "Editorial Improvement Context" not in sys_p, (
         "Summarization: feedback section found in system prompt with no feedback"
     )
-    print(f"  Summarization without feedback: no feedback section (PASS)")
+    print("  Summarization without feedback: no feedback section (PASS)")
 
     sys_p, user_p = build_theme_generation_prompt(SAMPLE_SUMMARIES_JSON)
     assert "Editorial Improvement Context" not in user_p, (
         "Theme generation: feedback section found with no feedback"
     )
-    print(f"  Theme generation without feedback: no feedback section (PASS)")
+    print("  Theme generation without feedback: no feedback section (PASS)")
 
     sys_p, user_p = build_markdown_generation_prompt(SAMPLE_FORMATTED_THEME)
     assert "Editorial Improvement Context" not in user_p, (
         "Markdown generation: feedback section found with no feedback"
     )
-    print(f"  Markdown generation without feedback: no feedback section (PASS)")
+    print("  Markdown generation without feedback: no feedback section (PASS)")
 
     print("\n  Phase 4 PASSED: Feedback injected into all 5 prompt builders correctly.")
     return results
@@ -659,7 +657,8 @@ async def phase_llm() -> dict[str, Any]:
     print("PHASE 5: Cross-run LLM — feedback injection into real LLM calls")
     print("=" * 70)
 
-    from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+    import litellm
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
     from ica.config.llm_config import LLMPurpose, get_model
     from ica.db.crud import add_note, get_recent_notes
@@ -669,7 +668,6 @@ async def phase_llm() -> dict[str, Any]:
         generate_themes,
     )
     from ica.prompts.summarization import build_summarization_prompt
-    import litellm
 
     env = _check_env("OPENROUTER_API_KEY", "DATABASE_URL")
     model = _openrouter_model(get_model(LLMPurpose.SUMMARY))
@@ -684,7 +682,7 @@ async def phase_llm() -> dict[str, Any]:
     test_nid = f"phase_d_llm_{uuid.uuid4().hex[:8]}"
 
     # -- 5a. Run 1: baseline call (no feedback) --
-    print(f"\n--- 5a. Run 1 — Baseline summarization (no feedback) ---")
+    print("\n--- 5a. Run 1 — Baseline summarization (no feedback) ---")
     sys_base, user_base = build_summarization_prompt(SAMPLE_ARTICLE_CONTENT)
     assert "Editorial Improvement Context" not in user_base, (
         "Baseline prompt should not contain feedback section"
@@ -706,7 +704,7 @@ async def phase_llm() -> dict[str, Any]:
     )
 
     # -- 5b. Simulate Run 1 feedback storage --
-    print(f"\n--- 5b. Storing feedback from Run 1 (simulated user review) ---")
+    print("\n--- 5b. Storing feedback from Run 1 (simulated user review) ---")
     feedback_entries = [
         "Always start summaries with a concrete statistic or number from the article.",
         "Business relevance must mention at least one specific business function "
@@ -720,7 +718,7 @@ async def phase_llm() -> dict[str, Any]:
     print(f"  Stored {len(feedback_entries)} feedback notes")
 
     # -- 5c. Run 2: with feedback --
-    print(f"\n--- 5c. Run 2 — Summarization with injected feedback ---")
+    print("\n--- 5c. Run 2 — Summarization with injected feedback ---")
     async with session_factory() as session:
         notes = await get_recent_notes(session, "user_summarization")
         print(f"  Retrieved {len(notes)} notes from DB")
@@ -762,7 +760,7 @@ async def phase_llm() -> dict[str, Any]:
     )
 
     # -- 5d. Theme generation with DB session (full integrate) --
-    print(f"\n--- 5d. Theme generation with DB session (full feedback loop) ---")
+    print("\n--- 5d. Theme generation with DB session (full feedback loop) ---")
     theme_model = _openrouter_model(get_model(LLMPurpose.THEME))
     print(f"  Theme model: {theme_model}")
 

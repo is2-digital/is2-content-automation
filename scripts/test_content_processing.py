@@ -186,7 +186,7 @@ async def phase_summarize() -> dict[str, Any]:
     # Fetch a real article for summarization
     test_url = TEST_ARTICLES[0]["url"]
     test_title = TEST_ARTICLES[0]["title"]
-    print(f"\n--- 2a. Fetching article for summarization ---")
+    print("\n--- 2a. Fetching article for summarization ---")
     print(f"  URL: {test_url}")
 
     async with WebFetcherService() as fetcher:
@@ -209,7 +209,7 @@ async def phase_summarize() -> dict[str, Any]:
         print(f"  Fetched: {len(text_content):,} chars (truncated to 3000)")
 
     # Build input and call LLM
-    print(f"\n--- 2b. Calling LLM for summarization ---")
+    print("\n--- 2b. Calling LLM for summarization ---")
     article_input = build_article_input(test_url, test_title, text_content)
     raw_output = await call_summary_llm(article_input)
 
@@ -217,7 +217,7 @@ async def phase_summarize() -> dict[str, Any]:
     print(f"  Raw output preview:\n    {raw_output[:300]}...")
 
     # Parse output
-    print(f"\n--- 2c. Parsing summary output ---")
+    print("\n--- 2c. Parsing summary output ---")
     parsed_url, parsed_title, summary, business = parse_summary_output(raw_output)
 
     print(f"  URL:                {parsed_url[:80]}")
@@ -373,7 +373,7 @@ async def phase_theme() -> dict[str, Any]:
     print(f"  Input: {len(sample_summaries)} article summaries")
 
     # Call LLM for theme generation
-    print(f"\n--- 3a. Calling LLM for theme generation ---")
+    print("\n--- 3a. Calling LLM for theme generation ---")
     raw_output, model_used = await call_theme_llm(summaries_json)
 
     print(f"  Raw output length: {len(raw_output)} chars")
@@ -381,7 +381,7 @@ async def phase_theme() -> dict[str, Any]:
     print(f"  Preview (first 500 chars):\n    {raw_output[:500]}...")
 
     # Split themes
-    print(f"\n--- 3b. Splitting theme blocks ---")
+    print("\n--- 3b. Splitting theme blocks ---")
     split_result = split_themes(raw_output)
     print(f"  Theme blocks found: {len(split_result.themes)}")
     print(f"  Has recommendation: {bool(split_result.recommendation)}")
@@ -392,7 +392,7 @@ async def phase_theme() -> dict[str, Any]:
             print(f"      Description: {block.theme_description[:100]}...")
 
     # Parse markers from each theme
-    print(f"\n--- 3c. Parsing %XX_ markers ---")
+    print("\n--- 3c. Parsing %XX_ markers ---")
     parsed_themes = parse_theme_output(raw_output)
 
     results: dict[str, Any] = {
@@ -544,10 +544,10 @@ REQUIREMENTS VERIFIED:
 %RV_Major AI player coverage:% Google, Microsoft, OpenAI, Anthropic"""
 
     print(f"  Theme body: {len(sample_theme_body)} chars")
-    print(f"  Theme: AI Accessibility Revolution")
+    print("  Theme: AI Accessibility Revolution")
 
     # Call freshness check
-    print(f"\n--- 4a. Calling freshness check LLM ---")
+    print("\n--- 4a. Calling freshness check LLM ---")
     freshness_report = await run_freshness_check(sample_theme_body)
 
     print(f"  Report length: {len(freshness_report)} chars")

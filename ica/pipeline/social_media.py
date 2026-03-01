@@ -29,12 +29,12 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from ica.config.llm_config import LLMPurpose, get_model
-from ica.services.llm import completion
 from ica.prompts.social_media import (
     build_social_media_caption_prompt,
     build_social_media_post_prompt,
     build_social_media_regeneration_prompt,
 )
+from ica.services.llm import completion
 
 # ---------------------------------------------------------------------------
 # Protocols

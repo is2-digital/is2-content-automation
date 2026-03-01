@@ -12,7 +12,6 @@ Tests the end-to-end flows:
 from __future__ import annotations
 
 import json
-import logging
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -34,7 +33,6 @@ from ica.services.slack_config_handlers import (
     VIEW_CONFIG_MODAL,
     register_config_handlers,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

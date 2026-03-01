@@ -28,11 +28,11 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from ica.config.llm_config import LLMPurpose, get_model
-from ica.services.llm import completion
 from ica.prompts.linkedin_carousel import (
     build_linkedin_carousel_prompt,
     build_linkedin_regeneration_prompt,
 )
+from ica.services.llm import completion
 
 # ---------------------------------------------------------------------------
 # Protocols

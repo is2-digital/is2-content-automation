@@ -23,10 +23,10 @@ from dataclasses import dataclass, field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ica.config.llm_config import LLMPurpose
-from ica.services.llm import completion
 from ica.db.crud import get_recent_notes
 from ica.db.models import Note
 from ica.prompts.theme_generation import build_theme_generation_prompt
+from ica.services.llm import completion
 from ica.utils.marker_parser import (
     FormattedTheme,
     parse_markers,

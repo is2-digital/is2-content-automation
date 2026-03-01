@@ -28,7 +28,7 @@ class TestSocialMediaPostSystemPrompt:
     def test_is_shared_system_prompt(self):
         from ica.llm_configs.loader import get_system_prompt
 
-        assert _POST_SYSTEM == get_system_prompt()
+        assert get_system_prompt() == _POST_SYSTEM
 
     def test_contains_zero_hallucination(self):
         assert "ZERO HALLUCINATION" in _POST_SYSTEM
@@ -77,7 +77,7 @@ class TestSocialMediaCaptionSystemPrompt:
     def test_is_shared_system_prompt(self):
         from ica.llm_configs.loader import get_system_prompt
 
-        assert _CAPTION_SYSTEM == get_system_prompt()
+        assert get_system_prompt() == _CAPTION_SYSTEM
 
     def test_contains_zero_hallucination(self):
         assert "ZERO HALLUCINATION" in _CAPTION_SYSTEM
@@ -126,7 +126,7 @@ class TestSocialMediaRegenerationSystemPrompt:
     def test_is_shared_system_prompt(self):
         from ica.llm_configs.loader import get_system_prompt
 
-        assert _REGEN_SYSTEM == get_system_prompt()
+        assert get_system_prompt() == _REGEN_SYSTEM
 
     def test_contains_zero_hallucination(self):
         assert "ZERO HALLUCINATION" in _REGEN_SYSTEM

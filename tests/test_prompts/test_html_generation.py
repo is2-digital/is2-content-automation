@@ -72,7 +72,7 @@ class TestHtmlGenerationSystemPrompt:
     def test_is_shared_system_prompt(self) -> None:
         from ica.llm_configs.loader import get_system_prompt
 
-        assert _GEN_SYSTEM == get_system_prompt()
+        assert get_system_prompt() == _GEN_SYSTEM
 
     def test_prompt_is_string(self) -> None:
         assert isinstance(_GEN_SYSTEM, str)
@@ -114,7 +114,7 @@ class TestHtmlRegenerationSystemPrompt:
     def test_is_shared_system_prompt(self) -> None:
         from ica.llm_configs.loader import get_system_prompt
 
-        assert _REGEN_SYSTEM == get_system_prompt()
+        assert get_system_prompt() == _REGEN_SYSTEM
 
     def test_prompt_is_string(self) -> None:
         assert isinstance(_REGEN_SYSTEM, str)

@@ -10,7 +10,6 @@ import pytest
 from ica.config.llm_config import LLMPurpose
 from ica.errors import LLMError
 from ica.pipeline.theme_generation import GeneratedTheme, ThemeGenerationResult
-from ica.services.llm import LLMResponse
 from ica.pipeline.theme_selection import (
     ADD_FEEDBACK_OPTION,
     APPROVAL_FIELD_LABEL,
@@ -37,6 +36,7 @@ from ica.pipeline.theme_selection import (
     save_approved_theme,
     store_theme_feedback,
 )
+from ica.services.llm import LLMResponse
 from ica.utils.marker_parser import (
     FormattedTheme,
 )
