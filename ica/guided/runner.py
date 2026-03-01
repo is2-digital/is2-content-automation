@@ -20,6 +20,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from ica.guided.artifacts import ArtifactEntry, ArtifactStore, ArtifactType
 from ica.guided.google_settings import GuidedGoogleSettingsError, validate_google_settings
 from ica.guided.slack_adapter import SlackTimeoutError
 from ica.guided.state import (
@@ -148,7 +149,10 @@ def render_checkpoint(state: TestRunState, console: Console) -> None:
                 for k in doc_keys:
                     console.print(f"  [dim]attempt {attempt_num}: {k}={arts[k]}[/dim]")
             else:
-                summary = ", ".join(f"{k}={v}" for k, v in arts.items() if k != "slack_interactions")
+                pairs = (
+                    f"{k}={v}" for k, v in arts.items() if k != "slack_interactions"
+                )
+                summary = ", ".join(pairs)
                 if summary:
                     console.print(f"  [dim]attempt {attempt_num}: {summary}[/dim]")
 
@@ -300,6 +304,7 @@ async def run_guided(
         console = Console()
 
     store = TestRunStore(store_dir)
+    artifact_store = ArtifactStore(store_dir)
 
     # --- Create or resume ---
     if run_id:
@@ -413,8 +418,13 @@ async def run_guided(
 
             try:
                 ctx = await run_step(step_name.value, step_fn, ctx)
-                # Extract artifacts from context for this step
-                artifacts = _extract_artifacts(step_name, ctx)
+                artifacts = _emit_step_artifacts(
+                    step_name,
+                    ctx,
+                    run_id=run_id,
+                    attempt=step_attempt,
+                    artifact_store=artifact_store,
+                )
                 sm.complete_step(artifacts=artifacts)
             except KeyboardInterrupt:
                 console.print("\n[yellow]Interrupted.[/yellow] State saved.")
@@ -424,6 +434,16 @@ async def run_guided(
             except Exception as exc:
                 error_msg = _classify_step_error(exc)
                 console.print(f"\n[red]Step failed:[/red] {error_msg}")
+                # Emit partial artifacts even on failure (e.g. doc created
+                # before validation error)
+                with contextlib.suppress(Exception):
+                    _emit_step_artifacts(
+                        step_name,
+                        ctx,
+                        run_id=run_id,
+                        attempt=step_attempt,
+                        artifact_store=artifact_store,
+                    )
                 with contextlib.suppress(InvalidTransitionError):
                     sm.fail_step(error_msg)
             finally:
@@ -432,7 +452,17 @@ async def run_guided(
                 if slack_override is not None and hasattr(
                     slack_override, "drain_step_interactions"
                 ):
-                    _merge_slack_interactions(slack_override, step_name, state)
+                    slack_interactions = _merge_slack_interactions(
+                        slack_override, step_name, state
+                    )
+                    if slack_interactions:
+                        _emit_slack_artifacts(
+                            slack_interactions,
+                            step_name,
+                            run_id=run_id,
+                            attempt=step_attempt,
+                            artifact_store=artifact_store,
+                        )
 
         # Checkpoint — show results and prompt
         if state.phase == RunPhase.CHECKPOINT:
@@ -598,16 +628,18 @@ def _merge_slack_interactions(
     adapter: Any,
     step_name: StepName,
     state: TestRunState,
-) -> None:
+) -> list[dict[str, Any]]:
     """Merge adapter interaction records into step artifacts and decision history.
 
     Interactions are *accumulated* across redo attempts so the full decision
     history is preserved.  Each interaction carries an ``attempt`` field
     identifying which attempt it belongs to.
+
+    Returns the drained interactions so the caller can emit artifact entries.
     """
-    interactions = adapter.drain_step_interactions(step_name.value)
+    interactions: list[dict[str, Any]] = adapter.drain_step_interactions(step_name.value)
     if not interactions:
-        return
+        return []
 
     step_record = state.current_step
     existing = step_record.artifacts.get("slack_interactions", [])
@@ -625,6 +657,8 @@ def _merge_slack_interactions(
                     note=str(response) if response else None,
                 )
             )
+
+    return interactions
 
 
 def _google_doc_url(doc_id: str) -> str:
@@ -709,63 +743,192 @@ def _prepare_redo_context(step_name: StepName, attempt: int, ctx: PipelineContex
         ctx.extra["guided_attempt"] = attempt
 
 
-def _extract_artifacts(step_name: StepName, ctx: PipelineContext) -> dict[str, Any]:
-    """Pull notable artifacts from context after a step completes."""
-    artifacts: dict[str, Any] = {}
+def _build_step_entries(
+    step_name: StepName,
+    ctx: PipelineContext,
+    *,
+    run_id: str,
+    attempt: int,
+) -> list[ArtifactEntry]:
+    """Build structured :class:`ArtifactEntry` objects for a step's outputs.
+
+    Each meaningful output (Google Doc/Sheet, LLM result, count) becomes a
+    separate entry with appropriate :class:`ArtifactType`.  Compound values
+    (e.g. doc ID + URL) are grouped into a single entry whose ``value`` is a
+    dict so the full context travels together.
+    """
+    entries: list[ArtifactEntry] = []
+    name = step_name.value
+
+    def _add(
+        artifact_type: ArtifactType,
+        key: str,
+        value: Any,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        entries.append(
+            ArtifactEntry(
+                run_id=run_id,
+                step_name=name,
+                artifact_type=artifact_type,
+                key=key,
+                value=value,
+                attempt_number=attempt,
+                metadata=metadata or {},
+            )
+        )
 
     if step_name == StepName.CURATION:
-        artifacts["article_count"] = len(ctx.articles)
+        _add(ArtifactType.LLM_OUTPUT, "article_count", len(ctx.articles))
         if ctx.newsletter_id:
-            artifacts["newsletter_id"] = ctx.newsletter_id
-        artifacts.update(_get_sheets_refs())
+            _add(ArtifactType.LLM_OUTPUT, "newsletter_id", ctx.newsletter_id)
+        sheets = _get_sheets_refs()
+        if sheets:
+            _add(ArtifactType.GOOGLE_SHEET, "curated_articles_sheet", sheets)
 
     elif step_name == StepName.SUMMARIZATION:
-        artifacts["summary_count"] = len(ctx.summaries)
-        artifacts.update(_get_sheets_refs())
+        _add(ArtifactType.LLM_OUTPUT, "summary_count", len(ctx.summaries))
+        sheets = _get_sheets_refs()
+        if sheets:
+            _add(ArtifactType.GOOGLE_SHEET, "article_summaries_sheet", sheets)
 
     elif step_name == StepName.THEME_GENERATION:
         if ctx.theme_name:
-            artifacts["theme_name"] = ctx.theme_name
+            _add(ArtifactType.LLM_OUTPUT, "theme_name", ctx.theme_name)
 
     elif step_name == StepName.MARKDOWN_GENERATION:
         if ctx.markdown_doc_id:
-            artifacts["markdown_doc_id"] = ctx.markdown_doc_id
-            artifacts["document_url"] = _google_doc_url(ctx.markdown_doc_id)
+            _add(
+                ArtifactType.GOOGLE_DOC,
+                "markdown_doc",
+                {
+                    "markdown_doc_id": ctx.markdown_doc_id,
+                    "document_url": _google_doc_url(ctx.markdown_doc_id),
+                },
+            )
 
     elif step_name == StepName.HTML_GENERATION:
         if ctx.html_doc_id:
-            artifacts["html_doc_id"] = ctx.html_doc_id
-            artifacts["document_url"] = _google_doc_url(ctx.html_doc_id)
+            _add(
+                ArtifactType.GOOGLE_DOC,
+                "html_doc",
+                {
+                    "html_doc_id": ctx.html_doc_id,
+                    "document_url": _google_doc_url(ctx.html_doc_id),
+                },
+            )
         tpl_name = ctx.extra.get("template_name")
         tpl_ver = ctx.extra.get("template_version")
-        if tpl_name:
-            artifacts["template_name"] = tpl_name
-        if tpl_ver:
-            artifacts["template_version"] = tpl_ver
+        if tpl_name or tpl_ver:
+            tpl_info: dict[str, str] = {}
+            if tpl_name:
+                tpl_info["template_name"] = tpl_name
+            if tpl_ver:
+                tpl_info["template_version"] = tpl_ver
+            _add(ArtifactType.LLM_OUTPUT, "template_info", tpl_info)
 
     elif step_name == StepName.EMAIL_SUBJECT:
         subject = ctx.extra.get("email_subject")
         if subject:
-            artifacts["email_subject"] = subject[:60]
+            _add(ArtifactType.LLM_OUTPUT, "email_subject", subject[:60])
         doc_id = ctx.extra.get("email_doc_id")
         if doc_id:
-            artifacts["email_doc_id"] = doc_id
-            artifacts["document_url"] = _google_doc_url(doc_id)
+            _add(
+                ArtifactType.GOOGLE_DOC,
+                "email_doc",
+                {
+                    "email_doc_id": doc_id,
+                    "document_url": _google_doc_url(doc_id),
+                },
+            )
 
     elif step_name == StepName.SOCIAL_MEDIA:
         doc_id = ctx.extra.get("social_media_doc_id")
         if doc_id:
-            artifacts["social_media_doc_id"] = doc_id
-            artifacts["document_url"] = _google_doc_url(doc_id)
+            _add(
+                ArtifactType.GOOGLE_DOC,
+                "social_media_doc",
+                {
+                    "social_media_doc_id": doc_id,
+                    "document_url": _google_doc_url(doc_id),
+                },
+            )
 
     elif step_name == StepName.LINKEDIN_CAROUSEL:
         doc_id = ctx.extra.get("linkedin_carousel_doc_id")
         if doc_id:
-            artifacts["linkedin_carousel_doc_id"] = doc_id
-            artifacts["document_url"] = _google_doc_url(doc_id)
+            _add(
+                ArtifactType.GOOGLE_DOC,
+                "linkedin_carousel_doc",
+                {
+                    "linkedin_carousel_doc_id": doc_id,
+                    "document_url": _google_doc_url(doc_id),
+                },
+            )
 
     elif step_name == StepName.ALTERNATES_HTML:
         unused = ctx.extra.get("alternates_unused_summaries", [])
-        artifacts["unused_article_count"] = len(unused)
+        _add(ArtifactType.LLM_OUTPUT, "unused_article_count", len(unused))
 
-    return artifacts
+    return entries
+
+
+def _entries_to_summary(entries: list[ArtifactEntry]) -> dict[str, Any]:
+    """Flatten artifact entries into a summary dict for ``StepRecord.artifacts``.
+
+    Scalar values use the entry key directly.  Dict values are merged
+    (flattened) so the summary remains backward-compatible with the
+    format used by ``render_step_table`` and ``render_checkpoint``.
+    """
+    summary: dict[str, Any] = {}
+    for entry in entries:
+        if isinstance(entry.value, dict):
+            summary.update(entry.value)
+        else:
+            summary[entry.key] = entry.value
+    return summary
+
+
+def _emit_step_artifacts(
+    step_name: StepName,
+    ctx: PipelineContext,
+    *,
+    run_id: str,
+    attempt: int,
+    artifact_store: ArtifactStore,
+) -> dict[str, Any]:
+    """Build artifact entries, persist each to the ledger, return summary dict.
+
+    This replaces the former ``_extract_artifacts()`` lightweight-dict approach
+    with structured :class:`ArtifactEntry` objects written to the append-only
+    artifact ledger.  The returned dict is backward-compatible with
+    ``StepRecord.artifacts`` so the UI rendering code continues to work.
+    """
+    entries = _build_step_entries(step_name, ctx, run_id=run_id, attempt=attempt)
+    for entry in entries:
+        artifact_store.append_artifact(run_id, entry)
+    return _entries_to_summary(entries)
+
+
+def _emit_slack_artifacts(
+    interactions: list[dict[str, Any]],
+    step_name: StepName,
+    *,
+    run_id: str,
+    attempt: int,
+    artifact_store: ArtifactStore,
+) -> None:
+    """Emit :class:`ArtifactEntry` objects for Slack interactions."""
+    for interaction in interactions:
+        method = interaction.get("method", "unknown")
+        artifact_store.append_artifact(
+            run_id,
+            ArtifactEntry(
+                run_id=run_id,
+                step_name=step_name.value,
+                artifact_type=ArtifactType.SLACK_DECISION,
+                key=f"slack_{method}",
+                value=interaction,
+                attempt_number=attempt,
+            ),
+        )

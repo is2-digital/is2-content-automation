@@ -8,8 +8,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from rich.console import Console
 
+from ica.guided.artifacts import ArtifactEntry, ArtifactStore, ArtifactType
 from ica.guided.runner import (
-    _extract_artifacts,
+    _build_step_entries,
+    _emit_slack_artifacts,
+    _emit_step_artifacts,
+    _entries_to_summary,
     _get_sheets_refs,
     _google_doc_url,
     _google_sheet_url,
@@ -178,8 +182,11 @@ class TestContextSnapshot:
 
 
 # ---------------------------------------------------------------------------
-# _extract_artifacts
+# Artifact entry builders and summary helpers
 # ---------------------------------------------------------------------------
+
+_RUN_ID = "test-run"
+_ATTEMPT = 1
 
 
 class TestGoogleUrlHelpers:
@@ -223,8 +230,8 @@ class TestGoogleUrlHelpers:
         assert refs == {}
 
 
-class TestExtractArtifacts:
-    """Artifact extraction from PipelineContext."""
+class TestBuildStepEntries:
+    """_build_step_entries produces typed ArtifactEntry objects per step."""
 
     def _mock_sheets_refs(self, spreadsheet_id: str = "sheet-1"):
         """Patch _get_sheets_refs to return predictable values."""
@@ -235,90 +242,336 @@ class TestExtractArtifacts:
         }
         return patch("ica.guided.runner._get_sheets_refs", return_value=refs)
 
-    def test_curation_artifacts(self) -> None:
+    def test_curation_entries(self) -> None:
         ctx = PipelineContext(
             articles=[{"title": "A"}, {"title": "B"}],
             newsletter_id="nl-1",
         )
         with self._mock_sheets_refs():
-            arts = _extract_artifacts(StepName.CURATION, ctx)
-        assert arts["article_count"] == 2
-        assert arts["newsletter_id"] == "nl-1"
-        assert arts["spreadsheet_id"] == "sheet-1"
-        assert arts["sheet_name"] == "Sheet1"
-        assert "spreadsheet_url" in arts
+            entries = _build_step_entries(
+                StepName.CURATION, ctx, run_id=_RUN_ID, attempt=_ATTEMPT
+            )
+        assert len(entries) == 3
+        assert entries[0].artifact_type == ArtifactType.LLM_OUTPUT
+        assert entries[0].key == "article_count"
+        assert entries[0].value == 2
+        assert entries[1].key == "newsletter_id"
+        assert entries[1].value == "nl-1"
+        assert entries[2].artifact_type == ArtifactType.GOOGLE_SHEET
+        assert entries[2].key == "curated_articles_sheet"
+        assert entries[2].value["spreadsheet_id"] == "sheet-1"
 
-    def test_summarization_artifacts(self) -> None:
+    def test_summarization_entries(self) -> None:
         ctx = PipelineContext(summaries=[{"url": "a"}, {"url": "b"}, {"url": "c"}])
         with self._mock_sheets_refs():
-            arts = _extract_artifacts(StepName.SUMMARIZATION, ctx)
-        assert arts["summary_count"] == 3
-        assert arts["spreadsheet_id"] == "sheet-1"
-        assert arts["sheet_name"] == "Sheet1"
+            entries = _build_step_entries(
+                StepName.SUMMARIZATION, ctx, run_id=_RUN_ID, attempt=_ATTEMPT
+            )
+        assert entries[0].key == "summary_count"
+        assert entries[0].value == 3
+        assert entries[1].artifact_type == ArtifactType.GOOGLE_SHEET
 
-    def test_theme_generation_artifacts(self) -> None:
+    def test_theme_generation_entries(self) -> None:
         ctx = PipelineContext(theme_name="AI Future")
-        arts = _extract_artifacts(StepName.THEME_GENERATION, ctx)
-        assert arts["theme_name"] == "AI Future"
+        entries = _build_step_entries(
+            StepName.THEME_GENERATION, ctx, run_id=_RUN_ID, attempt=_ATTEMPT
+        )
+        assert len(entries) == 1
+        assert entries[0].artifact_type == ArtifactType.LLM_OUTPUT
+        assert entries[0].key == "theme_name"
+        assert entries[0].value == "AI Future"
 
-    def test_markdown_generation_artifacts(self) -> None:
+    def test_markdown_generation_entries(self) -> None:
         ctx = PipelineContext(markdown_doc_id="doc-123")
-        arts = _extract_artifacts(StepName.MARKDOWN_GENERATION, ctx)
-        assert arts["markdown_doc_id"] == "doc-123"
-        assert arts["document_url"] == _google_doc_url("doc-123")
+        entries = _build_step_entries(
+            StepName.MARKDOWN_GENERATION, ctx, run_id=_RUN_ID, attempt=_ATTEMPT
+        )
+        assert len(entries) == 1
+        assert entries[0].artifact_type == ArtifactType.GOOGLE_DOC
+        assert entries[0].key == "markdown_doc"
+        assert entries[0].value["markdown_doc_id"] == "doc-123"
+        assert entries[0].value["document_url"] == _google_doc_url("doc-123")
 
-    def test_html_generation_artifacts(self) -> None:
+    def test_html_generation_entries(self) -> None:
         ctx = PipelineContext(html_doc_id="html-456")
-        arts = _extract_artifacts(StepName.HTML_GENERATION, ctx)
-        assert arts["html_doc_id"] == "html-456"
-        assert arts["document_url"] == _google_doc_url("html-456")
+        entries = _build_step_entries(
+            StepName.HTML_GENERATION, ctx, run_id=_RUN_ID, attempt=_ATTEMPT
+        )
+        assert len(entries) == 1
+        assert entries[0].artifact_type == ArtifactType.GOOGLE_DOC
+        assert entries[0].value["html_doc_id"] == "html-456"
 
-    def test_email_subject_artifacts(self) -> None:
+    def test_email_subject_entries(self) -> None:
         ctx = PipelineContext(
             extra={"email_subject": "Breaking News", "email_doc_id": "email-doc-1"}
         )
-        arts = _extract_artifacts(StepName.EMAIL_SUBJECT, ctx)
-        assert arts["email_subject"] == "Breaking News"
-        assert arts["email_doc_id"] == "email-doc-1"
-        assert arts["document_url"] == _google_doc_url("email-doc-1")
+        entries = _build_step_entries(
+            StepName.EMAIL_SUBJECT, ctx, run_id=_RUN_ID, attempt=_ATTEMPT
+        )
+        assert len(entries) == 2
+        assert entries[0].artifact_type == ArtifactType.LLM_OUTPUT
+        assert entries[0].key == "email_subject"
+        assert entries[0].value == "Breaking News"
+        assert entries[1].artifact_type == ArtifactType.GOOGLE_DOC
+        assert entries[1].value["email_doc_id"] == "email-doc-1"
 
     def test_email_subject_without_doc(self) -> None:
         ctx = PipelineContext(extra={"email_subject": "Breaking News"})
-        arts = _extract_artifacts(StepName.EMAIL_SUBJECT, ctx)
-        assert arts["email_subject"] == "Breaking News"
-        assert "email_doc_id" not in arts
-        assert "document_url" not in arts
+        entries = _build_step_entries(
+            StepName.EMAIL_SUBJECT, ctx, run_id=_RUN_ID, attempt=_ATTEMPT
+        )
+        assert len(entries) == 1
+        assert entries[0].key == "email_subject"
 
-    def test_social_media_artifacts(self) -> None:
+    def test_social_media_entries(self) -> None:
         ctx = PipelineContext(extra={"social_media_doc_id": "sm-789"})
-        arts = _extract_artifacts(StepName.SOCIAL_MEDIA, ctx)
-        assert arts["social_media_doc_id"] == "sm-789"
-        assert arts["document_url"] == _google_doc_url("sm-789")
+        entries = _build_step_entries(
+            StepName.SOCIAL_MEDIA, ctx, run_id=_RUN_ID, attempt=_ATTEMPT
+        )
+        assert len(entries) == 1
+        assert entries[0].artifact_type == ArtifactType.GOOGLE_DOC
+        assert entries[0].value["social_media_doc_id"] == "sm-789"
 
-    def test_linkedin_carousel_artifacts(self) -> None:
+    def test_linkedin_carousel_entries(self) -> None:
         ctx = PipelineContext(extra={"linkedin_carousel_doc_id": "lc-111"})
-        arts = _extract_artifacts(StepName.LINKEDIN_CAROUSEL, ctx)
-        assert arts["linkedin_carousel_doc_id"] == "lc-111"
-        assert arts["document_url"] == _google_doc_url("lc-111")
+        entries = _build_step_entries(
+            StepName.LINKEDIN_CAROUSEL, ctx, run_id=_RUN_ID, attempt=_ATTEMPT
+        )
+        assert len(entries) == 1
+        assert entries[0].value["linkedin_carousel_doc_id"] == "lc-111"
 
-    def test_alternates_html_artifacts(self) -> None:
+    def test_alternates_html_entries(self) -> None:
         ctx = PipelineContext(extra={"alternates_unused_summaries": [1, 2]})
-        arts = _extract_artifacts(StepName.ALTERNATES_HTML, ctx)
-        assert arts["unused_article_count"] == 2
+        entries = _build_step_entries(
+            StepName.ALTERNATES_HTML, ctx, run_id=_RUN_ID, attempt=_ATTEMPT
+        )
+        assert len(entries) == 1
+        assert entries[0].key == "unused_article_count"
+        assert entries[0].value == 2
 
-    def test_empty_artifacts(self) -> None:
+    def test_empty_context_curation(self) -> None:
         ctx = PipelineContext()
         with self._mock_sheets_refs():
-            arts = _extract_artifacts(StepName.CURATION, ctx)
-        assert arts["article_count"] == 0
-        assert "newsletter_id" not in arts
-        assert arts["spreadsheet_id"] == "sheet-1"
+            entries = _build_step_entries(
+                StepName.CURATION, ctx, run_id=_RUN_ID, attempt=_ATTEMPT
+            )
+        # article_count (0) + sheet entry, no newsletter_id
+        assert entries[0].key == "article_count"
+        assert entries[0].value == 0
+        assert not any(e.key == "newsletter_id" for e in entries)
 
-    def test_docs_no_url_when_no_doc_id(self) -> None:
+    def test_no_doc_entries_when_no_doc_id(self) -> None:
         ctx = PipelineContext()
-        arts = _extract_artifacts(StepName.MARKDOWN_GENERATION, ctx)
-        assert "document_url" not in arts
-        assert "markdown_doc_id" not in arts
+        entries = _build_step_entries(
+            StepName.MARKDOWN_GENERATION, ctx, run_id=_RUN_ID, attempt=_ATTEMPT
+        )
+        assert entries == []
+
+    def test_entries_carry_run_id_and_attempt(self) -> None:
+        ctx = PipelineContext(theme_name="test")
+        entries = _build_step_entries(
+            StepName.THEME_GENERATION, ctx, run_id="my-run", attempt=3
+        )
+        assert entries[0].run_id == "my-run"
+        assert entries[0].attempt_number == 3
+        assert entries[0].step_name == "theme_generation"
+
+
+# ---------------------------------------------------------------------------
+# _entries_to_summary — backward-compatible dict from entries
+# ---------------------------------------------------------------------------
+
+
+class TestEntriesToSummary:
+    """Summary dict is backward-compatible with the old _extract_artifacts output."""
+
+    def _mock_sheets_refs(self, spreadsheet_id: str = "sheet-1"):
+        refs = {
+            "spreadsheet_id": spreadsheet_id,
+            "spreadsheet_url": _google_sheet_url(spreadsheet_id),
+            "sheet_name": "Sheet1",
+        }
+        return patch("ica.guided.runner._get_sheets_refs", return_value=refs)
+
+    def test_curation_summary(self) -> None:
+        ctx = PipelineContext(
+            articles=[{"title": "A"}, {"title": "B"}],
+            newsletter_id="nl-1",
+        )
+        with self._mock_sheets_refs():
+            entries = _build_step_entries(
+                StepName.CURATION, ctx, run_id=_RUN_ID, attempt=_ATTEMPT
+            )
+        summary = _entries_to_summary(entries)
+        assert summary["article_count"] == 2
+        assert summary["newsletter_id"] == "nl-1"
+        assert summary["spreadsheet_id"] == "sheet-1"
+        assert summary["sheet_name"] == "Sheet1"
+        assert "spreadsheet_url" in summary
+
+    def test_markdown_summary_flattens_doc(self) -> None:
+        ctx = PipelineContext(markdown_doc_id="doc-123")
+        entries = _build_step_entries(
+            StepName.MARKDOWN_GENERATION, ctx, run_id=_RUN_ID, attempt=_ATTEMPT
+        )
+        summary = _entries_to_summary(entries)
+        assert summary["markdown_doc_id"] == "doc-123"
+        assert summary["document_url"] == _google_doc_url("doc-123")
+
+    def test_empty_entries_produce_empty_dict(self) -> None:
+        assert _entries_to_summary([]) == {}
+
+    def test_scalar_entries_use_key(self) -> None:
+        entry = ArtifactEntry(
+            run_id="r",
+            step_name="s",
+            artifact_type=ArtifactType.LLM_OUTPUT,
+            key="theme_name",
+            value="AI Future",
+        )
+        assert _entries_to_summary([entry]) == {"theme_name": "AI Future"}
+
+
+# ---------------------------------------------------------------------------
+# _emit_step_artifacts — emits to store and returns summary
+# ---------------------------------------------------------------------------
+
+
+class TestEmitStepArtifacts:
+    """_emit_step_artifacts persists entries and returns backward-compatible dict."""
+
+    def test_emits_to_artifact_store(self, tmp_path: Path) -> None:
+        store = ArtifactStore(tmp_path / "runs")
+        ctx = PipelineContext(markdown_doc_id="doc-abc")
+        summary = _emit_step_artifacts(
+            StepName.MARKDOWN_GENERATION,
+            ctx,
+            run_id="run-1",
+            attempt=1,
+            artifact_store=store,
+        )
+        # Summary dict is populated
+        assert summary["markdown_doc_id"] == "doc-abc"
+        # Ledger file was written
+        ledger = store.get_ledger("run-1")
+        assert len(ledger.entries) == 1
+        assert ledger.entries[0].artifact_type == ArtifactType.GOOGLE_DOC
+        assert ledger.entries[0].key == "markdown_doc"
+
+    def test_multiple_steps_accumulate(self, tmp_path: Path) -> None:
+        store = ArtifactStore(tmp_path / "runs")
+        ctx = PipelineContext(theme_name="AI")
+        _emit_step_artifacts(
+            StepName.THEME_GENERATION,
+            ctx,
+            run_id="run-1",
+            attempt=1,
+            artifact_store=store,
+        )
+        ctx2 = PipelineContext(markdown_doc_id="doc-1")
+        _emit_step_artifacts(
+            StepName.MARKDOWN_GENERATION,
+            ctx2,
+            run_id="run-1",
+            attempt=1,
+            artifact_store=store,
+        )
+        ledger = store.get_ledger("run-1")
+        assert len(ledger.entries) == 2
+
+    def test_redo_appends_not_replaces(self, tmp_path: Path) -> None:
+        store = ArtifactStore(tmp_path / "runs")
+        ctx1 = PipelineContext(markdown_doc_id="doc-v1")
+        _emit_step_artifacts(
+            StepName.MARKDOWN_GENERATION,
+            ctx1,
+            run_id="run-1",
+            attempt=1,
+            artifact_store=store,
+        )
+        ctx2 = PipelineContext(markdown_doc_id="doc-v2")
+        _emit_step_artifacts(
+            StepName.MARKDOWN_GENERATION,
+            ctx2,
+            run_id="run-1",
+            attempt=2,
+            artifact_store=store,
+        )
+        ledger = store.get_ledger("run-1")
+        assert len(ledger.entries) == 2
+        assert ledger.entries[0].attempt_number == 1
+        assert ledger.entries[0].value["markdown_doc_id"] == "doc-v1"
+        assert ledger.entries[1].attempt_number == 2
+        assert ledger.entries[1].value["markdown_doc_id"] == "doc-v2"
+
+    def test_empty_context_emits_nothing_for_doc_steps(self, tmp_path: Path) -> None:
+        store = ArtifactStore(tmp_path / "runs")
+        ctx = PipelineContext()
+        summary = _emit_step_artifacts(
+            StepName.MARKDOWN_GENERATION,
+            ctx,
+            run_id="run-1",
+            attempt=1,
+            artifact_store=store,
+        )
+        assert summary == {}
+        ledger = store.get_ledger("run-1")
+        assert ledger.entries == []
+
+
+# ---------------------------------------------------------------------------
+# _emit_slack_artifacts
+# ---------------------------------------------------------------------------
+
+
+class TestEmitSlackArtifacts:
+    """Slack interactions are emitted as SLACK_DECISION entries."""
+
+    def test_emits_one_entry_per_interaction(self, tmp_path: Path) -> None:
+        store = ArtifactStore(tmp_path / "runs")
+        interactions = [
+            {"method": "send_and_wait", "response": "approved", "timestamp": "t1"},
+            {"method": "send_and_wait_form", "response": {"choice": "A"}, "timestamp": "t2"},
+        ]
+        _emit_slack_artifacts(
+            interactions,
+            StepName.CURATION,
+            run_id="run-1",
+            attempt=1,
+            artifact_store=store,
+        )
+        ledger = store.get_ledger("run-1")
+        assert len(ledger.entries) == 2
+        assert all(e.artifact_type == ArtifactType.SLACK_DECISION for e in ledger.entries)
+        assert ledger.entries[0].key == "slack_send_and_wait"
+        assert ledger.entries[1].key == "slack_send_and_wait_form"
+
+    def test_empty_interactions_emits_nothing(self, tmp_path: Path) -> None:
+        store = ArtifactStore(tmp_path / "runs")
+        _emit_slack_artifacts(
+            [],
+            StepName.CURATION,
+            run_id="run-1",
+            attempt=1,
+            artifact_store=store,
+        )
+        ledger = store.get_ledger("run-1")
+        assert ledger.entries == []
+
+    def test_interaction_value_is_full_dict(self, tmp_path: Path) -> None:
+        store = ArtifactStore(tmp_path / "runs")
+        interaction = {"method": "send_and_wait", "response": "ok", "channel": "C123"}
+        _emit_slack_artifacts(
+            [interaction],
+            StepName.THEME_GENERATION,
+            run_id="run-1",
+            attempt=2,
+            artifact_store=store,
+        )
+        entry = store.get_ledger("run-1").entries[0]
+        assert entry.value == interaction
+        assert entry.attempt_number == 2
+        assert entry.step_name == "theme_generation"
 
 
 # ---------------------------------------------------------------------------
@@ -735,38 +988,52 @@ class TestResolveTemplate:
 
 
 # ---------------------------------------------------------------------------
-# _extract_artifacts — template info in HTML_GENERATION artifacts
+# HTML_GENERATION template info in artifact entries and summary
 # ---------------------------------------------------------------------------
 
 
-class TestExtractArtifactsTemplateInfo:
-    """HTML generation artifact extraction includes template metadata."""
+class TestBuildStepEntriesTemplateInfo:
+    """HTML generation entries include template metadata."""
 
-    def test_includes_template_name_and_version(self) -> None:
+    def test_includes_template_entry(self) -> None:
         ctx = PipelineContext(
             html_doc_id="html-1",
             extra={"template_name": "weekly", "template_version": "2.0.0"},
         )
-        arts = _extract_artifacts(StepName.HTML_GENERATION, ctx)
-        assert arts["template_name"] == "weekly"
-        assert arts["template_version"] == "2.0.0"
-        assert arts["html_doc_id"] == "html-1"
+        entries = _build_step_entries(
+            StepName.HTML_GENERATION, ctx, run_id=_RUN_ID, attempt=_ATTEMPT
+        )
+        tpl_entries = [e for e in entries if e.key == "template_info"]
+        assert len(tpl_entries) == 1
+        assert tpl_entries[0].value == {"template_name": "weekly", "template_version": "2.0.0"}
+        # Summary backward compat
+        summary = _entries_to_summary(entries)
+        assert summary["template_name"] == "weekly"
+        assert summary["template_version"] == "2.0.0"
+        assert summary["html_doc_id"] == "html-1"
 
     def test_omits_template_when_not_set(self) -> None:
         ctx = PipelineContext(html_doc_id="html-1")
-        arts = _extract_artifacts(StepName.HTML_GENERATION, ctx)
-        assert "template_name" not in arts
-        assert "template_version" not in arts
-        assert arts["html_doc_id"] == "html-1"
+        entries = _build_step_entries(
+            StepName.HTML_GENERATION, ctx, run_id=_RUN_ID, attempt=_ATTEMPT
+        )
+        assert not any(e.key == "template_info" for e in entries)
+        summary = _entries_to_summary(entries)
+        assert "template_name" not in summary
+        assert "template_version" not in summary
+        assert summary["html_doc_id"] == "html-1"
 
     def test_includes_template_without_doc_id(self) -> None:
         ctx = PipelineContext(
             extra={"template_name": "weekly", "template_version": "1.0.0"},
         )
-        arts = _extract_artifacts(StepName.HTML_GENERATION, ctx)
-        assert arts["template_name"] == "weekly"
-        assert arts["template_version"] == "1.0.0"
-        assert "html_doc_id" not in arts
+        entries = _build_step_entries(
+            StepName.HTML_GENERATION, ctx, run_id=_RUN_ID, attempt=_ATTEMPT
+        )
+        summary = _entries_to_summary(entries)
+        assert summary["template_name"] == "weekly"
+        assert summary["template_version"] == "1.0.0"
+        assert "html_doc_id" not in summary
 
 
 # ---------------------------------------------------------------------------

@@ -2,7 +2,16 @@
 
 ## Current Status
 **Last Updated:** 2026-03-01
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1, ica-476.7.2, ica-476.7.3, ica-476.7.4, ica-476.8.1, ica-476.8.2
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1, ica-476.7.2, ica-476.7.3, ica-476.7.4, ica-476.8.1, ica-476.8.2, ica-476.8.3
+
+### 2026-03-01 — ica-476.8.3: Emit rich artifact entries from each guided runner step
+- Replaced `_extract_artifacts()` lightweight dict with structured `ArtifactEntry` emission to the append-only artifact ledger
+- New functions: `_build_step_entries()` creates typed `ArtifactEntry` objects per step (GOOGLE_DOC, GOOGLE_SHEET, LLM_OUTPUT types), `_entries_to_summary()` flattens to backward-compatible dict for StepRecord.artifacts UI, `_emit_step_artifacts()` builds+persists+returns summary, `_emit_slack_artifacts()` emits SLACK_DECISION entries per interaction
+- Wired into `run_guided()` main loop: emits on step completion, emits partial artifacts on failure, emits Slack interactions after merge
+- `_merge_slack_interactions()` now returns drained interactions list so caller can emit Slack artifact entries
+- `ArtifactStore` created alongside `TestRunStore` in `run_guided()` using same `store_dir`
+- Tests: replaced `TestExtractArtifacts` with `TestBuildStepEntries` (13 tests), added `TestEntriesToSummary` (4 tests), `TestEmitStepArtifacts` (4 tests), `TestEmitSlackArtifacts` (3 tests)
+- All 392 guided tests pass, ruff and mypy clean (no new errors)
 
 ### 2026-03-01 — ica-476.8.2: Implement artifact ledger persistence extending TestRunStore
 - Added `ArtifactStore` class to `ica/guided/artifacts.py` with JSON-file persistence using `{run_id}-artifacts.json` files
