@@ -43,6 +43,9 @@ async def upsert_articles(
             "title": a.title,
             "origin": a.origin,
             "publish_date": a.publish_date,
+            "excerpt": a.excerpt,
+            "relevance_status": a.relevance_status,
+            "relevance_reason": a.relevance_reason,
         }
         for a in articles
     ]
@@ -54,6 +57,9 @@ async def upsert_articles(
             "title": stmt.excluded.title,
             "origin": stmt.excluded.origin,
             "publish_date": stmt.excluded.publish_date,
+            "excerpt": stmt.excluded.excerpt,
+            "relevance_status": stmt.excluded.relevance_status,
+            "relevance_reason": stmt.excluded.relevance_reason,
         },
     )
 
@@ -66,18 +72,23 @@ async def get_articles(
     *,
     approved: bool | None = None,
     newsletter_id: str | None = None,
+    relevance_status: str | None = None,
 ) -> list[Article]:
     """Retrieve articles with optional filters.
 
     Args:
         approved: Filter by approval status when not ``None``.
         newsletter_id: Filter by newsletter association when not ``None``.
+        relevance_status: Filter by relevance status (e.g. ``'accepted'``,
+            ``'rejected'``) when not ``None``.
     """
     stmt = select(Article)
     if approved is not None:
         stmt = stmt.where(Article.approved == approved)
     if newsletter_id is not None:
         stmt = stmt.where(Article.newsletter_id == newsletter_id)
+    if relevance_status is not None:
+        stmt = stmt.where(Article.relevance_status == relevance_status)
     stmt = stmt.order_by(Article.created_at.desc())
 
     result = await session.execute(stmt)

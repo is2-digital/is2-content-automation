@@ -41,12 +41,18 @@ class ArticleRecord:
         title: Article title.
         origin: Schedule label (``"daily"`` or ``"every_2_days"``).
         publish_date: Parsed publish date from search result metadata.
+        excerpt: Search result snippet (from Brave Search description).
+        relevance_status: LLM assessment result — ``'accepted'`` or ``'rejected'``.
+        relevance_reason: Short LLM explanation of the accept/reject decision.
     """
 
     url: str
     title: str
     origin: str
     publish_date: date
+    excerpt: str | None = None
+    relevance_status: str | None = None
+    relevance_reason: str | None = None
 
 
 class ArticleRepository(Protocol):
@@ -126,6 +132,7 @@ def parse_articles(
                 title=r.title.strip(),
                 origin=r.origin,
                 publish_date=publish_date,
+                excerpt=r.excerpt or None,
             )
         )
     return articles

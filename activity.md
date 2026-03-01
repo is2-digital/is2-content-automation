@@ -1962,3 +1962,17 @@ After completing each task, add an entry below in this format:
 
 **Blockers:**
 - Docker containers not running — cannot run full test suite in-container
+
+---
+
+### 2026-02-28 — Add DB columns for excerpt, relevance status, and reason (ica-0z7)
+
+- Added 3 new nullable columns to `Article` model in `ica/db/models.py`: `excerpt` (Text), `relevance_status` (String(20)), `relevance_reason` (Text)
+- Created Alembic migration `002_add_article_relevance_columns.py`
+- Updated `upsert_articles()` in `ica/db/crud.py` to include new fields in INSERT and ON CONFLICT DO UPDATE
+- Added `relevance_status` filter parameter to `get_articles()` in `ica/db/crud.py`
+- Updated `ArticleRecord` dataclass in `ica/pipeline/article_collection.py` with 3 new optional fields (backward-compatible defaults)
+- Updated `parse_articles()` to pass `excerpt` from `SearchResult` to `ArticleRecord`
+
+**Blockers:**
+- Docker containers not running — cannot run tests or migration in-container
