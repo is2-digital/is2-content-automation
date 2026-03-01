@@ -166,19 +166,21 @@ class TestRunArticleCollection:
         mock_result.deduplicated = [1, 2]
         mock_result.articles = [1, 2]
         mock_result.rows_affected = 2
+        mock_result.accepted_count = 2
+        mock_result.rejected_count = 0
 
         mock_collect = AsyncMock(return_value=mock_result)
         mock_session = AsyncMock()
 
         with (
             patch("ica.config.settings.get_settings") as mock_settings,
-            patch("ica.services.google_search.GoogleSearchClient"),
+            patch("ica.services.brave_search.BraveSearchClient"),
             patch("ica.pipeline.article_collection.collect_articles", mock_collect),
             patch("httpx.AsyncClient") as mock_httpx,
             patch("ica.db.session.get_session") as mock_get_session,
         ):
             mock_settings.return_value = MagicMock(
-                google_cse_api_key="test-key", google_cse_cx="test-cx"
+                brave_api_key="test-key"
             )
             mock_httpx.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
             mock_httpx.return_value.__aexit__ = AsyncMock(return_value=None)
@@ -198,19 +200,21 @@ class TestRunArticleCollection:
         mock_result.deduplicated = list(range(8))
         mock_result.articles = list(range(8))
         mock_result.rows_affected = 8
+        mock_result.accepted_count = 6
+        mock_result.rejected_count = 2
 
         mock_collect = AsyncMock(return_value=mock_result)
         mock_session = AsyncMock()
 
         with (
             patch("ica.config.settings.get_settings") as mock_settings,
-            patch("ica.services.google_search.GoogleSearchClient"),
+            patch("ica.services.brave_search.BraveSearchClient"),
             patch("ica.pipeline.article_collection.collect_articles", mock_collect),
             patch("httpx.AsyncClient") as mock_httpx,
             patch("ica.db.session.get_session") as mock_get_session,
         ):
             mock_settings.return_value = MagicMock(
-                google_cse_api_key="test-key", google_cse_cx="test-cx"
+                brave_api_key="test-key"
             )
             mock_httpx.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
             mock_httpx.return_value.__aexit__ = AsyncMock(return_value=None)
@@ -240,19 +244,21 @@ class TestRunArticleCollection:
         mock_result.deduplicated = []
         mock_result.articles = []
         mock_result.rows_affected = 0
+        mock_result.accepted_count = 0
+        mock_result.rejected_count = 0
 
         mock_collect = AsyncMock(return_value=mock_result)
         mock_session = AsyncMock()
 
         with (
             patch("ica.config.settings.get_settings") as mock_settings,
-            patch("ica.services.google_search.GoogleSearchClient"),
+            patch("ica.services.brave_search.BraveSearchClient"),
             patch("ica.pipeline.article_collection.collect_articles", mock_collect),
             patch("httpx.AsyncClient") as mock_httpx,
             patch("ica.db.session.get_session") as mock_get_session,
         ):
             mock_settings.return_value = MagicMock(
-                google_cse_api_key="test-key", google_cse_cx="test-cx"
+                brave_api_key="test-key"
             )
             mock_httpx.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
             mock_httpx.return_value.__aexit__ = AsyncMock(return_value=None)
@@ -270,20 +276,20 @@ class TestRunArticleCollection:
         mock_result.deduplicated = [1]
         mock_result.articles = [1]
         mock_result.rows_affected = 1
+        mock_result.accepted_count = 1
+        mock_result.rejected_count = 0
 
         mock_collect = AsyncMock(return_value=mock_result)
         mock_session = AsyncMock()
 
         with (
             patch("ica.config.settings.get_settings") as mock_settings,
-            patch("ica.services.google_search.GoogleSearchClient"),
+            patch("ica.services.brave_search.BraveSearchClient"),
             patch("ica.pipeline.article_collection.collect_articles", mock_collect),
             patch("httpx.AsyncClient") as mock_httpx,
             patch("ica.db.session.get_session") as mock_get_session,
         ):
-            mock_settings.return_value = MagicMock(
-                google_cse_api_key="test-key", google_cse_cx="test-cx"
-            )
+            mock_settings.return_value = MagicMock(brave_api_key="test-key")
             mock_httpx.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
             mock_httpx.return_value.__aexit__ = AsyncMock(return_value=None)
             mock_get_session.return_value.__aenter__ = AsyncMock(return_value=mock_session)
@@ -291,7 +297,10 @@ class TestRunArticleCollection:
 
             result = await run_article_collection(schedule="daily")
 
-        expected_keys = {"schedule", "raw_results", "deduplicated", "articles", "rows_affected"}
+        expected_keys = {
+            "schedule", "raw_results", "deduplicated", "articles",
+            "accepted", "rejected", "rows_affected",
+        }
         assert set(result.keys()) == expected_keys
 
 

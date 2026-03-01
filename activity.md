@@ -2,7 +2,7 @@
 
 ## Current Status
 **Last Updated:** 2026-03-01
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k
 
 ### 2026-03-01 — ica-vk5: Create LLM relevance assessment config and module
 - Created `ica/llm_configs/relevance-assessment-llm.json` — Gemini Flash config with structured JSON output (accept/reject + reason)
@@ -1984,3 +1984,18 @@ After completing each task, add an entry below in this format:
 
 **Blockers:**
 - Docker containers not running — cannot run tests or migration in-container
+
+---
+
+### 2026-03-01 — ica-09k: Wire Brave Search + relevance into article collection
+
+**What was done:**
+- Replaced `GoogleSearchClient` with `BraveSearchClient` in `article_collection.py`, `scheduler.py`, and `__main__.py`
+- Added LLM relevance assessment step to `collect_articles()` — after dedup/parse, calls `assess_articles()` from `relevance_assessment.py`, merges results onto `ArticleRecord` using `dataclasses.replace()`
+- Added `accepted_count` and `rejected_count` to `CollectionResult` dataclass
+- Updated scheduler summary dict and logging to include accepted/rejected counts
+- Updated CLI `collect-articles` command output with status column and accepted/rejected counts
+- Updated scheduler tests (`test_scheduler.py`) to match new BraveSearchClient and summary keys
+- All 3704 tests pass
+
+**Blockers:** None

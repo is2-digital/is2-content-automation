@@ -1,20 +1,25 @@
 """Article Collection Pipeline — scheduled utility for article discovery.
 
 Runs on two schedules:
-- **Daily**: Google CSE sorted by date, 3 keywords (10 results each)
-- **Every 2 days**: Google CSE relevance ranking, 5 keywords (10 results each)
+- **Daily**: Brave Web Search with freshness filter, 3 keywords (10 results each)
+- **Every 2 days**: Brave Web Search relevance ranking, 5 keywords (10 results each)
 
-Flow: Google CSE queries → date parsing → deduplication → DB upsert.
+Flow: Brave Search queries → deduplication → date parsing →
+LLM relevance assessment → DB upsert.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import logging
+from dataclasses import dataclass, field, replace
 from datetime import date
 from typing import Protocol
 
-from ica.services.google_search import GoogleSearchClient, SearchResult
+from ica.services.brave_search import BraveSearchClient
+from ica.services.google_search import SearchResult
 from ica.utils.date_parser import parse_relative_date
+
+logger = logging.getLogger(__name__)
 
 # Default keyword sets per PRD Section 1.3
 DAILY_KEYWORDS: list[str] = [
@@ -79,12 +84,16 @@ class CollectionResult:
         deduplicated: Articles after URL deduplication.
         articles: Processed article records ready for/after DB insertion.
         rows_affected: Number of DB rows upserted.
+        accepted_count: Articles accepted by relevance filter.
+        rejected_count: Articles rejected by relevance filter.
     """
 
     raw_results: list[SearchResult] = field(default_factory=list)
     deduplicated: list[SearchResult] = field(default_factory=list)
     articles: list[ArticleRecord] = field(default_factory=list)
     rows_affected: int = 0
+    accepted_count: int = 0
+    rejected_count: int = 0
 
 
 def deduplicate_results(results: list[SearchResult]) -> list[SearchResult]:
@@ -139,7 +148,7 @@ def parse_articles(
 
 
 async def collect_articles(
-    client: GoogleSearchClient,
+    client: BraveSearchClient,
     repository: ArticleRepository,
     *,
     schedule: str = "daily",
@@ -147,13 +156,14 @@ async def collect_articles(
 ) -> CollectionResult:
     """Execute the full article collection pipeline.
 
-    1. Query Google Custom Search for each keyword in the schedule's keyword set.
+    1. Query Brave Web Search for each keyword in the schedule's keyword set.
     2. Deduplicate results by URL.
     3. Parse dates into calendar dates.
-    4. Upsert article records into the database.
+    4. Run LLM relevance assessment on each article.
+    5. Upsert all article records (accepted and rejected) into the database.
 
     Args:
-        client: Configured :class:`GoogleSearchClient`.
+        client: Configured :class:`BraveSearchClient`.
         repository: Database repository implementing :class:`ArticleRepository`.
         schedule: Either ``"daily"`` (sort by date, 3 keywords, 10 results)
             or ``"every_2_days"`` (relevance ranking, 5 keywords, 10 results).
@@ -165,6 +175,8 @@ async def collect_articles(
     Raises:
         ValueError: If *schedule* is not ``"daily"`` or ``"every_2_days"``.
     """
+    from ica.pipeline.relevance_assessment import assess_articles
+
     if schedule == "daily":
         keywords = DAILY_KEYWORDS
         sort_by_date = True
@@ -187,12 +199,42 @@ async def collect_articles(
     # Step 3: Parse dates
     articles = parse_articles(deduplicated, reference_date=reference_date)
 
-    # Step 4: Persist
+    # Step 4: Relevance assessment
+    assessment_input = [
+        (a.url, a.title, a.excerpt or "") for a in articles
+    ]
+    relevance_results = await assess_articles(assessment_input)
+    relevance_map = {r.url: r for r in relevance_results}
+
+    articles = [
+        replace(
+            article,
+            relevance_status=relevance_map[article.url].decision,
+            relevance_reason=relevance_map[article.url].reason,
+        )
+        if article.url in relevance_map
+        else article
+        for article in articles
+    ]
+
+    accepted = sum(1 for a in articles if a.relevance_status == "accept")
+    rejected = sum(1 for a in articles if a.relevance_status == "reject")
+
+    # Step 5: Persist (both accepted and rejected)
     rows_affected = await repository.upsert_articles(articles)
+
+    logger.info(
+        "Collected %d articles, %d accepted, %d rejected by relevance filter",
+        len(articles),
+        accepted,
+        rejected,
+    )
 
     return CollectionResult(
         raw_results=raw_results,
         deduplicated=deduplicated,
         articles=articles,
         rows_affected=rows_affected,
+        accepted_count=accepted,
+        rejected_count=rejected,
     )

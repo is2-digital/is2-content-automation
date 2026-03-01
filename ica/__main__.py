@@ -171,13 +171,14 @@ def _status_color(status: str) -> str:
 def collect_articles(
     schedule: str = typer.Option(
         "daily",
-        help="Schedule type: 'daily' (google_news, 3 keywords) or 'every_2_days' (5 keywords).",
+        help="Schedule type: 'daily' (3 keywords) or 'every_2_days' (5 keywords).",
     ),
 ) -> None:
     """Run article collection manually.
 
-    Queries Google CSE for keywords, deduplicates by URL, and upserts into
-    the articles table. Requires GOOGLE_CSE_API_KEY and database credentials.
+    Searches via Brave Web Search, runs LLM relevance filtering,
+    deduplicates by URL, and upserts into the articles table.
+    Requires BRAVE_API_KEY and database credentials.
     """
     asyncio.run(_collect_articles(schedule))
 
@@ -187,7 +188,7 @@ async def _collect_articles(schedule: str) -> None:
     try:
         from ica.config.settings import get_settings
         from ica.pipeline.article_collection import collect_articles as _collect
-        from ica.services.google_search import GoogleSearchClient
+        from ica.services.brave_search import BraveSearchClient
 
         settings = get_settings()
     except Exception as exc:
@@ -204,9 +205,8 @@ async def _collect_articles(schedule: str) -> None:
         from ica.db.session import get_session
 
         async with httpx.AsyncClient() as http_client:
-            search_client = GoogleSearchClient(
-                api_key=settings.google_cse_api_key,
-                cx=settings.google_cse_cx,
+            search_client = BraveSearchClient(
+                api_key=settings.brave_api_key,
                 http_client=http_client,  # type: ignore[arg-type]
             )
             async with get_session() as session:
@@ -221,6 +221,8 @@ async def _collect_articles(schedule: str) -> None:
         console.print(f"  raw results:    {len(result.raw_results)}")
         console.print(f"  deduplicated:   {len(result.deduplicated)}")
         console.print(f"  articles:       {len(result.articles)}")
+        console.print(f"  accepted:       {result.accepted_count}")
+        console.print(f"  rejected:       {result.rejected_count}")
         console.print(f"  rows affected:  {result.rows_affected}")
 
         if result.articles:
@@ -228,8 +230,11 @@ async def _collect_articles(schedule: str) -> None:
             table.add_column("Title", max_width=60)
             table.add_column("Origin")
             table.add_column("Date")
+            table.add_column("Status")
             for a in result.articles[:20]:
-                table.add_row(a.title, a.origin, str(a.publish_date))
+                table.add_row(
+                    a.title, a.origin, str(a.publish_date), a.relevance_status or ""
+                )
             if len(result.articles) > 20:
                 console.print(f"  [dim]... and {len(result.articles) - 20} more[/dim]")
             console.print(table)

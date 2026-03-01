@@ -112,9 +112,9 @@ def create_scheduler(
 async def run_article_collection(*, schedule: str = "daily") -> dict[str, Any]:
     """Execute article collection as a scheduled job.
 
-    Loads settings, creates an HTTP client and Google CSE client, and runs
-    the full collection pipeline.  Failures are logged but not re-raised
-    (APScheduler handles job exceptions gracefully).
+    Loads settings, creates an HTTP client and Brave Search client, and runs
+    the full collection pipeline with LLM relevance filtering.  Failures are
+    logged but not re-raised (APScheduler handles job exceptions gracefully).
 
     Args:
         schedule: Either ``"daily"`` or ``"every_2_days"``.
@@ -131,14 +131,13 @@ async def run_article_collection(*, schedule: str = "daily") -> dict[str, Any]:
         from ica.db.repository import SqlArticleRepository
         from ica.db.session import get_session
         from ica.pipeline.article_collection import collect_articles
-        from ica.services.google_search import GoogleSearchClient
+        from ica.services.brave_search import BraveSearchClient
 
         settings = get_settings()
 
         async with httpx.AsyncClient() as http_client:
-            search_client = GoogleSearchClient(
-                api_key=settings.google_cse_api_key,
-                cx=settings.google_cse_cx,
+            search_client = BraveSearchClient(
+                api_key=settings.brave_api_key,
                 http_client=http_client,  # type: ignore[arg-type]
             )
             async with get_session() as session:
@@ -154,12 +153,17 @@ async def run_article_collection(*, schedule: str = "daily") -> dict[str, Any]:
             "raw_results": len(result.raw_results),
             "deduplicated": len(result.deduplicated),
             "articles": len(result.articles),
+            "accepted": result.accepted_count,
+            "rejected": result.rejected_count,
             "rows_affected": result.rows_affected,
         }
         logger.info(
-            "Article collection complete (schedule=%s): %d articles, %d rows",
+            "Article collection complete (schedule=%s): "
+            "%d articles, %d accepted, %d rejected, %d rows",
             schedule,
             len(result.articles),
+            result.accepted_count,
+            result.rejected_count,
             result.rows_affected,
         )
         return summary
