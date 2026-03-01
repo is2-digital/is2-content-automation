@@ -485,6 +485,33 @@ def _merge_slack_interactions(
             )
 
 
+def _google_doc_url(doc_id: str) -> str:
+    """Build a Google Docs URL from a document ID."""
+    return f"https://docs.google.com/document/d/{doc_id}/edit"
+
+
+def _google_sheet_url(spreadsheet_id: str) -> str:
+    """Build a Google Sheets URL from a spreadsheet ID."""
+    return f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
+
+
+def _get_sheets_refs() -> dict[str, str]:
+    """Return spreadsheet_id and sheet_name from settings for Sheets artifacts."""
+    from ica.config.settings import get_settings
+
+    settings = get_settings()
+    spreadsheet_id = (
+        settings.guided_test_spreadsheet_id
+        or settings.curated_articles_google_sheet_id
+    )
+    refs: dict[str, str] = {}
+    if spreadsheet_id:
+        refs["spreadsheet_id"] = spreadsheet_id
+        refs["spreadsheet_url"] = _google_sheet_url(spreadsheet_id)
+        refs["sheet_name"] = "Sheet1"
+    return refs
+
+
 def _extract_artifacts(step_name: StepName, ctx: PipelineContext) -> dict[str, Any]:
     """Pull notable artifacts from context after a step completes."""
     artifacts: dict[str, Any] = {}
@@ -493,9 +520,11 @@ def _extract_artifacts(step_name: StepName, ctx: PipelineContext) -> dict[str, A
         artifacts["article_count"] = len(ctx.articles)
         if ctx.newsletter_id:
             artifacts["newsletter_id"] = ctx.newsletter_id
+        artifacts.update(_get_sheets_refs())
 
     elif step_name == StepName.SUMMARIZATION:
         artifacts["summary_count"] = len(ctx.summaries)
+        artifacts.update(_get_sheets_refs())
 
     elif step_name == StepName.THEME_GENERATION:
         if ctx.theme_name:
@@ -504,25 +533,33 @@ def _extract_artifacts(step_name: StepName, ctx: PipelineContext) -> dict[str, A
     elif step_name == StepName.MARKDOWN_GENERATION:
         if ctx.markdown_doc_id:
             artifacts["markdown_doc_id"] = ctx.markdown_doc_id
+            artifacts["document_url"] = _google_doc_url(ctx.markdown_doc_id)
 
     elif step_name == StepName.HTML_GENERATION:
         if ctx.html_doc_id:
             artifacts["html_doc_id"] = ctx.html_doc_id
+            artifacts["document_url"] = _google_doc_url(ctx.html_doc_id)
 
     elif step_name == StepName.EMAIL_SUBJECT:
         subject = ctx.extra.get("email_subject")
         if subject:
             artifacts["email_subject"] = subject[:60]
+        doc_id = ctx.extra.get("email_doc_id")
+        if doc_id:
+            artifacts["email_doc_id"] = doc_id
+            artifacts["document_url"] = _google_doc_url(doc_id)
 
     elif step_name == StepName.SOCIAL_MEDIA:
         doc_id = ctx.extra.get("social_media_doc_id")
         if doc_id:
             artifacts["social_media_doc_id"] = doc_id
+            artifacts["document_url"] = _google_doc_url(doc_id)
 
     elif step_name == StepName.LINKEDIN_CAROUSEL:
         doc_id = ctx.extra.get("linkedin_carousel_doc_id")
         if doc_id:
             artifacts["linkedin_carousel_doc_id"] = doc_id
+            artifacts["document_url"] = _google_doc_url(doc_id)
 
     elif step_name == StepName.ALTERNATES_HTML:
         unused = ctx.extra.get("alternates_unused_summaries", [])

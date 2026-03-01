@@ -10,6 +10,9 @@ from rich.console import Console
 
 from ica.guided.runner import (
     _extract_artifacts,
+    _get_sheets_refs,
+    _google_doc_url,
+    _google_sheet_url,
     parse_operator_input,
     prompt_operator,
     render_checkpoint,
@@ -176,22 +179,79 @@ class TestContextSnapshot:
 # ---------------------------------------------------------------------------
 
 
+class TestGoogleUrlHelpers:
+    """URL builder helpers for Google Docs and Sheets."""
+
+    def test_google_doc_url(self) -> None:
+        url = _google_doc_url("abc123")
+        assert url == "https://docs.google.com/document/d/abc123/edit"
+
+    def test_google_sheet_url(self) -> None:
+        url = _google_sheet_url("sheet456")
+        assert url == "https://docs.google.com/spreadsheets/d/sheet456/edit"
+
+    def test_get_sheets_refs_guided(self) -> None:
+        """Prefers guided_test_spreadsheet_id when set."""
+        mock_settings = MagicMock()
+        mock_settings.guided_test_spreadsheet_id = "test-sheet-id"
+        mock_settings.curated_articles_google_sheet_id = "prod-sheet-id"
+        with patch("ica.config.settings.get_settings", return_value=mock_settings):
+            refs = _get_sheets_refs()
+        assert refs["spreadsheet_id"] == "test-sheet-id"
+        assert refs["sheet_name"] == "Sheet1"
+        assert "spreadsheet_url" in refs
+
+    def test_get_sheets_refs_fallback_to_prod(self) -> None:
+        """Falls back to production spreadsheet ID when guided is empty."""
+        mock_settings = MagicMock()
+        mock_settings.guided_test_spreadsheet_id = ""
+        mock_settings.curated_articles_google_sheet_id = "prod-sheet-id"
+        with patch("ica.config.settings.get_settings", return_value=mock_settings):
+            refs = _get_sheets_refs()
+        assert refs["spreadsheet_id"] == "prod-sheet-id"
+
+    def test_get_sheets_refs_empty(self) -> None:
+        """Returns empty dict when no spreadsheet is configured."""
+        mock_settings = MagicMock()
+        mock_settings.guided_test_spreadsheet_id = ""
+        mock_settings.curated_articles_google_sheet_id = ""
+        with patch("ica.config.settings.get_settings", return_value=mock_settings):
+            refs = _get_sheets_refs()
+        assert refs == {}
+
+
 class TestExtractArtifacts:
     """Artifact extraction from PipelineContext."""
+
+    def _mock_sheets_refs(self, spreadsheet_id: str = "sheet-1"):
+        """Patch _get_sheets_refs to return predictable values."""
+        refs = {
+            "spreadsheet_id": spreadsheet_id,
+            "spreadsheet_url": _google_sheet_url(spreadsheet_id),
+            "sheet_name": "Sheet1",
+        }
+        return patch("ica.guided.runner._get_sheets_refs", return_value=refs)
 
     def test_curation_artifacts(self) -> None:
         ctx = PipelineContext(
             articles=[{"title": "A"}, {"title": "B"}],
             newsletter_id="nl-1",
         )
-        arts = _extract_artifacts(StepName.CURATION, ctx)
+        with self._mock_sheets_refs():
+            arts = _extract_artifacts(StepName.CURATION, ctx)
         assert arts["article_count"] == 2
         assert arts["newsletter_id"] == "nl-1"
+        assert arts["spreadsheet_id"] == "sheet-1"
+        assert arts["sheet_name"] == "Sheet1"
+        assert "spreadsheet_url" in arts
 
     def test_summarization_artifacts(self) -> None:
         ctx = PipelineContext(summaries=[{"url": "a"}, {"url": "b"}, {"url": "c"}])
-        arts = _extract_artifacts(StepName.SUMMARIZATION, ctx)
+        with self._mock_sheets_refs():
+            arts = _extract_artifacts(StepName.SUMMARIZATION, ctx)
         assert arts["summary_count"] == 3
+        assert arts["spreadsheet_id"] == "sheet-1"
+        assert arts["sheet_name"] == "Sheet1"
 
     def test_theme_generation_artifacts(self) -> None:
         ctx = PipelineContext(theme_name="AI Future")
@@ -202,26 +262,41 @@ class TestExtractArtifacts:
         ctx = PipelineContext(markdown_doc_id="doc-123")
         arts = _extract_artifacts(StepName.MARKDOWN_GENERATION, ctx)
         assert arts["markdown_doc_id"] == "doc-123"
+        assert arts["document_url"] == _google_doc_url("doc-123")
 
     def test_html_generation_artifacts(self) -> None:
         ctx = PipelineContext(html_doc_id="html-456")
         arts = _extract_artifacts(StepName.HTML_GENERATION, ctx)
         assert arts["html_doc_id"] == "html-456"
+        assert arts["document_url"] == _google_doc_url("html-456")
 
     def test_email_subject_artifacts(self) -> None:
+        ctx = PipelineContext(
+            extra={"email_subject": "Breaking News", "email_doc_id": "email-doc-1"}
+        )
+        arts = _extract_artifacts(StepName.EMAIL_SUBJECT, ctx)
+        assert arts["email_subject"] == "Breaking News"
+        assert arts["email_doc_id"] == "email-doc-1"
+        assert arts["document_url"] == _google_doc_url("email-doc-1")
+
+    def test_email_subject_without_doc(self) -> None:
         ctx = PipelineContext(extra={"email_subject": "Breaking News"})
         arts = _extract_artifacts(StepName.EMAIL_SUBJECT, ctx)
         assert arts["email_subject"] == "Breaking News"
+        assert "email_doc_id" not in arts
+        assert "document_url" not in arts
 
     def test_social_media_artifacts(self) -> None:
         ctx = PipelineContext(extra={"social_media_doc_id": "sm-789"})
         arts = _extract_artifacts(StepName.SOCIAL_MEDIA, ctx)
         assert arts["social_media_doc_id"] == "sm-789"
+        assert arts["document_url"] == _google_doc_url("sm-789")
 
     def test_linkedin_carousel_artifacts(self) -> None:
         ctx = PipelineContext(extra={"linkedin_carousel_doc_id": "lc-111"})
         arts = _extract_artifacts(StepName.LINKEDIN_CAROUSEL, ctx)
         assert arts["linkedin_carousel_doc_id"] == "lc-111"
+        assert arts["document_url"] == _google_doc_url("lc-111")
 
     def test_alternates_html_artifacts(self) -> None:
         ctx = PipelineContext(extra={"alternates_unused_summaries": [1, 2]})
@@ -230,9 +305,17 @@ class TestExtractArtifacts:
 
     def test_empty_artifacts(self) -> None:
         ctx = PipelineContext()
-        arts = _extract_artifacts(StepName.CURATION, ctx)
+        with self._mock_sheets_refs():
+            arts = _extract_artifacts(StepName.CURATION, ctx)
         assert arts["article_count"] == 0
         assert "newsletter_id" not in arts
+        assert arts["spreadsheet_id"] == "sheet-1"
+
+    def test_docs_no_url_when_no_doc_id(self) -> None:
+        ctx = PipelineContext()
+        arts = _extract_artifacts(StepName.MARKDOWN_GENERATION, ctx)
+        assert "document_url" not in arts
+        assert "markdown_doc_id" not in arts
 
 
 # ---------------------------------------------------------------------------

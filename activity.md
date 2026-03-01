@@ -2,7 +2,7 @@
 
 ## Current Status
 **Last Updated:** 2026-02-28
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2
 
 ### 2026-03-01 — ica-476.5.1: Add configurable test target settings for guided Google integration
 - Added `guided_test_spreadsheet_id` and `guided_test_drive_folder_id` to Settings (optional, empty default)
@@ -2128,5 +2128,18 @@ After completing each task, add an entry below in this format:
 - F401 (1): Removed unused import in test_prompt_editor_roundtrip.py
 - E501 (1): Manually wrapped line in test_config_editor.py (100 > 99 chars)
 - `docker exec ica-app-1 ruff check .` exits 0, all 3977 tests pass
+
+**Blockers:** None
+
+### 2026-02-28 — ica-476.5.2: Store Google Doc IDs and Sheet row references in run state per step
+
+**What was done:**
+- Extended `_extract_artifacts()` in `ica/guided/runner.py` to capture Google service references
+- Added `spreadsheet_id`, `spreadsheet_url`, and `sheet_name` for CURATION and SUMMARIZATION steps (pulled from settings, preferring guided test target)
+- Added `document_url` for all Docs steps (MARKDOWN, HTML, EMAIL_SUBJECT, SOCIAL_MEDIA, LINKEDIN_CAROUSEL)
+- Added missing `email_doc_id` extraction for EMAIL_SUBJECT step
+- Added helper functions: `_google_doc_url()`, `_google_sheet_url()`, `_get_sheets_refs()`
+- Added `TestGoogleUrlHelpers` test class (5 tests) and updated all `TestExtractArtifacts` tests (now 12 tests)
+- All 56 guided runner tests pass; ruff clean; no new mypy errors
 
 **Blockers:** None
