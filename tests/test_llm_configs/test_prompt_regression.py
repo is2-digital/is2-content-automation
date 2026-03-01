@@ -93,6 +93,7 @@ _REF_EMAIL_SUBJECT_INSTRUCTION = (
     "\n"
     "<Output_Format_MANDATORY>\n"
     "Return clean plain text. No markdown formatting, no colons in headers.\n"
+    "The ---- delimiter between subjects is mandatory for downstream parsing.\n"
     "\n"
     "Subject_1: [Subject Text]\n"
     "----\n"
@@ -102,6 +103,12 @@ _REF_EMAIL_SUBJECT_INSTRUCTION = (
     "\n"
     "RECOMMENDATION: Subject [Number] - [Subject Text]\n"
     "[Brief 1-sentence explanation of why this fits the Kevin persona best.]\n"
+    "\n"
+    "Example (2 of 10 shown):\n"
+    "Subject_1: AI Agents Replace Dashboards Not People\n"
+    "----\n"
+    "Subject_2: Your Competitor Already Automated This\n"
+    "----\n"
     "</Output_Format_MANDATORY>"
 )
 
@@ -230,7 +237,7 @@ class TestEmailSubjectPromptRegression:
         from ica.llm_configs import get_process_prompts
 
         _, instruction = get_process_prompts("email-subject")
-        assert len(instruction) == 1136
+        assert len(instruction) == 1346
 
 
 # ---------------------------------------------------------------------------
