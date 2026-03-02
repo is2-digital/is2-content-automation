@@ -30,6 +30,32 @@ class HttpClient(Protocol):
     ) -> dict[str, Any]: ...
 
 
+class HttpxJsonClient:
+    """Adapter that wraps ``httpx.AsyncClient`` to return parsed JSON.
+
+    The :class:`HttpClient` protocol expects ``.get()`` to return a dict,
+    but ``httpx.AsyncClient.get()`` returns a ``Response`` object.  This
+    thin wrapper bridges the gap.
+    """
+
+    def __init__(self, client: Any) -> None:
+        self._client = client
+
+    async def get(
+        self,
+        url: str,
+        *,
+        params: dict[str, Any],
+        headers: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        kwargs: dict[str, Any] = {"params": params}
+        if headers is not None:
+            kwargs["headers"] = headers
+        response = await self._client.get(url, **kwargs)
+        response.raise_for_status()
+        return response.json()  # type: ignore[no-any-return]
+
+
 # ---------------------------------------------------------------------------
 # Brave Search API configuration flags
 # ---------------------------------------------------------------------------
