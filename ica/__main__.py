@@ -381,7 +381,39 @@ async def _run_guided(
     template_version: str | None = None,
 ) -> None:
     """Execute the guided pipeline flow."""
+    import asyncio as _asyncio
+
+    from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
+    from slack_bolt.async_app import AsyncApp
+
+    from ica.config.settings import get_settings
     from ica.guided.runner import run_guided
+    from ica.guided.slack_adapter import GuidedSlackAdapter
+    from ica.services.slack import SlackService
+
+    settings = get_settings()
+
+    # Create Bolt app + SlackService with registered handlers
+    bolt_app = AsyncApp(
+        token=settings.slack_bot_token,
+        signing_secret=None,
+    )
+    slack_service = SlackService(
+        token=settings.slack_bot_token,
+        channel=settings.slack_channel,
+    )
+    slack_service.register_handlers(bolt_app)
+
+    # Start Socket Mode in background so button clicks are received
+    socket_handler = AsyncSocketModeHandler(bolt_app, settings.slack_app_token)
+    await socket_handler.connect_async()
+    console.print("[cyan]Slack Socket Mode connected[/cyan]")
+
+    # Wrap in guided adapter for run/step tagging
+    slack_override = GuidedSlackAdapter(
+        slack_service,
+        run_id=run_id or "new",
+    )
 
     try:
         state = await run_guided(
@@ -390,6 +422,7 @@ async def _run_guided(
             console=console,
             seed=seed,
             start_step=start_step,
+            slack_override=slack_override,
             slack_timeout=slack_timeout,
             template_name=template_name,
             template_version=template_version,
@@ -404,6 +437,8 @@ async def _run_guided(
     except Exception as exc:
         err_console.print(f"[red]Guided run failed:[/red] {exc}")
         raise typer.Exit(code=1) from None
+    finally:
+        await socket_handler.close_async()
 
 
 @app.command(name="collect-articles")
