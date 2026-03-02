@@ -52,6 +52,12 @@ class Settings(BaseSettings):
 
     # --- Brave Search ---
     brave_api_key: str = ""
+    brave_daily_keywords: str = (
+        "Artificial General Intelligence,Automation,Artificial Intelligence"
+    )
+    brave_every_2_days_keywords: str = (
+        "AI breakthrough,AI latest,AI tutorial,AI case study,AI research"
+    )
 
     # --- Google Sheets ---
     curated_articles_google_sheet_id: str = ""

@@ -37,6 +37,14 @@ EVERY_2_DAYS_KEYWORDS: list[str] = [
 ]
 
 
+def parse_keywords(raw: str) -> list[str]:
+    """Parse a comma-separated keyword string into a list.
+
+    Returns an empty list if *raw* is empty or contains only whitespace.
+    """
+    return [k.strip() for k in raw.split(",") if k.strip()]
+
+
 @dataclass(frozen=True)
 class ArticleRecord:
     """A processed article ready for database insertion.
@@ -152,6 +160,7 @@ async def collect_articles(
     repository: ArticleRepository,
     *,
     schedule: str = "daily",
+    keywords: list[str] | None = None,
     reference_date: date | None = None,
 ) -> CollectionResult:
     """Execute the full article collection pipeline.
@@ -167,6 +176,8 @@ async def collect_articles(
         repository: Database repository implementing :class:`ArticleRepository`.
         schedule: Either ``"daily"`` (sort by date, 3 keywords, 10 results)
             or ``"every_2_days"`` (relevance ranking, 5 keywords, 10 results).
+        keywords: Custom keyword list. When ``None``, falls back to
+            :data:`DAILY_KEYWORDS` or :data:`EVERY_2_DAYS_KEYWORDS`.
         reference_date: Override for date calculations (testing).
 
     Returns:
@@ -178,11 +189,11 @@ async def collect_articles(
     from ica.pipeline.relevance_assessment import assess_articles
 
     if schedule == "daily":
-        keywords = DAILY_KEYWORDS
+        kw = keywords if keywords is not None else DAILY_KEYWORDS
         sort_by_date = True
         num = 10
     elif schedule == "every_2_days":
-        keywords = EVERY_2_DAYS_KEYWORDS
+        kw = keywords if keywords is not None else EVERY_2_DAYS_KEYWORDS
         sort_by_date = False
         num = 10
     else:
@@ -190,7 +201,7 @@ async def collect_articles(
 
     # Step 1: Search
     raw_results = await client.search_keywords(
-        keywords, num=num, sort_by_date=sort_by_date
+        kw, num=num, sort_by_date=sort_by_date
     )
 
     # Step 2: Deduplicate

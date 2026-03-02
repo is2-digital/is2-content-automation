@@ -427,9 +427,16 @@ async def _collect_articles(schedule: str) -> None:
     try:
         from ica.config.settings import get_settings
         from ica.pipeline.article_collection import collect_articles as _collect
+        from ica.pipeline.article_collection import parse_keywords
         from ica.services.brave_search import BraveSearchClient
 
         settings = get_settings()
+        kw_raw = (
+            settings.brave_daily_keywords
+            if schedule == "daily"
+            else settings.brave_every_2_days_keywords
+        )
+        kw = parse_keywords(kw_raw) or None
     except Exception as exc:
         err_console.print(f"[red]Configuration error:[/red] {exc}")
         err_console.print("Ensure required environment variables are set (see .env.example).")
@@ -454,6 +461,7 @@ async def _collect_articles(schedule: str) -> None:
                     client=search_client,
                     repository=repository,
                     schedule=schedule,
+                    keywords=kw,
                 )
 
         console.print("[green]Collection complete[/green]")

@@ -26,6 +26,7 @@ from ica.pipeline.article_collection import (
     collect_articles,
     deduplicate_results,
     parse_articles,
+    parse_keywords,
 )
 from ica.pipeline.relevance_assessment import RelevanceResult
 from ica.services.google_search import SearchResult
@@ -494,6 +495,92 @@ class TestCollectArticlesEvery2Days:
         )
         for article in result.articles:
             assert article.origin == "every_2_days"
+
+
+# ===========================================================================
+# parse_keywords helper
+# ===========================================================================
+
+
+class TestParseKeywords:
+    """Tests for the parse_keywords helper."""
+
+    def test_basic_split(self) -> None:
+        assert parse_keywords("foo,bar,baz") == ["foo", "bar", "baz"]
+
+    def test_strips_whitespace(self) -> None:
+        assert parse_keywords(" foo , bar , baz ") == ["foo", "bar", "baz"]
+
+    def test_empty_string_returns_empty_list(self) -> None:
+        assert parse_keywords("") == []
+
+    def test_whitespace_only_returns_empty_list(self) -> None:
+        assert parse_keywords("  ,  , ") == []
+
+    def test_single_keyword(self) -> None:
+        assert parse_keywords("AI") == ["AI"]
+
+
+# ===========================================================================
+# collect_articles — custom keywords via parameter
+# ===========================================================================
+
+
+class TestCollectArticlesCustomKeywords:
+    """Verify that passing explicit keywords overrides the defaults."""
+
+    @pytest.fixture()
+    def repository(self) -> StubArticleRepository:
+        return StubArticleRepository()
+
+    @patch("ica.pipeline.relevance_assessment.assess_articles")
+    async def test_custom_keywords_used(
+        self,
+        mock_assess: AsyncMock,
+        repository: StubArticleRepository,
+    ) -> None:
+        custom_kw = ["custom topic one", "custom topic two"]
+        responses = {
+            kw: _brave_response(_brave_item(f"https://example.com/{i}", f"Result {i}"))
+            for i, kw in enumerate(custom_kw)
+        }
+        http = StubHttpClient(responses=responses)
+        mock_assess.return_value = [
+            RelevanceResult(
+                url=f"https://example.com/{i}", decision="accept", reason="OK"
+            )
+            for i in range(len(custom_kw))
+        ]
+
+        from ica.services.brave_search import BraveSearchClient
+
+        client = BraveSearchClient(api_key="test-key", http_client=http)
+        await collect_articles(
+            client, repository, schedule="daily", keywords=custom_kw,
+            reference_date=REF_DATE,
+        )
+        keywords_searched = [r["params"]["q"] for r in http.requests]
+        assert keywords_searched == custom_kw
+
+    @patch("ica.pipeline.relevance_assessment.assess_articles")
+    async def test_none_keywords_uses_defaults(
+        self,
+        mock_assess: AsyncMock,
+        repository: StubArticleRepository,
+    ) -> None:
+        """Passing keywords=None falls back to DAILY_KEYWORDS."""
+        http = StubHttpClient(responses=_build_daily_brave_responses())
+        mock_assess.return_value = []
+
+        from ica.services.brave_search import BraveSearchClient
+
+        client = BraveSearchClient(api_key="test-key", http_client=http)
+        await collect_articles(
+            client, repository, schedule="daily", keywords=None,
+            reference_date=REF_DATE,
+        )
+        keywords_searched = [r["params"]["q"] for r in http.requests]
+        assert keywords_searched == DAILY_KEYWORDS
 
 
 class TestCollectArticlesEdgeCases:

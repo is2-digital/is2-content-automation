@@ -2278,3 +2278,14 @@ Updated `ica/llm_configs/relevance-assessment-llm.json` (v2 → v3) to broaden t
 - All 78 relevance-related tests pass
 
 **Blockers:** None
+
+## 2026-03-01 — Make search keywords configurable via env vars (ica-59b)
+
+Added `BRAVE_DAILY_KEYWORDS` and `BRAVE_EVERY_2_DAYS_KEYWORDS` env vars to control
+article collection keywords. Settings fields in `settings.py` default to the current
+hardcoded values. `collect_articles()` accepts an optional `keywords` parameter;
+callers (scheduler, CLI) parse keywords from settings and pass them through. Added
+`parse_keywords()` helper, updated `.env-example`, and added tests for custom
+keywords and the parser.
+
+**Blockers:** None

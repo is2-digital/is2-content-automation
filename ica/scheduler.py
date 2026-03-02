@@ -130,10 +130,17 @@ async def run_article_collection(*, schedule: str = "daily") -> dict[str, Any]:
         from ica.config.settings import get_settings
         from ica.db.repository import SqlArticleRepository
         from ica.db.session import get_session
-        from ica.pipeline.article_collection import collect_articles
+        from ica.pipeline.article_collection import collect_articles, parse_keywords
         from ica.services.brave_search import BraveSearchClient
 
         settings = get_settings()
+
+        kw_raw = (
+            settings.brave_daily_keywords
+            if schedule == "daily"
+            else settings.brave_every_2_days_keywords
+        )
+        kw = parse_keywords(kw_raw) or None
 
         async with httpx.AsyncClient() as http_client:
             search_client = BraveSearchClient(
@@ -146,6 +153,7 @@ async def run_article_collection(*, schedule: str = "daily") -> dict[str, Any]:
                     client=search_client,
                     repository=repository,
                     schedule=schedule,
+                    keywords=kw,
                 )
 
         summary = {
