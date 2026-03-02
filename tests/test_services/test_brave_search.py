@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -19,6 +20,7 @@ from ica.services.brave_search import (
     DEFAULT_FLAGS,
     BraveSearchClient,
     BraveSearchFlags,
+    flags_from_settings,
 )
 from ica.services.google_search import SearchResult
 
@@ -96,6 +98,8 @@ class TestBraveSearchFlags:
         assert flags.country == "us"
         assert flags.safesearch == "moderate"
         assert flags.extra_snippets is False
+        assert flags.result_filter is None
+        assert flags.text_decorations is None
 
     def test_is_frozen(self) -> None:
         flags = BraveSearchFlags()
@@ -110,6 +114,8 @@ class TestBraveSearchFlags:
             country="gb",
             safesearch="strict",
             extra_snippets=True,
+            result_filter="web",
+            text_decorations=False,
         )
         assert flags.count == 10
         assert flags.freshness == "pw"
@@ -117,6 +123,8 @@ class TestBraveSearchFlags:
         assert flags.country == "gb"
         assert flags.safesearch == "strict"
         assert flags.extra_snippets is True
+        assert flags.result_filter == "web"
+        assert flags.text_decorations is False
 
     def test_default_flags_singleton(self) -> None:
         assert isinstance(DEFAULT_FLAGS, BraveSearchFlags)
@@ -327,6 +335,44 @@ class TestSearch:
         params = http.requests[0]["params"]
         assert "extra_snippets" not in params
 
+    async def test_result_filter_flag(self) -> None:
+        http = StubHttpClient(responses=[_brave_response()])
+        flags = BraveSearchFlags(result_filter="web")
+        client = self._make_client(http, flags=flags)
+        await client.search("test")
+        params = http.requests[0]["params"]
+        assert params["result_filter"] == "web"
+
+    async def test_result_filter_none_omits_param(self) -> None:
+        http = StubHttpClient(responses=[_brave_response()])
+        client = self._make_client(http)
+        await client.search("test")
+        params = http.requests[0]["params"]
+        assert "result_filter" not in params
+
+    async def test_text_decorations_false_sends_param(self) -> None:
+        http = StubHttpClient(responses=[_brave_response()])
+        flags = BraveSearchFlags(text_decorations=False)
+        client = self._make_client(http, flags=flags)
+        await client.search("test")
+        params = http.requests[0]["params"]
+        assert params["text_decorations"] is False
+
+    async def test_text_decorations_true_sends_param(self) -> None:
+        http = StubHttpClient(responses=[_brave_response()])
+        flags = BraveSearchFlags(text_decorations=True)
+        client = self._make_client(http, flags=flags)
+        await client.search("test")
+        params = http.requests[0]["params"]
+        assert params["text_decorations"] is True
+
+    async def test_text_decorations_none_omits_param(self) -> None:
+        http = StubHttpClient(responses=[_brave_response()])
+        client = self._make_client(http)
+        await client.search("test")
+        params = http.requests[0]["params"]
+        assert "text_decorations" not in params
+
     async def test_pagination_multiple_pages(self) -> None:
         """Request 30 results → 2 pages (20 + 10)."""
         page1 = _brave_response(
@@ -465,3 +511,67 @@ class TestBraveSearchClientDataclass:
         )
         await client.search("test")
         assert http.requests[0]["url"] == "https://custom.api/v2/search"
+
+
+# ===========================================================================
+# flags_from_settings
+# ===========================================================================
+
+
+class TestFlagsFromSettings:
+    """Tests for the flags_from_settings factory function."""
+
+    @staticmethod
+    def _mock_settings(**overrides: str) -> MagicMock:
+        defaults = {
+            "brave_result_filter": "",
+            "brave_extra_snippets": "",
+            "brave_freshness": "",
+            "brave_text_decorations": "",
+        }
+        defaults.update(overrides)
+        settings = MagicMock()
+        for k, v in defaults.items():
+            setattr(settings, k, v)
+        return settings
+
+    def test_all_empty_returns_defaults(self) -> None:
+        flags = flags_from_settings(self._mock_settings())
+        assert flags.freshness is None
+        assert flags.extra_snippets is False
+        assert flags.result_filter is None
+        assert flags.text_decorations is None
+
+    def test_all_set(self) -> None:
+        flags = flags_from_settings(
+            self._mock_settings(
+                brave_result_filter="web",
+                brave_extra_snippets="true",
+                brave_freshness="pd",
+                brave_text_decorations="false",
+            )
+        )
+        assert flags.result_filter == "web"
+        assert flags.extra_snippets is True
+        assert flags.freshness == "pd"
+        assert flags.text_decorations is False
+
+    def test_extra_snippets_case_insensitive(self) -> None:
+        flags = flags_from_settings(self._mock_settings(brave_extra_snippets="True"))
+        assert flags.extra_snippets is True
+
+    def test_text_decorations_true(self) -> None:
+        flags = flags_from_settings(self._mock_settings(brave_text_decorations="true"))
+        assert flags.text_decorations is True
+
+    def test_text_decorations_false(self) -> None:
+        flags = flags_from_settings(self._mock_settings(brave_text_decorations="false"))
+        assert flags.text_decorations is False
+
+    def test_text_decorations_empty_is_none(self) -> None:
+        flags = flags_from_settings(self._mock_settings(brave_text_decorations=""))
+        assert flags.text_decorations is None
+
+    def test_extra_snippets_non_true_is_false(self) -> None:
+        flags = flags_from_settings(self._mock_settings(brave_extra_snippets="yes"))
+        assert flags.extra_snippets is False

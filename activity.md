@@ -2,7 +2,15 @@
 
 ## Current Status
 **Last Updated:** 2026-03-01
-**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1, ica-476.7.2, ica-476.7.3, ica-476.7.4, ica-476.8.1, ica-476.8.2, ica-476.8.3, ica-476.8.4, ica-476.8.5, ica-476.9
+**Tasks Completed:** ica-dnm, ica-zo5, ica-45o, ica-6ys, ica-brf, ica-vk5, ica-09k, ica-epf, ica-zqm, ica-zs9, ica-qri, ica-476.1, ica-476.2, ica-5ke, ica-476.4, ica-476.3.1, ica-476.3.2, ica-476.3.3, ica-476.5.1, ica-476.5.2, ica-476.5.3, ica-476.3.4, ica-476.3, ica-476.5.4, ica-476.5, ica-476.7.1, ica-476.7.2, ica-476.7.3, ica-476.7.4, ica-476.8.1, ica-476.8.2, ica-476.8.3, ica-476.8.4, ica-476.8.5, ica-476.9, ica-qbh
+
+### 2026-03-01 — ica-qbh: Make Brave Search flags configurable via env vars
+- Added BRAVE_RESULT_FILTER, BRAVE_EXTRA_SNIPPETS, BRAVE_FRESHNESS, BRAVE_TEXT_DECORATIONS to settings.py
+- Added result_filter and text_decorations fields to BraveSearchFlags dataclass
+- Added flags_from_settings() factory to build flags from Settings env vars (empty = omit)
+- Updated BraveSearchClient construction in __main__.py and scheduler.py to pass flags
+- Added sample values to .env-example
+- Added 12 new tests (5 search param tests + 7 flags_from_settings tests); all 4300 pass
 
 ### 2026-03-01 — ica-476.9: Add full guided-flow verification suite and replay fixtures
 - New `tests/test_guided/test_verification.py` with 36 tests across 4 test classes

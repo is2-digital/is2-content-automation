@@ -428,7 +428,7 @@ async def _collect_articles(schedule: str) -> None:
         from ica.config.settings import get_settings
         from ica.pipeline.article_collection import collect_articles as _collect
         from ica.pipeline.article_collection import parse_keywords
-        from ica.services.brave_search import BraveSearchClient
+        from ica.services.brave_search import BraveSearchClient, flags_from_settings
 
         settings = get_settings()
         kw_raw = (
@@ -454,6 +454,7 @@ async def _collect_articles(schedule: str) -> None:
             search_client = BraveSearchClient(
                 api_key=settings.brave_api_key,
                 http_client=http_client,  # type: ignore[arg-type]
+                flags=flags_from_settings(settings),
             )
             async with get_session() as session:
                 repository = SqlArticleRepository(session)

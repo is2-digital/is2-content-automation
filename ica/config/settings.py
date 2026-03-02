@@ -58,6 +58,10 @@ class Settings(BaseSettings):
     brave_every_2_days_keywords: str = (
         "AI breakthrough,AI latest,AI tutorial,AI case study,AI research"
     )
+    brave_result_filter: str = ""
+    brave_extra_snippets: str = ""
+    brave_freshness: str = ""
+    brave_text_decorations: str = ""
 
     # --- Google Sheets ---
     curated_articles_google_sheet_id: str = ""

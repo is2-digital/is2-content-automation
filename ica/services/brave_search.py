@@ -10,7 +10,10 @@ API reference: https://api.search.brave.com/app/documentation/web-search/query
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
+
+if TYPE_CHECKING:
+    from ica.config.settings import Settings
 
 from ica.services.google_search import SearchResult
 
@@ -48,6 +51,10 @@ class BraveSearchFlags:
         safesearch: Content filter: ``'off'``, ``'moderate'``, ``'strict'``.
         extra_snippets: When ``True``, include up to 5 additional excerpts
             per result.
+        result_filter: Comma-separated result types to include
+            (e.g., ``'web'``). ``None`` omits the parameter.
+        text_decorations: When ``False``, strip bold/highlight markers from
+            display strings. ``None`` omits the parameter.
     """
 
     count: int = 20
@@ -56,10 +63,30 @@ class BraveSearchFlags:
     country: str = "us"
     safesearch: str = "moderate"
     extra_snippets: bool = False
+    result_filter: str | None = None
+    text_decorations: bool | None = None
 
 
 # Default flags instance for convenience
 DEFAULT_FLAGS = BraveSearchFlags()
+
+
+def flags_from_settings(settings: Settings) -> BraveSearchFlags:
+    """Build :class:`BraveSearchFlags` from application settings.
+
+    Empty/unset env vars are treated as *not configured*, so the
+    corresponding API parameter will be omitted from requests.
+    """
+    extra_snippets = settings.brave_extra_snippets.lower() == "true"
+    text_decorations: bool | None = None
+    if settings.brave_text_decorations:
+        text_decorations = settings.brave_text_decorations.lower() == "true"
+    return BraveSearchFlags(
+        freshness=settings.brave_freshness or None,
+        extra_snippets=extra_snippets,
+        result_filter=settings.brave_result_filter or None,
+        text_decorations=text_decorations,
+    )
 
 
 @dataclass
@@ -132,6 +159,10 @@ class BraveSearchClient:
                 params["freshness"] = effective_freshness
             if self.flags.extra_snippets:
                 params["extra_snippets"] = True
+            if self.flags.result_filter:
+                params["result_filter"] = self.flags.result_filter
+            if self.flags.text_decorations is not None:
+                params["text_decorations"] = self.flags.text_decorations
 
             data = await self.http_client.get(
                 self.base_url, params=params, headers=headers
