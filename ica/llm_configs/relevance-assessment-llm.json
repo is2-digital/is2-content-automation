@@ -1,14 +1,14 @@
 {
   "$schema": "ica-llm-config/v1",
   "processName": "relevance-assessment",
-  "description": "Relevance assessment — evaluates whether a search result article is a good fit for the IS2 newsletter audience (solopreneurs and SMB professionals interested in AI for business).",
+  "description": "Relevance assessment — evaluates whether a search result article is a good fit for the IS2 newsletter audience (professionals interested in AI for business, learning, and industry trends).",
   "model": "google/gemini-2.5-flash",
   "prompts": {
-    "instruction": "<Task_Context>\nYou are a newsletter editor for IS2 Digital, a publication serving solopreneurs and SMB professionals who want to apply AI practically in their businesses.\n\nEvaluate whether the following article is relevant for inclusion in the newsletter.\n</Task_Context>\n\n<Article>\nTitle: {title}\nExcerpt: {excerpt}\n</Article>\n\n<Evaluation_Criteria>\n1. PRACTICAL AI RELEVANCE: Does the article cover AI tools, techniques, or trends that a small business owner could act on?\n2. BUSINESS APPLICABILITY: Is this useful for solopreneurs or SMB professionals, not just researchers or enterprise?\n3. NEWSWORTHINESS: Is this timely and informative, not just a product announcement or press release?\n4. ACCESSIBILITY: Is the content approachable for a non-technical business audience, or is it overly academic/niche?\n\nPRACTICAL AI RELEVANCE (criterion 1) is mandatory. Accept only if criterion 1 is met AND at least one additional criterion scores well.\nReject articles that are purely academic research, narrow enterprise-only topics, generic tech news with no AI angle, or thinly veiled advertisements.\n</Evaluation_Criteria>\n\n<Output_Format>\nOutput ONLY a JSON object:\n{{\n  \"decision\": \"accept\" or \"reject\",\n  \"reason\": \"A concise explanation in roughly 20 words or fewer.\"\n}}\n</Output_Format>"
+    "instruction": "<Task_Context>\nYou are a newsletter editor for IS2 Digital, a publication serving professionals — from solopreneurs to enterprise leaders — who want to understand and apply AI in their work.\n\nEvaluate whether the following article is relevant for inclusion in the newsletter.\n</Task_Context>\n\n<Article>\nTitle: {title}\nExcerpt: {excerpt}\n</Article>\n\n<Evaluation_Criteria>\n1. AI RELEVANCE: Does the article meaningfully cover AI tools, techniques, strategies, or industry trends?\n2. AUDIENCE VALUE: Would this be useful or informative for professionals interested in AI — whether they are solopreneurs, SMB owners, enterprise decision-makers, or individuals learning about AI?\n3. NEWSWORTHINESS: Is this timely and informative, not just a product announcement or press release?\n4. ACCESSIBILITY: Is the content approachable for a business-oriented audience? Deeply technical research papers with no practical angle may be excluded, but technical content with clear business or learning value is welcome.\n\nAI RELEVANCE (criterion 1) is mandatory. Accept if criterion 1 is met AND at least one additional criterion scores well.\nReject articles that are generic tech news with no AI angle, purely academic with no practical takeaway, or thinly veiled advertisements.\n</Evaluation_Criteria>\n\n<Output_Format>\nOutput ONLY a JSON object:\n{{\n  \"decision\": \"accept\" or \"reject\",\n  \"reason\": \"A concise explanation in roughly 20 words or fewer.\"\n}}\n</Output_Format>"
   },
   "metadata": {
     "googleDocId": null,
-    "lastSyncedAt": "2026-02-28",
-    "version": 2
+    "lastSyncedAt": "2026-03-01",
+    "version": 3
   }
 }

@@ -2264,3 +2264,17 @@ After completing each task, add an entry below in this format:
 - All 33 tests pass; ruff clean
 
 **Blockers:** None
+
+---
+
+### 2026-03-01 — ica-1kj: Loosen relevance assessment prompt
+
+Updated `ica/llm_configs/relevance-assessment-llm.json` (v2 → v3) to broaden the audience and acceptance criteria:
+- Audience expanded from "solopreneurs and SMB professionals" to "professionals — from solopreneurs to enterprise leaders"
+- Criterion 1 renamed from "PRACTICAL AI RELEVANCE" to "AI RELEVANCE" — no longer requires small-business actionability
+- Criterion 2 renamed from "BUSINESS APPLICABILITY" to "AUDIENCE VALUE" — now explicitly includes enterprise decision-makers and AI learners
+- Criterion 4 (ACCESSIBILITY) loosened: technical content with business/learning value is now welcome
+- Reject criteria narrowed: removed "narrow enterprise-only topics" and "purely academic research"; kept ads and off-topic rejections
+- All 78 relevance-related tests pass
+
+**Blockers:** None
