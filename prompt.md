@@ -27,6 +27,8 @@ Be judicious — do NOT read large files upfront. Only read what the current tas
 
 # Task Claiming
 
+Run `bd ready` to find available work. If multiple issues share the same priority, just pick one — don't ask which to work on.
+
 After claiming a task with `bd update <id> --status in_progress`, run `bd show <id>` and print the full output (all fields) so the task details are visible in context before starting work.
 
 # Wrap-Up & Commit
