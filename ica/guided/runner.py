@@ -684,7 +684,7 @@ def _get_sheets_refs() -> dict[str, str]:
     if spreadsheet_id:
         refs["spreadsheet_id"] = spreadsheet_id
         refs["spreadsheet_url"] = _google_sheet_url(spreadsheet_id)
-        refs["sheet_name"] = "Sheet1"
+        refs["sheet_name"] = "Accepted"
     return refs
 
 

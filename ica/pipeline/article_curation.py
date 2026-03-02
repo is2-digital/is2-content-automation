@@ -312,7 +312,7 @@ async def fetch_unapproved_articles(
                 Article.approved.is_(None),
             ),
             or_(
-                Article.relevance_status == "accepted",
+                Article.relevance_status == "accept",
                 Article.relevance_status.is_(None),
             ),
         )
@@ -335,7 +335,7 @@ async def fetch_rejected_articles(
     """
     stmt = (
         select(Article)
-        .where(Article.relevance_status == "rejected")
+        .where(Article.relevance_status == "reject")
         .order_by(Article.publish_date.desc())
         .limit(limit)
     )
@@ -420,7 +420,7 @@ async def prepare_curation_data(
     sheets: SheetWriter,
     *,
     spreadsheet_id: str,
-    sheet_name: str = "Sheet1",
+    sheet_name: str = "Accepted",
     channel: str,
 ) -> CurationDataResult:
     """Prepare unapproved articles for human review in Google Sheets.
@@ -495,7 +495,7 @@ async def run_approval_flow(
     sheets: SheetReader,
     *,
     spreadsheet_id: str,
-    sheet_name: str = "Sheet1",
+    sheet_name: str = "Accepted",
     channel: str,
 ) -> ApprovalResult:
     """Run the Slack-based article approval loop.

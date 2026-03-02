@@ -22,9 +22,9 @@ Usage::
     from ica.services.google_sheets import GoogleSheetsService
 
     svc = GoogleSheetsService(credentials_path="/path/to/creds.json")
-    rows = await svc.read_rows(spreadsheet_id, "Sheet1")
-    await svc.clear_sheet(spreadsheet_id, "Sheet1")
-    count = await svc.append_rows(spreadsheet_id, "Sheet1", rows)
+    rows = await svc.read_rows(spreadsheet_id, "Accepted")
+    await svc.clear_sheet(spreadsheet_id, "Accepted")
+    count = await svc.append_rows(spreadsheet_id, "Accepted", rows)
 """
 
 from __future__ import annotations

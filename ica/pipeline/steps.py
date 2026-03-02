@@ -149,14 +149,19 @@ async def run_curation_step(ctx: PipelineContext) -> PipelineContext:
     sheets = _make_sheets()
     channel = settings.slack_channel
 
-    # Ensure spreadsheet exists (creates one if needed)
+    # Ensure spreadsheet exists (creates one if needed).
+    # Prefer guided-test sheet when set (avoids modifying production data).
+    configured_id = (
+        settings.guided_test_spreadsheet_id
+        or settings.curated_articles_google_sheet_id
+    )
     spreadsheet_id = await sheets.ensure_spreadsheet(
-        settings.curated_articles_google_sheet_id,
+        configured_id,
         title="IS2 Curated Articles",
     )
 
     # Ensure main tab exists
-    await sheets.ensure_tab(spreadsheet_id, "Sheet1")
+    await sheets.ensure_tab(spreadsheet_id, "Accepted")
 
     # Phase 1: prepare curation data (DB → Sheet)
     async with _session() as session:
@@ -211,7 +216,10 @@ async def run_summarization_step(ctx: PipelineContext) -> PipelineContext:
     slack = _make_slack()
     sheets = _make_sheets()
     http = _make_http()
-    spreadsheet_id = settings.curated_articles_google_sheet_id
+    spreadsheet_id = (
+        settings.guided_test_spreadsheet_id
+        or settings.curated_articles_google_sheet_id
+    )
 
     # Phase 1: data preparation (Sheet → DB upsert → normalized articles)
     async with _session() as session:

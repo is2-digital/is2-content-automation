@@ -198,7 +198,7 @@ def guided(
         False, "--cleanup", help="Remove fixture-generated test-run state files and exit."
     ),
     slack_timeout: float = typer.Option(
-        300.0,
+        0.0,
         "--slack-timeout",
         help="Timeout in seconds for Slack send-and-wait calls (0 = no timeout).",
     ),

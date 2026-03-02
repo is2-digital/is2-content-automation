@@ -293,7 +293,7 @@ async def prepare_summarization_data(
     sheets: SheetReader,
     *,
     spreadsheet_id: str,
-    sheet_name: str = "Sheet1",
+    sheet_name: str = "Accepted",
 ) -> SummarizationPrepResult:
     """Orchestrate summarization data preparation (PRD Section 3.2 steps 1–5).
 

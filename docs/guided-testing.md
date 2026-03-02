@@ -280,7 +280,7 @@ python -m ica guided [OPTIONS]
 | `--seed, -s` | | Auto-provision fixture data with this seed |
 | `--step` | | Start from a specific step (requires `--seed`) |
 | `--cleanup` | | Remove fixture-generated state files |
-| `--slack-timeout` | `300` | Timeout in seconds for Slack calls (0 = no timeout) |
+| `--slack-timeout` | `0` | Timeout in seconds for Slack calls (0 = no timeout) |
 | `--template-name` | `default` | HTML template name |
 | `--template-version` | | Pin a specific template version |
 
