@@ -24,3 +24,10 @@ __pycache__/
 credentials/*.json
 !credentials/*.example.json
 .mcp.json
+
+# Orchestration files
+.ralph-logs
+.ralph-logs/*
+
+# Guided testing run state
+.guided-runs/
